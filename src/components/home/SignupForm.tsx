@@ -1,54 +1,57 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ArrowUpRight, Eye, EyeOff, Check } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const SignupForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // If already logged in, redirect to dashboard
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission and account creation
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const { error, success } = await signUp(email, password, name);
       
-      // Store user info in localStorage for demo purposes
-      // In a real app, this would be handled by a backend service
-      localStorage.setItem('userEmail', email);
-      localStorage.setItem('userName', name);
-      localStorage.setItem('userLoggedIn', 'false'); // User created but not logged in yet
-      
-      setShowDialog(true);
-      
-      // Simulate email sent
-      setEmailSent(true);
-      
+      if (error) {
+        toast({
+          title: "Signup failed",
+          description: error.message || "Failed to create account. Please try again.",
+          variant: "destructive",
+          duration: 5000,
+        });
+      } else if (success) {
+        setShowDialog(true);
+      }
+    } catch (error) {
       toast({
-        title: "Account created!",
-        description: "Check your email to verify your account.",
+        title: "Signup failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
         duration: 5000,
       });
-    }, 1500);
-  };
-
-  const handleLogin = () => {
-    // In a real app, this would verify the email link
-    // For demo, we'll just log the user in
-    localStorage.setItem('userLoggedIn', 'true');
-    setShowDialog(false);
-    navigate('/dashboard');
+      console.error('Signup error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -150,7 +153,7 @@ const SignupForm = () => {
         </div>
       </div>
 
-      {/* Email Sent Dialog */}
+      {/* Email Verification Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -169,13 +172,12 @@ const SignupForm = () => {
               Click the link in the email to verify your account and start improving your credit.
             </p>
             
-            {/* This would normally be handled by clicking the email link */}
-            <button 
-              onClick={handleLogin}
+            <Link 
+              to="/login"
               className="bg-credify-teal hover:bg-credify-teal-light text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center mb-4 w-full"
             >
-              Verify and Continue to Dashboard
-            </button>
+              Go to Login Page
+            </Link>
             
             <div className="w-full border-t border-gray-200 dark:border-gray-700 my-4 pt-4">
               <h4 className="text-center font-medium mb-3">Before you start:</h4>

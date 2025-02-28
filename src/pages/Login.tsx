@@ -5,10 +5,12 @@ import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -16,42 +18,39 @@ const Login = () => {
 
   useEffect(() => {
     // If already logged in, redirect to dashboard
-    if (localStorage.getItem('userLoggedIn') === 'true') {
+    if (user) {
       navigate('/dashboard');
     }
-  }, [navigate]);
+  }, [user, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // In a real app, this would verify with a backend
-    // For demo purposes, we'll check against localStorage
-    const storedEmail = localStorage.getItem('userEmail');
-    
-    setTimeout(() => {
-      if (email === storedEmail) {
-        // In a real app, we would verify the password here
-        localStorage.setItem('userLoggedIn', 'true');
-        setIsLoading(false);
-        
-        toast({
-          title: "Welcome back!",
-          description: "You've successfully logged in.",
-          duration: 3000,
-        });
-        
-        navigate('/dashboard');
-      } else {
-        setIsLoading(false);
+    try {
+      const { error, success } = await signIn(email, password);
+      
+      if (error) {
         toast({
           title: "Login failed",
-          description: "Invalid email or password. Please try again.",
+          description: error.message || "Invalid email or password. Please try again.",
           variant: "destructive",
           duration: 3000,
         });
+      } else if (success) {
+        navigate('/dashboard');
       }
-    }, 1000);
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

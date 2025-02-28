@@ -1,27 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import Logo from '../ui/Logo';
 import { Menu, X, ChevronDown, LogOut, User } from 'lucide-react';
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState('');
-
-  useEffect(() => {
-    // Check login status whenever component mounts or location changes
-    const loggedIn = localStorage.getItem('userLoggedIn') === 'true';
-    setIsLoggedIn(loggedIn);
-    
-    if (loggedIn) {
-      const name = localStorage.getItem('userName') || '';
-      setUserName(name);
-    }
-  }, [location]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -46,12 +35,9 @@ const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
   
-  const handleLogout = () => {
-    localStorage.setItem('userLoggedIn', 'false');
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
-    
-    // Show toast message (you can implement this with the toast hook)
   };
 
   return (
@@ -60,7 +46,7 @@ const Navbar = () => {
         <div className="flex justify-between items-center">
           <Logo />
           
-          {isLoggedIn && (
+          {user && (
             <>
               <div className="hidden md:flex items-center space-x-6">
                 {navLinks.map((link) => (
@@ -81,7 +67,7 @@ const Navbar = () => {
               <div className="hidden md:flex items-center space-x-3">
                 <div className="flex items-center gap-2 px-3 py-2 text-credify-navy dark:text-white/90">
                   <User size={18} className="text-credify-teal" />
-                  <span className="font-medium">{userName.split(' ')[0]}</span>
+                  <span className="font-medium">{profile?.full_name.split(' ')[0] || 'User'}</span>
                 </div>
                 <button
                   onClick={handleLogout}
@@ -94,8 +80,14 @@ const Navbar = () => {
             </>
           )}
           
-          {!isLoggedIn && location.pathname !== '/signup' && (
+          {!user && location.pathname !== '/signup' && (
             <div className="hidden md:flex items-center space-x-3">
+              <Link
+                to="/login"
+                className="px-4 py-2 font-medium text-credify-navy dark:text-white/90 hover:text-credify-teal dark:hover:text-credify-teal transition-colors duration-200"
+              >
+                Log In
+              </Link>
               <Link
                 to="/signup"
                 className="btn-primary"
@@ -105,7 +97,7 @@ const Navbar = () => {
             </div>
           )}
 
-          {isLoggedIn && (
+          {user && (
             <button
               className="block md:hidden text-credify-navy dark:text-white"
               onClick={() => setIsOpen(!isOpen)}
@@ -117,7 +109,7 @@ const Navbar = () => {
       </div>
 
       {/* Mobile menu - only shown when logged in */}
-      {isLoggedIn && (
+      {user && (
         <div
           className={`md:hidden absolute w-full bg-white dark:bg-credify-dark border-b border-gray-200 dark:border-gray-700/50 overflow-hidden transition-all duration-300 ease-in-out ${
             isOpen ? 'max-h-screen py-4' : 'max-h-0'
@@ -140,7 +132,7 @@ const Navbar = () => {
             <div className="pt-4 pb-2 space-y-3 border-t border-gray-200 dark:border-gray-700/30 mt-2">
               <div className="flex items-center gap-2 py-2">
                 <User size={18} className="text-credify-teal" />
-                <span className="font-medium text-credify-navy dark:text-white/90">{userName}</span>
+                <span className="font-medium text-credify-navy dark:text-white/90">{profile?.full_name || 'User'}</span>
               </div>
               <button
                 onClick={handleLogout}
