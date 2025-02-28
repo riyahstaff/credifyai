@@ -3,10 +3,16 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
+import DisputeAgent from '../components/ai/DisputeAgent';
+import DisputePreview from '../components/disputes/DisputePreview';
 import { FileText, Plus, Download, Mail, Eye, Filter, Search, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const DisputeLetters = () => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'all' | 'drafts' | 'sent' | 'resolved'>('all');
+  const [showPreview, setShowPreview] = useState(false);
+  const [currentLetter, setCurrentLetter] = useState<any>(null);
   
   // Sample data for dispute letters
   const letters = [
@@ -71,6 +77,63 @@ const DisputeLetters = () => {
         return letters;
     }
   })();
+  
+  const handleGenerateDispute = (disputeData: any) => {
+    // In a real implementation, this would save the dispute to the database
+    console.log('Generated dispute:', disputeData);
+    
+    const newLetter = {
+      id: Date.now(),
+      title: `${disputeData.errorType} Dispute (${disputeData.accountName})`,
+      recipient: disputeData.bureau,
+      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      status: 'draft',
+      bureaus: [disputeData.bureau],
+      laws: ['FCRA § 611', 'FCRA § 623'],
+      content: disputeData.letterContent
+    };
+    
+    setCurrentLetter(newLetter);
+    setShowPreview(true);
+    
+    toast({
+      title: "Dispute letter created",
+      description: "Your dispute letter has been generated and is ready for review.",
+    });
+  };
+  
+  const handleDownloadLetter = () => {
+    if (!currentLetter) return;
+    
+    // Create text file with letter content
+    const element = document.createElement('a');
+    const file = new Blob([currentLetter.content], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = `${currentLetter.title.replace(/\s+/g, '_')}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    
+    toast({
+      title: "Letter downloaded",
+      description: "Your dispute letter has been downloaded to your device.",
+    });
+  };
+  
+  const handleSendLetter = () => {
+    // In a real implementation, this would send the letter via API or email
+    toast({
+      title: "Letter queued for sending",
+      description: "Your dispute letter will be sent to the credit bureau.",
+    });
+    
+    setShowPreview(false);
+  };
+  
+  const handleViewLetter = (letter: any) => {
+    setCurrentLetter(letter);
+    setShowPreview(true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -214,6 +277,7 @@ const DisputeLetters = () => {
                           <button 
                             title="View"
                             className="p-1.5 text-credify-navy-light hover:text-credify-teal dark:text-white/70 dark:hover:text-credify-teal hover:bg-gray-100 dark:hover:bg-gray-800/30 rounded-lg transition-colors"
+                            onClick={() => handleViewLetter(letter)}
                           >
                             <Eye size={18} />
                           </button>
@@ -418,6 +482,19 @@ const DisputeLetters = () => {
           </div>
         </div>
       </main>
+      
+      {/* AI Agent Component */}
+      <DisputeAgent onGenerateDispute={handleGenerateDispute} />
+      
+      {/* Dispute Preview Modal */}
+      {showPreview && currentLetter && (
+        <DisputePreview 
+          letterContent={currentLetter.content || "Your dispute letter content will appear here."}
+          onClose={() => setShowPreview(false)}
+          onDownload={handleDownloadLetter}
+          onSend={handleSendLetter}
+        />
+      )}
       
       <Footer />
     </div>
