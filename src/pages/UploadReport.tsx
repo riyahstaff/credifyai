@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
@@ -27,6 +27,7 @@ const UploadReport = () => {
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState('');
   const [reportData, setReportData] = useState<CreditReportData | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [issues, setIssues] = useState<Array<{
     type: string;
     title: string;
@@ -80,6 +81,7 @@ const UploadReport = () => {
     setFileName(file.name);
     setFileSize(formatFileSize(file.size));
     setFileUploaded(true);
+    setUploadedFile(file);
   };
 
   const formatFileSize = (size: number): string => {
@@ -89,21 +91,20 @@ const UploadReport = () => {
   };
 
   const startAnalysis = async () => {
-    if (!fileUploaded) return;
+    if (!fileUploaded || !uploadedFile) {
+      toast({
+        title: "No file found",
+        description: "Please upload a credit report file first.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setAnalyzing(true);
     
-    try {
-      // Get file input element
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      if (!fileInput || !fileInput.files || !fileInput.files[0]) {
-        throw new Error("No file found");
-      }
-      
-      const file = fileInput.files[0];
-      
+    try {      
       // Process the credit report
-      const data = await processCreditReport(file);
+      const data = await processCreditReport(uploadedFile);
       setReportData(data);
       
       // Identify potential issues
@@ -485,6 +486,7 @@ const UploadReport = () => {
                         setAnalyzed(false);
                         setReportData(null);
                         setIssues([]);
+                        setUploadedFile(null);
                       }}
                       className="btn-outline flex items-center gap-1"
                     >
@@ -531,7 +533,10 @@ const UploadReport = () => {
                         <p className="text-xs text-credify-navy-light dark:text-white/70">{fileSize}</p>
                       </div>
                       <button
-                        onClick={() => setFileUploaded(false)}
+                        onClick={() => {
+                          setFileUploaded(false);
+                          setUploadedFile(null);
+                        }}
                         className="ml-4 p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
                       >
                         <X size={18} />
