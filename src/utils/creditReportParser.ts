@@ -791,7 +791,7 @@ export const parseReportContent = (content: string): CreditReportData => {
             description: discrepancy.suggestedDispute || `The ${discrepancy.field} reported by ${bureau} is inconsistent with other bureaus.`,
             severity: discrepancy.severity,
             discrepancyDetails: discrepancy,
-            sampleDisputeLanguage: getSampleDisputeLanguage(account.accountName, discrepancy.field, bureau),
+            sampleDisputeLanguage: "", // This will be populated by getSampleDisputeLanguage
             legalBasis: discrepancy.legalBasis || getLegalReferencesForDispute(discrepancy.field)
           });
         });
@@ -809,12 +809,21 @@ export const parseReportContent = (content: string): CreditReportData => {
           reason: `Incorrect ${discrepancy.field}`,
           description: discrepancy.suggestedDispute || `The ${discrepancy.field} reported by ${bureau} is inconsistent with other bureaus.`,
           severity: discrepancy.severity,
-          sampleDisputeLanguage: getSampleDisputeLanguage("Personal Information", discrepancy.field, bureau),
+          sampleDisputeLanguage: "", // This will be populated by getSampleDisputeLanguage
           legalBasis: discrepancy.legalBasis || getLegalReferencesForDispute(discrepancy.field)
         });
       });
     });
   }
+  
+  // Populate sample dispute language
+  recommendedDisputes.forEach(async dispute => {
+    try {
+      dispute.sampleDisputeLanguage = await getSampleDisputeLanguage(dispute.accountName, dispute.reason, dispute.bureau);
+    } catch (error) {
+      console.error("Error getting sample dispute language:", error);
+    }
+  });
   
   // Create analysis summary
   const analysisResults = {
@@ -901,7 +910,7 @@ async function getSampleDisputeLanguage(accountName: string, field: string, bure
   };
   
   // Get the specific language for the field if available, otherwise use a generic template
-  const language = sampleLanguage[field] || 
+  const language = sampleLanguage[fieldLower] || 
     `The ${field} for this account is being inaccurately reported by ${bureau}. This information is incorrect and should be investigated and corrected to reflect accurate information. This error violates both FCRA Section 611(a) accuracy requirements and Metro 2 Format standards.`;
   
   return language;
@@ -1057,6 +1066,7 @@ export const getSuccessfulDisputePhrases = async (): Promise<Record<string, stri
 
 /**
  * Generate legal citations for dispute letter based on sample letters
+ * This function is async now since it may need to await sample dispute letters
  */
 export const generateLegalCitations = async (dispute: RecommendedDispute): Promise<string> => {
   let citations = "";
@@ -1101,6 +1111,7 @@ export const generateLegalCitations = async (dispute: RecommendedDispute): Promi
 
 /**
  * Generate dispute letter for a specific discrepancy
+ * This function is now properly async since it needs to await legal citations
  */
 export const generateDisputeLetterForDiscrepancy = async (
   dispute: RecommendedDispute,
