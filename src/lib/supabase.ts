@@ -178,7 +178,7 @@ export async function saveDisputeLetter(userId: string, disputeData: any) {
 export const APP_ROUTES = {
   DASHBOARD: '/dashboard',
   DISPUTE_LETTERS: '/dispute-letters',
-  CREATE_DISPUTE: '/dispute-letters', // Changed from '/dispute-letters/new' to fix 404 error
+  CREATE_DISPUTE: '/dispute-letters/new', // Changed back to the correct route
   UPLOAD_REPORT: '/upload-report',
   EDUCATION: '/education',
   LOGIN: '/login',
