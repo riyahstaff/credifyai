@@ -29,9 +29,9 @@ const Hero = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-6 animate-fade-in delay-300">
-              <Link to="/signup" className="btn-primary py-3 px-6 text-base w-full sm:w-auto">
+              <a href="#signup" className="btn-primary py-3 px-6 text-base w-full sm:w-auto">
                 Start Free Trial
-              </Link>
+              </a>
               <a 
                 href="https://www.annualcreditreport.com/index.action" 
                 target="_blank" 

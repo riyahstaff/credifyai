@@ -23,13 +23,13 @@ const CallToAction = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10 animate-fade-in delay-200">
-            <Link 
-              to="/signup" 
+            <a 
+              href="#signup" 
               className="bg-credify-teal hover:bg-credify-teal-light text-white font-medium py-3 px-8 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-lg"
             >
-              <span>Start Free Trial</span>
+              <span>Get Started</span>
               <ChevronRight size={18} />
-            </Link>
+            </a>
             
             <Link 
               to="/pricing" 
