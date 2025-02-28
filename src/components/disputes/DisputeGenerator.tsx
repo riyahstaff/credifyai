@@ -17,7 +17,7 @@ import {
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
 import CreditReportUploader from './CreditReportUploader';
 import LetterTemplateManager from './LetterTemplateManager';
-import { AgentAvatar } from '@/components/ai';
+import AgentAvatar from '../ai/AgentAvatar';  // Fixed import path
 
 interface LetterTemplate {
   id: string;
