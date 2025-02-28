@@ -10,6 +10,7 @@ import UploadReport from "./pages/UploadReport";
 import DisputeLetters from "./pages/DisputeLetters";
 import Education from "./pages/Education";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,8 @@ const App = () => (
           <Route path="/upload-report" element={<UploadReport />} />
           <Route path="/dispute-letters" element={<DisputeLetters />} />
           <Route path="/education" element={<Education />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Index />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

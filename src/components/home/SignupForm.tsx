@@ -2,30 +2,53 @@
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Eye, EyeOff, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const SignupForm = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission
+    // Simulate form submission and account creation
     setTimeout(() => {
       setIsSubmitting(false);
+      
+      // Store user info in localStorage for demo purposes
+      // In a real app, this would be handled by a backend service
+      localStorage.setItem('userEmail', email);
+      localStorage.setItem('userName', name);
+      localStorage.setItem('userLoggedIn', 'false'); // User created but not logged in yet
+      
       setShowDialog(true);
       
+      // Simulate email sent
+      setEmailSent(true);
+      
       toast({
-        title: "Success!",
-        description: "Your account has been created.",
+        title: "Account created!",
+        description: "Check your email to verify your account.",
         duration: 5000,
       });
-    }, 1000);
+    }, 1500);
+  };
+
+  const handleLogin = () => {
+    // In a real app, this would verify the email link
+    // For demo, we'll just log the user in
+    localStorage.setItem('userLoggedIn', 'true');
+    setShowDialog(false);
+    navigate('/dashboard');
   };
 
   return (
@@ -74,6 +97,37 @@ const SignupForm = () => {
                 placeholder="Enter your email"
                 required
               />
+              <p className="mt-1 text-xs text-credify-navy-light dark:text-white/60">
+                This will be your username for login
+              </p>
+            </div>
+            
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-credify-navy-light dark:text-white/70 mb-1">
+                Create Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-white dark:bg-credify-navy/40 border border-gray-200 dark:border-gray-700/50 rounded-lg focus:ring-2 focus:ring-credify-teal focus:border-transparent transition-colors"
+                  placeholder="Create a password"
+                  required
+                  minLength={8}
+                />
+                <button 
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-credify-navy-light dark:text-white/60">
+                Must be at least 8 characters
+              </p>
             </div>
 
             <div className="pt-2">
@@ -96,37 +150,48 @@ const SignupForm = () => {
         </div>
       </div>
 
-      {/* Success Dialog */}
+      {/* Email Sent Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl text-center">Your Account is Ready!</DialogTitle>
+            <DialogTitle className="text-xl text-center">Check Your Email</DialogTitle>
             <DialogDescription className="text-center">
-              Before we start fixing your credit, you'll need your credit reports.
+              We've sent a verification link to <span className="font-medium">{email}</span>
             </DialogDescription>
           </DialogHeader>
           <div className="p-6 flex flex-col items-center">
             <div className="bg-green-100 dark:bg-green-900/30 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-              <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+              <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
-            <h3 className="text-lg font-medium text-center mb-2">Get Your Free Credit Reports</h3>
+            
+            <h3 className="text-lg font-medium text-center mb-2">Verify Your Account</h3>
             <p className="text-sm text-center text-credify-navy-light dark:text-white/70 mb-6">
-              Federal law allows you to get a free copy of your credit report from each of the three major credit bureaus once every 12 months.
+              Click the link in the email to verify your account and start improving your credit.
             </p>
-            <a 
-              href="https://www.annualcreditreport.com/index.action" 
-              target="_blank" 
-              rel="noopener noreferrer"
+            
+            {/* This would normally be handled by clicking the email link */}
+            <button 
+              onClick={handleLogin}
               className="bg-credify-teal hover:bg-credify-teal-light text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center mb-4 w-full"
             >
-              Get Free Credit Reports
-              <ArrowUpRight size={16} className="ml-2" />
-            </a>
-            <p className="text-xs text-center text-credify-navy-light dark:text-white/70">
-              This will take you to the official Annual Credit Report website.
-            </p>
+              Verify and Continue to Dashboard
+            </button>
+            
+            <div className="w-full border-t border-gray-200 dark:border-gray-700 my-4 pt-4">
+              <h4 className="text-center font-medium mb-3">Before you start:</h4>
+              <a 
+                href="https://www.annualcreditreport.com/index.action" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-credify-navy dark:text-white border border-gray-200 dark:border-gray-700 font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center w-full"
+              >
+                Get Your Free Credit Reports
+                <ArrowUpRight size={16} className="ml-2" />
+              </a>
+              <p className="text-xs text-center text-credify-navy-light dark:text-white/70 mt-2">
+                This will take you to the official Annual Credit Report website.
+              </p>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
