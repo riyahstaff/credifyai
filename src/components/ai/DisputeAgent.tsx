@@ -246,14 +246,14 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
       const enhancedDisputes = await Promise.all(
         recommendedDisputes.map(async (dispute) => {
           try {
-            const sampleLanguage = await getSampleDisputeLanguage(
-              dispute.accountName, 
-              dispute.reason, 
-              dispute.bureau
-            );
+            // Replace with our internal getSampleDisputeLanguage implementation
             return {
               ...dispute,
-              sampleDisputeLanguage: sampleLanguage
+              sampleDisputeLanguage: await internalGetSampleDisputeLanguage(
+                dispute.accountName, 
+                dispute.reason, 
+                dispute.bureau
+              )
             };
           } catch (error) {
             console.error("Error getting sample dispute language:", error);
@@ -721,6 +721,41 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
     setIsAgentTyping(false);
   };
   
+  // Internal function to replace the imported getSampleDisputeLanguage
+  const internalGetSampleDisputeLanguage = async (accountName: string, field: string, bureau: string): Promise<string> => {
+    // Get dispute type from field
+    let disputeType = 'general';
+    
+    const fieldLower = field.toLowerCase();
+    if (fieldLower.includes('balance')) {
+      disputeType = 'balance';
+    } else if (fieldLower.includes('payment') || fieldLower.includes('late')) {
+      disputeType = 'late_payment';
+    } else if (fieldLower.includes('status')) {
+      disputeType = 'account_status';
+    } else if (fieldLower.includes('date')) {
+      disputeType = 'dates';
+    } else if (accountName === "Personal Information") {
+      disputeType = 'personal_information';
+    }
+    
+    // Default sample language based on dispute type
+    const defaultLanguage: Record<string, string> = {
+      'balance': 'The balance shown on this account is incorrect and does not reflect my actual financial obligation. This error violates Metro 2 reporting standards which require accurate balance reporting.',
+      'late_payment': 'This account is incorrectly reported as delinquent. According to my records, all payments have been made on time. This error violates FCRA Section 623 which requires furnishers to report accurate information.',
+      'account_status': 'The account status is being reported incorrectly. This violates FCRA accuracy requirements and Metro 2 standards for proper status code reporting.',
+      'dates': 'The dates associated with this account are inaccurate and do not align with the actual account history. This violates Metro 2 standards for date reporting.',
+      'personal_information': 'My personal information is reported incorrectly. This error affects my credit profile and violates FCRA requirements for accurate consumer information.'
+    };
+    
+    // Get the specific language for the field if available, otherwise use a generic template
+    const normalizedField = fieldLower.replace(/\s+/g, '');
+    const language = defaultLanguage[disputeType] || 
+      `The ${field} for this account is being inaccurately reported by ${bureau}. This information is incorrect and should be investigated and corrected to reflect accurate information. This error violates both FCRA Section 611(a) accuracy requirements and Metro 2 Format standards.`;
+    
+    return language;
+  };
+  
   const generateDisputeLetter = (dispute: DisputeType) => {
     // Enhanced letter template with FCRA citations and legal language
     const bureauAddresses = {
@@ -828,46 +863,6 @@ Enclosures:
       
       setMessages([welcomeMessage]);
     }, 300);
-  };
-  
-  // Async helper function to get sample dispute language
-  const getSampleDisputeLanguage = async (accountName: string, field: string, bureau: string): Promise<string> => {
-    try {
-      // Import from creditReportParser
-      const { getSampleDisputeLanguage } = await import('@/utils/creditReportParser');
-      
-      // Call the actual function
-      return await getSampleDisputeLanguage(accountName, field, bureau);
-    } catch (error) {
-      console.error("Error getting sample dispute language:", error);
-      
-      // Fallback to a default response if the function fails
-      let disputeType = 'general';
-      const fieldLower = field.toLowerCase();
-      
-      if (fieldLower.includes('balance')) {
-        disputeType = 'balance';
-      } else if (fieldLower.includes('payment') || fieldLower.includes('late')) {
-        disputeType = 'late_payment';
-      } else if (fieldLower.includes('status')) {
-        disputeType = 'account_status';
-      } else if (fieldLower.includes('date')) {
-        disputeType = 'dates';
-      } else if (accountName === "Personal Information") {
-        disputeType = 'personal_information';
-      }
-      
-      const defaultLanguage = {
-        'balance': 'The balance shown on this account is incorrect and does not reflect my actual financial obligation. This error violates Metro 2 reporting standards which require accurate balance reporting.',
-        'late_payment': 'This account is incorrectly reported as delinquent. According to my records, all payments have been made on time. This error violates FCRA Section 623 which requires furnishers to report accurate information.',
-        'account_status': 'The account status is being reported incorrectly. This violates FCRA accuracy requirements and Metro 2 standards for proper status code reporting.',
-        'dates': 'The dates associated with this account are inaccurate and do not align with the actual account history. This violates Metro 2 standards for date reporting.',
-        'personal_information': 'My personal information is reported incorrectly. This error affects my credit profile and violates FCRA requirements for accurate consumer information.'
-      };
-      
-      return defaultLanguage[disputeType as keyof typeof defaultLanguage] || 
-        `The ${field} for this account is being inaccurately reported by ${bureau}. This information is incorrect and should be investigated and corrected.`;
-    }
   };
   
   // Render a discrepancy item with action button
