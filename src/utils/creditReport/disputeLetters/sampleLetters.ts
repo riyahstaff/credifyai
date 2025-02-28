@@ -2,7 +2,7 @@
 /**
  * Sample dispute letters loading and processing
  */
-import { SampleDisputeLetter } from './types';
+import { SampleDisputeLetter } from '../types';
 import { listSampleDisputeLetters, downloadSampleDisputeLetter } from '@/lib/supabase';
 import { 
   determineDisputeTypeFromFileName, 
