@@ -209,7 +209,7 @@ const UploadReport = () => {
     });
     
     // Check for personal information issues
-    if (data.personalInfo && data.personalInfo.addresses && data.personalInfo.addresses.length > 1) {
+    if (data.personalInfo && data.personalInfo.previousAddresses && data.personalInfo.previousAddresses.length > 0) {
       issues.push({
         type: 'address',
         title: 'Multiple Addresses Listed',
@@ -637,4 +637,3 @@ const UploadReport = () => {
 };
 
 export default UploadReport;
-
