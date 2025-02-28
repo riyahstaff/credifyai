@@ -130,6 +130,40 @@ const UploadReport = () => {
     }
   };
 
+  // Helper function to check if an account name is valid
+  const isValidAccountName = (name: string): boolean => {
+    // Filter out accounts with names that look like garbage/PDF artifacts
+    // These typically contain lots of special characters or look like PDF stream data
+    if (!name) return false;
+    
+    // Check for PDF stream data patterns
+    if (name.includes('endstream') || name.includes('endobj') || name.includes('FIRST') ||
+        name.includes('Length') || name.includes('Typ')) {
+      return false;
+    }
+    
+    // Check for too many special characters (more than 30% of the string)
+    const specialCharCount = (name.match(/[^a-zA-Z0-9\s]/g) || []).length;
+    if (specialCharCount > name.length * 0.3) {
+      return false;
+    }
+    
+    // Valid account names should typically be at least 3 characters
+    return name.length >= 3;
+  };
+
+  // Clean account name for display
+  const cleanAccountName = (name: string): string => {
+    // If the name contains "GM" which appears to be a common artifact, extract what might be the real name
+    if (name.includes('GM') && name.length > 3) {
+      // Try to get the part before or after GM
+      const parts = name.split('GM');
+      // Return the longer part, assuming it might contain the real name
+      return parts.reduce((a, b) => a.length > b.length ? a : b).trim();
+    }
+    return name.trim();
+  };
+
   const identifyIssues = (data: CreditReportData): Array<{
     type: string;
     title: string;
@@ -149,11 +183,35 @@ const UploadReport = () => {
       laws: string[];
     }> = [];
     
+    // Filter accounts to only include those with valid names
+    const validAccounts = data.accounts.filter(acc => isValidAccountName(acc.accountName));
+    
+    if (validAccounts.length === 0 && data.accounts.length > 0) {
+      // If we have accounts but none with valid names, add a notice about parsing issues
+      issues.push({
+        type: 'parsing',
+        title: 'Credit Report Parsing Issue',
+        description: 'We encountered difficulties reading account names from your credit report. This may be due to the file format or encryption. Please try another format or contact support.',
+        impact: 'Medium Impact',
+        impactColor: 'yellow',
+        laws: []
+      });
+      
+      // Return early as we can't process further with invalid accounts
+      return issues;
+    }
+    
+    // Clean up account names for better presentation
+    const cleanedAccounts = validAccounts.map(acc => ({
+      ...acc,
+      accountName: cleanAccountName(acc.accountName)
+    }));
+    
     // Check for duplicate accounts (accounts with similar names)
-    const accountNames = data.accounts.map(acc => acc.accountName.toLowerCase());
+    const accountNames = cleanedAccounts.map(acc => acc.accountName.toLowerCase());
     const duplicateNameMap = new Map<string, CreditReportAccount[]>();
     
-    data.accounts.forEach(account => {
+    cleanedAccounts.forEach(account => {
       const simplifiedName = account.accountName.toLowerCase().replace(/\s+/g, '');
       if (!duplicateNameMap.has(simplifiedName)) {
         duplicateNameMap.set(simplifiedName, []);
@@ -177,7 +235,7 @@ const UploadReport = () => {
     }
     
     // Check for accounts with late payments or negative remarks
-    data.accounts.forEach(account => {
+    cleanedAccounts.forEach(account => {
       // Check payment status
       if (account.paymentStatus && (
         account.paymentStatus.includes('Late') || 
@@ -222,8 +280,8 @@ const UploadReport = () => {
     }
     
     // If no issues found, add generic issue for educational purposes
-    if (issues.length === 0 && data.accounts.length > 0) {
-      const randomAccount = data.accounts[Math.floor(Math.random() * data.accounts.length)];
+    if (issues.length === 0 && cleanedAccounts.length > 0) {
+      const randomAccount = cleanedAccounts[Math.floor(Math.random() * cleanedAccounts.length)];
       issues.push({
         type: 'general',
         title: `Review Account Information (${randomAccount.accountName})`,
