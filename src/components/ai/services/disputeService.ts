@@ -13,7 +13,7 @@ export type DisputeType = {
   explanation: string;
 };
 
-// Internal function to replace the imported getSampleDisputeLanguage
+// Enhanced function to find potential dispute opportunities even from limited data
 export const getSampleDisputeLanguage = async (
   accountName: string, 
   field: string, 
@@ -31,8 +31,12 @@ export const getSampleDisputeLanguage = async (
     disputeType = 'account_status';
   } else if (fieldLower.includes('date')) {
     disputeType = 'dates';
-  } else if (accountName === "Personal Information") {
+  } else if (fieldLower.includes('inquiry') || fieldLower.includes('inquiries')) {
+    disputeType = 'inquiry';
+  } else if (accountName.toLowerCase().includes('personal') || fieldLower.includes('address') || fieldLower.includes('name')) {
     disputeType = 'personal_information';
+  } else if (fieldLower.includes('student') || accountName.toLowerCase().includes('student')) {
+    disputeType = 'student_loan';
   }
   
   // Default sample language based on dispute type
@@ -41,12 +45,14 @@ export const getSampleDisputeLanguage = async (
     'late_payment': 'This account is incorrectly reported as delinquent. According to my records, all payments have been made on time. This error violates FCRA Section 623 which requires furnishers to report accurate information.',
     'account_status': 'The account status is being reported incorrectly. This violates FCRA accuracy requirements and Metro 2 standards for proper status code reporting.',
     'dates': 'The dates associated with this account are inaccurate and do not align with the actual account history. This violates Metro 2 standards for date reporting.',
-    'personal_information': 'My personal information is reported incorrectly. This error affects my credit profile and violates FCRA requirements for accurate consumer information.'
+    'personal_information': 'My personal information is reported incorrectly. This error affects my credit profile and violates FCRA requirements for accurate consumer information.',
+    'inquiry': 'This inquiry was made without my knowledge or consent. This violates FCRA Section 604, which requires a permissible purpose for accessing my credit information.',
+    'student_loan': 'This student loan account is being reported inaccurately. Recent Department of Education changes may qualify this loan for discharge or reduction. This violates FCRA Section 623 which requires furnishers to report accurate information.',
+    'general': `The information for this account is being inaccurately reported by ${bureau}. This information is incorrect and should be investigated and corrected to reflect accurate information. This error violates both FCRA Section 611(a) accuracy requirements and Metro 2 Format standards.`
   };
   
   // Get the specific language for the field if available, otherwise use a generic template
-  const language = defaultLanguage[disputeType] || 
-    `The ${field} for this account is being inaccurately reported by ${bureau}. This information is incorrect and should be investigated and corrected to reflect accurate information. This error violates both FCRA Section 611(a) accuracy requirements and Metro 2 Format standards.`;
+  const language = defaultLanguage[disputeType] || defaultLanguage['general'];
   
   return language;
 };
@@ -79,6 +85,13 @@ export const generateManualDisputeLetter = (dispute: DisputeType, samplePhrases:
       additionalLanguage = samplePhrases.accountOwnershipDisputes?.[0] || "";
     } else if (dispute.errorType.toLowerCase().includes('closed')) {
       additionalLanguage = samplePhrases.closedAccountDisputes?.[0] || "";
+    } else if (dispute.errorType.toLowerCase().includes('inquiry')) {
+      additionalLanguage = samplePhrases.inquiryDisputes?.[0] || "";
+    } else if (dispute.errorType.toLowerCase().includes('name') || dispute.errorType.toLowerCase().includes('address')) {
+      additionalLanguage = samplePhrases.personalInfoDisputes?.[0] || "";
+    } else if (dispute.errorType.toLowerCase().includes('student')) {
+      // Add student loan specific language
+      additionalLanguage = "In light of recent Department of Education changes affecting student loan servicing and reporting, this information should be reviewed for compliance with current federal guidelines.";
     }
   }
   
@@ -161,4 +174,29 @@ export const generateAutomaticDisputeLetter = async (
   };
 
   return { disputeData, letterContent };
+};
+
+// New: Check for security breaches affecting the consumer
+export const checkSecurityBreaches = async (bureau: string): Promise<string | null> => {
+  // Add logic here to check for known breaches
+  // For now, just return static information about known breaches
+  
+  if (bureau.toLowerCase() === 'equifax') {
+    return "Equifax had a major data breach in 2017 that affected approximately 147 million consumers. If you were affected, you may have additional grounds for dispute based on compromised information security.";
+  }
+  
+  if (bureau.toLowerCase() === 'experian') {
+    return "Experian has had several security incidents in recent years, including a 2015 breach affecting approximately 15 million consumers. If you were affected, you may have additional grounds for dispute.";
+  }
+  
+  if (bureau.toLowerCase() === 'transunion') {
+    return "TransUnion has had security incidents in recent years. If you were affected by these incidents, you may have additional grounds for dispute related to the security of your information.";
+  }
+  
+  return null;
+};
+
+// New: Check for Department of Education changes affecting student loans
+export const checkStudentLoanChanges = (): string => {
+  return "The Department of Education has implemented several student loan relief programs in the past two years, including Public Service Loan Forgiveness (PSLF) waivers, income-driven repayment plan adjustments, and targeted loan discharges. Student loans on your credit report may be eligible for correction or removal based on these programs.";
 };

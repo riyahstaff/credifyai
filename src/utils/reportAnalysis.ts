@@ -1,3 +1,4 @@
+
 import { CreditReportData, CreditReportAccount } from './creditReportParser';
 
 /**
@@ -55,7 +56,7 @@ export const extractAccountsFromRawText = (rawText: string): Array<{ name: strin
   const commonCreditors = [
     "CARMAX AUTO FINANCE", "CAPITAL ONE", "CHASE", "BANK OF AMERICA", "WELLS FARGO", 
     "DISCOVER", "AMERICAN EXPRESS", "AMEX", "CITI", "CITIBANK", "TD BANK",
-    "SYNCHRONY", "CREDIT ONE", "AUTO", "FINANCE", "LOAN", "MORTGAGE"
+    "SYNCHRONY", "CREDIT ONE", "AUTO", "FINANCE", "LOAN", "MORTGAGE", "STUDENT"
   ];
   
   // Look for accounts using each pattern
@@ -82,6 +83,41 @@ export const extractAccountsFromRawText = (rawText: string): Array<{ name: strin
         number: match[1] ? match[1].trim() : undefined
       });
     }
+  }
+  
+  // Look for inquiries
+  const inquiryPatterns = [
+    /inquir(?:y|ies)(?:[:\s]+)(?:[\r\n]+)?([A-Z][A-Z\s&]+)/gi,
+    /(?:INQUIRY|INQUIRIES)(?:[:\s]+)(?:[\r\n]+)?([A-Z][A-Z\s&]+)/g
+  ];
+  
+  for (const pattern of inquiryPatterns) {
+    let match;
+    while ((match = pattern.exec(rawText)) !== null) {
+      if (match[1] && match[1].length > 3) {
+        accounts.push({
+          name: `Inquiry: ${match[1].trim()}`
+        });
+      }
+    }
+  }
+  
+  // Look for personal information sections
+  if (rawText.toLowerCase().includes('address') || 
+      rawText.toLowerCase().includes('personal information') || 
+      rawText.toLowerCase().includes('consumer information')) {
+    accounts.push({
+      name: "Personal Information"
+    });
+  }
+  
+  // Look for student loan mentions
+  if (rawText.toLowerCase().includes('student loan') || 
+      rawText.toLowerCase().includes('department of education') || 
+      rawText.toLowerCase().includes('dept of ed')) {
+    accounts.push({
+      name: "Student Loan"
+    });
   }
   
   // Remove duplicates based on name
@@ -236,6 +272,96 @@ export const identifyIssues = (data: CreditReportData): Array<{
     laws: string[];
   }> = [];
   
+  // Even if we don't have valid accounts, check for raw text and try to identify potential issues
+  if (data.rawText) {
+    console.log("Examining raw text for potential issues, length:", data.rawText.length);
+    
+    // Look for inquiries in raw text
+    if (data.rawText.toLowerCase().includes('inquiry') || data.rawText.toLowerCase().includes('inquiries')) {
+      issues.push({
+        type: 'inquiry',
+        title: 'Credit Inquiries Detected',
+        description: 'Your report contains credit inquiries. These may be affecting your score and should be reviewed for accuracy and authorization.',
+        impact: 'Medium Impact',
+        impactColor: 'yellow',
+        laws: ['FCRA § 604 (Permissible purposes of consumer reports)', 'FCRA § 611 (Procedure in case of disputed accuracy)']
+      });
+    }
+    
+    // Look for late payments in raw text
+    if (data.rawText.toLowerCase().includes('late') || 
+        data.rawText.toLowerCase().includes('30 day') || 
+        data.rawText.toLowerCase().includes('60 day') || 
+        data.rawText.toLowerCase().includes('90 day') ||
+        data.rawText.toLowerCase().includes('delinquent')) {
+      issues.push({
+        type: 'payment',
+        title: 'Late Payment Records Detected',
+        description: 'Your report appears to contain late payment information. These negative items have a significant impact on your score and should be verified for accuracy.',
+        impact: 'Critical Impact',
+        impactColor: 'red',
+        laws: ['FCRA § 623 (Responsibilities of furnishers of information)', 'FCRA § 611 (Procedure in case of disputed accuracy)']
+      });
+    }
+    
+    // Look for multiple addresses
+    if ((data.rawText.toLowerCase().match(/address/g) || []).length > 1) {
+      issues.push({
+        type: 'address',
+        title: 'Multiple Addresses Detected',
+        description: 'Your report appears to list multiple addresses. Outdated or inaccurate address information should be removed to maintain accurate records.',
+        impact: 'Medium Impact',
+        impactColor: 'yellow',
+        laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
+      });
+    }
+    
+    // Look for potential name variations or misspellings
+    if (data.rawText.toLowerCase().includes('also known as') || 
+        data.rawText.toLowerCase().includes('aka') ||
+        data.rawText.toLowerCase().includes('aliases')) {
+      issues.push({
+        type: 'name',
+        title: 'Name Variations Detected',
+        description: 'Your report appears to contain multiple name variations or possible spelling errors. These should be corrected to maintain accurate records.',
+        impact: 'Medium Impact',
+        impactColor: 'yellow',
+        laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
+      });
+    }
+    
+    // Look for student loans
+    if (data.rawText.toLowerCase().includes('student loan') || 
+        data.rawText.toLowerCase().includes('dept of ed') || 
+        data.rawText.toLowerCase().includes('department of education') ||
+        data.rawText.toLowerCase().includes('navient') ||
+        data.rawText.toLowerCase().includes('nelnet') ||
+        data.rawText.toLowerCase().includes('great lakes') ||
+        data.rawText.toLowerCase().includes('sallie mae')) {
+      issues.push({
+        type: 'student_loan',
+        title: 'Student Loan Accounts Detected',
+        description: 'Your report contains student loan accounts. Recent Department of Education changes may affect how these loans should be reported. These should be reviewed for compliance with current guidelines.',
+        impact: 'High Impact',
+        impactColor: 'orange',
+        laws: ['FCRA § 623 (Responsibilities of furnishers of information)', 'Department of Education Guidelines']
+      });
+    }
+    
+    // Look for collections
+    if (data.rawText.toLowerCase().includes('collection') || 
+        data.rawText.toLowerCase().includes('collections')) {
+      issues.push({
+        type: 'collection',
+        title: 'Collection Accounts Detected',
+        description: 'Your report appears to contain collection accounts. These have a significant negative impact on your score and should be verified for accuracy and proper reporting.',
+        impact: 'Critical Impact',
+        impactColor: 'red',
+        laws: ['FCRA § 623 (Responsibilities of furnishers of information)', 'FCRA § 611 (Procedure in case of disputed accuracy)']
+      });
+    }
+  }
+  
   // Filter accounts to only include those with valid names
   const validAccounts = data.accounts.filter(acc => isValidAccountName(acc.accountName));
   
@@ -244,7 +370,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
     issues.push({
       type: 'parsing',
       title: 'Credit Report Parsing Issue',
-      description: 'We encountered difficulties reading account names from your credit report. This may be due to the file format or encryption. Please try another format or contact support.',
+      description: 'We encountered difficulties reading account names from your credit report. This may be due to the file format or encryption. However, we can still help you create dispute letters.',
       impact: 'Medium Impact',
       impactColor: 'yellow',
       laws: []
@@ -282,17 +408,20 @@ export const identifyIssues = (data: CreditReportData): Array<{
       }
     }
     
-    // Return early if we couldn't find valid accounts
-    if (issues.length === 0) {
-      issues.push({
-        type: 'parsing',
-        title: 'Unable to Extract Account Information',
-        description: 'We could not identify any accounts in your credit report. Please try uploading a different format or contact support.',
-        impact: 'Medium Impact',
-        impactColor: 'yellow',
-        laws: []
-      });
+    // If we still couldn't find valid accounts but we found issues, don't add a generic issue
+    if (issues.length > 1) {
+      return issues;
     }
+    
+    // If we couldn't find any accounts or issues, add generic dispute opportunities
+    issues.push({
+      type: 'generic',
+      title: 'Generic Credit Report Review',
+      description: 'Even though we could not identify specific accounts in your report, we can create dispute letters addressing common credit reporting issues. We can help with inquiries, personal information, and more.',
+      impact: 'Medium Impact',
+      impactColor: 'yellow',
+      laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
+    });
     
     return issues;
   }
@@ -363,32 +492,64 @@ export const identifyIssues = (data: CreditReportData): Array<{
         laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
       });
     }
+    
+    // Always suggest reviewing each account for potential inaccuracies
+    issues.push({
+      type: 'account_review',
+      title: `Review Account Details (${account.accountName})`,
+      description: `All details of your ${account.accountName} account should be carefully reviewed. Creditors often report incorrect balances, payment history, or account status.`,
+      impact: 'Medium Impact',
+      impactColor: 'yellow',
+      account: account,
+      laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
+    });
   });
   
   // Check for personal information issues
-  if (data.personalInfo && data.personalInfo.previousAddresses && data.personalInfo.previousAddresses.length > 0) {
+  if (data.personalInfo) {
     issues.push({
-      type: 'address',
-      title: 'Multiple Addresses Listed',
-      description: 'Your report shows multiple addresses. If any of these are incorrect or outdated, they should be disputed.',
+      type: 'personal_info',
+      title: 'Personal Information Review',
+      description: 'Your personal information should be verified for accuracy, including name spelling, current and previous addresses, and employment information.',
       impact: 'Medium Impact',
       impactColor: 'yellow',
       laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
     });
   }
   
-  // If no issues found, add generic issue for educational purposes
-  if (issues.length === 0 && cleanedAccounts.length > 0) {
-    const randomAccount = cleanedAccounts[Math.floor(Math.random() * cleanedAccounts.length)];
+  // If no issues found, add generic issues
+  if (issues.length === 0) {
+    // Add a few generic issues that are likely to apply to any credit report
     issues.push({
-      type: 'general',
-      title: `Review Account Information (${randomAccount.accountName})`,
-      description: `No obvious errors were detected, but you should carefully review your ${randomAccount.accountName} account details for accuracy.`,
+      type: 'inquiry',
+      title: 'Credit Inquiries Review',
+      description: 'All inquiries on your credit report should be reviewed to ensure they were authorized by you. Unauthorized inquiries can be disputed and removed.',
       impact: 'Medium Impact',
       impactColor: 'yellow',
-      account: randomAccount,
+      laws: ['FCRA § 604 (Permissible purposes of consumer reports)']
+    });
+    
+    issues.push({
+      type: 'bureau_comparison',
+      title: 'Cross-Bureau Data Comparison',
+      description: 'Information often varies between credit bureaus. Accounts, balances, and status should be consistent across all three major bureaus.',
+      impact: 'Medium Impact',
+      impactColor: 'yellow',
       laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
     });
+    
+    if (cleanedAccounts.length > 0) {
+      const randomAccount = cleanedAccounts[Math.floor(Math.random() * cleanedAccounts.length)];
+      issues.push({
+        type: 'general',
+        title: `Review Account Information (${randomAccount.accountName})`,
+        description: `No obvious errors were detected, but you should carefully review your ${randomAccount.accountName} account details for accuracy.`,
+        impact: 'Medium Impact',
+        impactColor: 'yellow',
+        account: randomAccount,
+        laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
+      });
+    }
   }
   
   return issues;
