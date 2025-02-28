@@ -5,7 +5,7 @@
  */
 
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
-import { findMatchingAccount } from './accountExtraction';
+import { findMatchingAccount, extractAccountsFromRawText } from './accountExtraction';
 import { isValidAccountName, cleanAccountName } from './validation';
 
 /**
