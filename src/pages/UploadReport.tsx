@@ -132,36 +132,79 @@ const UploadReport = () => {
 
   // Helper function to check if an account name is valid
   const isValidAccountName = (name: string): boolean => {
-    // Filter out accounts with names that look like garbage/PDF artifacts
-    // These typically contain lots of special characters or look like PDF stream data
     if (!name) return false;
     
-    // Check for PDF stream data patterns
-    if (name.includes('endstream') || name.includes('endobj') || name.includes('FIRST') ||
-        name.includes('Length') || name.includes('Typ')) {
+    // Look for common PDF artifacts and garbage strings
+    if (name.includes('endstream') || 
+        name.includes('endobj') || 
+        name.includes('FIRST') ||
+        name.includes('Length') || 
+        name.includes('Typ') ||
+        name.match(/^[0-9]+\s*0\s*/) // Pattern like "142 0" often in PDF data
+    ) {
       return false;
     }
     
-    // Check for too many special characters (more than 30% of the string)
+    // Real account names typically have mostly alphanumeric characters
+    // Count special characters (excluding spaces)
     const specialCharCount = (name.match(/[^a-zA-Z0-9\s]/g) || []).length;
-    if (specialCharCount > name.length * 0.3) {
+    
+    // If more than 25% of characters are special characters, it's likely not a valid name
+    if (specialCharCount > name.length * 0.25) {
       return false;
     }
     
-    // Valid account names should typically be at least 3 characters
+    // Real account names usually have uppercase letters and few symbols
+    const uppercaseCount = (name.match(/[A-Z]/g) || []).length;
+    
+    // Legitimate creditor names usually have capital letters
+    if (name.length > 5 && uppercaseCount === 0) {
+      return false;
+    }
+    
+    // Most legitimate account names will be at least 3 characters
     return name.length >= 3;
   };
 
   // Clean account name for display
   const cleanAccountName = (name: string): string => {
-    // If the name contains "GM" which appears to be a common artifact, extract what might be the real name
-    if (name.includes('GM') && name.length > 3) {
-      // Try to get the part before or after GM
-      const parts = name.split('GM');
-      // Return the longer part, assuming it might contain the real name
-      return parts.reduce((a, b) => a.length > b.length ? a : b).trim();
+    // Common patterns in incorrectly extracted names
+    if (name.includes('GM ') && name.length > 4) {
+      // Extract the part after GM if it looks like a real name pattern
+      const parts = name.split('GM ');
+      if (parts[1] && parts[1].length > 3) {
+        return parts[1].trim();
+      }
     }
-    return name.trim();
+    
+    // Remove PDF artifacts if they exist
+    let cleaned = name.replace(/^\d+\s+\d+\s+/, ''); // Remove patterns like "142 0 "
+    
+    // If the name has a mix of garbage and real text, try to extract real words
+    // Most real creditor names have 2+ capital letters in a row
+    const matches = cleaned.match(/[A-Z]{2,}[A-Za-z\s]+/);
+    if (matches && matches[0].length > 5) {
+      return matches[0].trim();
+    }
+    
+    // For common credit accounts, try to extract known creditor names
+    const commonCreditors = [
+      "CARMAX", "CAPITAL ONE", "CHASE", "BANK OF AMERICA", "WELLS FARGO", 
+      "DISCOVER", "AMERICAN EXPRESS", "AMEX", "CITI", "CITIBANK", "TD BANK",
+      "SYNCHRONY", "CREDIT ONE", "AUTO", "FINANCE", "LOAN", "MORTGAGE"
+    ];
+    
+    for (const creditor of commonCreditors) {
+      if (cleaned.includes(creditor)) {
+        // Extract the portion containing the creditor name and some surrounding context
+        const index = cleaned.indexOf(creditor);
+        const start = Math.max(0, index - 10);
+        const end = Math.min(cleaned.length, index + creditor.length + 15);
+        return cleaned.substring(start, end).trim();
+      }
+    }
+    
+    return cleaned.trim();
   };
 
   const identifyIssues = (data: CreditReportData): Array<{
@@ -197,6 +240,9 @@ const UploadReport = () => {
         laws: []
       });
       
+      console.log("No valid account names found. Original account names:", 
+        data.accounts.map(acc => acc.accountName).join(", "));
+      
       // Return early as we can't process further with invalid accounts
       return issues;
     }
@@ -206,6 +252,8 @@ const UploadReport = () => {
       ...acc,
       accountName: cleanAccountName(acc.accountName)
     }));
+    
+    console.log("Cleaned account names:", cleanedAccounts.map(acc => acc.accountName).join(", "));
     
     // Check for duplicate accounts (accounts with similar names)
     const accountNames = cleanedAccounts.map(acc => acc.accountName.toLowerCase());
