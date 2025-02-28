@@ -5,7 +5,8 @@
  */
 
 // Re-export types
-export * from './types';
+export * from '../types'; // Import SampleDisputeLetter from parent types
+export * from './types'; // Import other dispute-specific types
 
 // Re-export letter generator
 export { generateDisputeLetterForDiscrepancy } from './letterGenerator';

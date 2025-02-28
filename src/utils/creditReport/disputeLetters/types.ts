@@ -4,15 +4,7 @@
  */
 import { LegalReference } from '../types';
 
-export interface SampleDisputeLetter {
-  content: string;
-  disputeType: string;
-  bureau?: string;
-  successfulOutcome?: boolean;
-  effectiveLanguage?: string[];
-  legalCitations?: string[];
-}
-
+// Using type from parent module to avoid duplication
 export interface DisputePhrasesCache {
   balanceDisputes: string[];
   latePaymentDisputes: string[];
