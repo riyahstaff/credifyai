@@ -13,12 +13,21 @@ import {
   Sparkles,
   Check,
   Upload,
-  FileUp
+  FileUp,
+  Lightbulb
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { processCreditReport, CreditReportData, CreditReportAccount, RecommendedDispute, generateDisputeLetterForDiscrepancy } from '@/utils/creditReportParser';
+import { 
+  processCreditReport, 
+  CreditReportData, 
+  CreditReportAccount, 
+  RecommendedDispute, 
+  generateDisputeLetterForDiscrepancy,
+  loadSampleReports,
+  getSuccessfulDisputePhrases
+} from '@/utils/creditReportParser';
 import { useToast } from '@/hooks/use-toast';
-import { Profile } from '@/lib/supabase';
+import { Profile, saveDisputeLetter } from '@/lib/supabase';
 
 interface DisputeAgentProps {
   onGenerateDispute?: (disputeData: any) => void;
@@ -47,7 +56,7 @@ const AGENT_FULL_NAME = "Credit Litigation Expert Operator";
 
 const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<MessageType[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -56,10 +65,33 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
   const [disputeGenerated, setDisputeGenerated] = useState(false);
   const [reportData, setReportData] = useState<CreditReportData | null>(null);
   const [selectedDiscrepancy, setSelectedDiscrepancy] = useState<RecommendedDispute | null>(null);
+  const [sampleReportsLoaded, setSampleReportsLoaded] = useState(false);
+  const [samplePhrases, setSamplePhrases] = useState<Record<string, string[]>>({});
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Load sample reports and successful phrases on component mount
+  useEffect(() => {
+    const loadSamples = async () => {
+      try {
+        // Load sample reports
+        await loadSampleReports();
+        setSampleReportsLoaded(true);
+        
+        // Load successful dispute phrases
+        const phrases = await getSuccessfulDisputePhrases();
+        setSamplePhrases(phrases);
+        
+        console.log("Sample reports and phrases loaded successfully");
+      } catch (error) {
+        console.error("Error loading sample data:", error);
+      }
+    };
+    
+    loadSamples();
+  }, []);
   
   // Initial welcome message
   useEffect(() => {
@@ -183,6 +215,18 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
     // Discrepancies found
     const { totalDiscrepancies, highSeverityIssues, accountsWithIssues, recommendedDisputes } = data.analysisResults;
     
+    // Create sample reports message if samples were loaded
+    if (sampleReportsLoaded) {
+      const sampleLoadedMessage: MessageType = {
+        id: Date.now().toString(),
+        content: `Based on sample credit reports and past successful disputes, I've enhanced my analysis to identify the most likely successful dispute strategies.`,
+        sender: 'agent',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, sampleLoadedMessage]);
+    }
+    
     // Create summary message
     const summaryMessage: MessageType = {
       id: Date.now().toString(),
@@ -266,6 +310,11 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
               onGenerateDispute(disputeData);
             }
             
+            // Save to Supabase if user is logged in
+            if (user && user.id) {
+              saveDisputeLetter(user.id, disputeData);
+            }
+            
             const generatedResponse: MessageType = {
               id: Date.now().toString(),
               content: "I've generated your dispute letter! It includes citations to FCRA Section 611 regarding accuracy disputes and Section 623 regarding furnisher responsibilities. You can now download it or send it directly to the credit bureau.",
@@ -339,6 +388,55 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
         setIsAgentTyping(false);
         return;
       }
+    }
+    
+    // Handle user asking about sample reports
+    if (lowerCaseMessage.includes('sample') && lowerCaseMessage.includes('report')) {
+      const sampleInfoResponse: MessageType = {
+        id: Date.now().toString(),
+        content: `I've been trained on a library of sample credit reports and successful dispute letters. This allows me to identify the most effective dispute strategies and language for your specific situation. My analysis is enhanced with real-world examples of successful dispute outcomes.`,
+        sender: 'agent',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, sampleInfoResponse]);
+      setIsAgentTyping(false);
+      return;
+    }
+    
+    // Handle user asking for successful dispute tips
+    if ((lowerCaseMessage.includes('successful') || lowerCaseMessage.includes('effective')) && 
+        (lowerCaseMessage.includes('dispute') || lowerCaseMessage.includes('tips'))) {
+      
+      // Get some sample tips based on loaded phrases
+      let tipContent = "Based on my analysis of successful dispute letters, here are some effective strategies:\n\n";
+      
+      if (Object.keys(samplePhrases).length > 0) {
+        // Add tips from sample phrases
+        tipContent += "1. For balance disputes: \"" + (samplePhrases.balanceDisputes?.[0] || "Be specific about the correct balance and provide documentation.") + "\"\n\n";
+        tipContent += "2. For late payment disputes: \"" + (samplePhrases.latePaymentDisputes?.[0] || "Provide proof of on-time payment and reference any special circumstances.") + "\"\n\n";
+        tipContent += "3. For account ownership disputes: \"" + (samplePhrases.accountOwnershipDisputes?.[0] || "Clearly state that the account does not belong to you and request full verification.") + "\"\n\n";
+        tipContent += "4. Always include: specific dates, account numbers, and references to supporting documentation.\n\n";
+        tipContent += "5. Cite the relevant FCRA sections that protect your rights.";
+      } else {
+        // Default tips if phrases aren't loaded
+        tipContent += "1. Be specific about the error and explain clearly why it's incorrect.\n\n";
+        tipContent += "2. Provide supporting documentation whenever possible.\n\n";
+        tipContent += "3. Reference the FCRA sections that protect your rights.\n\n";
+        tipContent += "4. Follow up if you don't receive a response within 30 days.\n\n";
+        tipContent += "5. Keep copies of all correspondence and document everything.";
+      }
+      
+      const tipsResponse: MessageType = {
+        id: Date.now().toString(),
+        content: tipContent,
+        sender: 'agent',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, tipsResponse]);
+      setIsAgentTyping(false);
+      return;
     }
     
     // Handle user asking to generate a dispute letter for a discrepancy
@@ -416,9 +514,23 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
             onGenerateDispute(disputeData);
           }
           
+          // Save to Supabase if user is logged in
+          if (user && user.id) {
+            saveDisputeLetter(user.id, disputeData);
+          }
+          
+          // If we have sample report data loaded, mention it
+          let successMessage = `I've generated your dispute letter for ${targetDispute.accountName}! It includes all relevant details about the ${targetDispute.reason.toLowerCase()} and cites the appropriate FCRA regulations.`;
+          
+          if (sampleReportsLoaded) {
+            successMessage += ` The letter incorporates language from previously successful dispute letters for similar issues.`;
+          }
+          
+          successMessage += ` You can now download it or send it directly to ${targetDispute.bureau}.`;
+          
           const generatedResponse: MessageType = {
             id: Date.now().toString(),
-            content: `I've generated your dispute letter for ${targetDispute.accountName}! It includes all relevant details about the ${targetDispute.reason.toLowerCase()} and cites the appropriate FCRA regulations. You can now download it or send it directly to ${targetDispute.bureau}.`,
+            content: successMessage,
             sender: 'agent',
             timestamp: new Date(),
           };
@@ -513,6 +625,25 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
       day: 'numeric'
     });
     
+    // Try to find appropriate sample language based on dispute type
+    let additionalLanguage = "";
+    if (samplePhrases) {
+      if (dispute.errorType.toLowerCase().includes('balance')) {
+        additionalLanguage = samplePhrases.balanceDisputes?.[0] || "";
+      } else if (dispute.errorType.toLowerCase().includes('late') || dispute.errorType.toLowerCase().includes('payment')) {
+        additionalLanguage = samplePhrases.latePaymentDisputes?.[0] || "";
+      } else if (dispute.errorType.toLowerCase().includes('not mine') || dispute.errorType.toLowerCase().includes('fraud')) {
+        additionalLanguage = samplePhrases.accountOwnershipDisputes?.[0] || "";
+      } else if (dispute.errorType.toLowerCase().includes('closed')) {
+        additionalLanguage = samplePhrases.closedAccountDisputes?.[0] || "";
+      }
+    }
+    
+    // Add the sample language if available
+    const explanation = additionalLanguage ? 
+      `${dispute.explanation}\n\n${additionalLanguage}` : 
+      dispute.explanation;
+    
     return `
 [YOUR NAME]
 [YOUR ADDRESS]
@@ -535,7 +666,7 @@ Account Name: ${dispute.accountName}
 Account Number: [ACCOUNT NUMBER]
 Reason for Dispute: ${dispute.errorType}
 
-This information is inaccurate because: ${dispute.explanation}
+This information is inaccurate because: ${explanation}
 
 Under Section 611(a) of the FCRA, you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified. Additionally, Section 623 of the FCRA places responsibilities on furnishers of information to provide accurate data to consumer reporting agencies.
 
@@ -621,6 +752,12 @@ Enclosures:
         <p className="text-xs text-credify-navy-light dark:text-white/70 mb-2">
           {discrepancy.description}
         </p>
+        {discrepancy.sampleDisputeLanguage && (
+          <div className="flex items-start gap-1 text-xs text-credify-navy-light dark:text-white/70 mb-2 p-1 bg-credify-teal/5 border border-credify-teal/10 rounded">
+            <Lightbulb size={12} className="text-credify-teal mt-0.5 shrink-0" />
+            <p className="italic">{discrepancy.sampleDisputeLanguage.substring(0, 100)}...</p>
+          </div>
+        )}
         <button
           onClick={() => {
             setInputValue(`Generate a dispute letter for the issue with ${discrepancy.accountName} reported by ${discrepancy.bureau}`);

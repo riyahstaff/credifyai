@@ -5,6 +5,8 @@
  * for generating dispute letters and automatically identifies discrepancies and errors.
  */
 
+import { listSampleReports, downloadSampleReport } from '@/lib/supabase';
+
 export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
@@ -109,7 +111,42 @@ export interface RecommendedDispute {
   description: string;
   severity: 'high' | 'medium' | 'low';
   discrepancyDetails?: AccountDiscrepancy;
+  sampleDisputeLanguage?: string; // Added field for sample dispute language
 }
+
+// Store sample reports data cache
+let sampleReportsCache: CreditReportData[] = [];
+
+/**
+ * Load all sample credit reports from Supabase Storage
+ * This helps CLEO learn from past successful disputes
+ */
+export const loadSampleReports = async (): Promise<CreditReportData[]> => {
+  if (sampleReportsCache.length > 0) {
+    return sampleReportsCache;
+  }
+  
+  try {
+    const sampleFiles = await listSampleReports();
+    
+    const reports: CreditReportData[] = [];
+    
+    for (const file of sampleFiles) {
+      const sampleFile = await downloadSampleReport(file.name);
+      if (sampleFile) {
+        const reportData = await processCreditReport(sampleFile);
+        reports.push(reportData);
+      }
+    }
+    
+    sampleReportsCache = reports;
+    console.log(`Loaded ${reports.length} sample credit reports`);
+    return reports;
+  } catch (error) {
+    console.error('Error loading sample reports:', error);
+    return [];
+  }
+};
 
 /**
  * Extract text content from PDF file
@@ -422,7 +459,8 @@ export const parseReportContent = (content: string): CreditReportData => {
             reason: `Incorrect ${discrepancy.field}`,
             description: discrepancy.suggestedDispute || `The ${discrepancy.field} reported by ${bureau} is inconsistent with other bureaus.`,
             severity: discrepancy.severity,
-            discrepancyDetails: discrepancy
+            discrepancyDetails: discrepancy,
+            sampleDisputeLanguage: getSampleDisputeLanguage(account.accountName, discrepancy.field, bureau)
           });
         });
       });
@@ -439,6 +477,7 @@ export const parseReportContent = (content: string): CreditReportData => {
           reason: `Incorrect ${discrepancy.field}`,
           description: discrepancy.suggestedDispute || `The ${discrepancy.field} reported by ${bureau} is inconsistent with other bureaus.`,
           severity: discrepancy.severity,
+          sampleDisputeLanguage: getSampleDisputeLanguage("Personal Information", discrepancy.field, bureau)
         });
       });
     });
@@ -462,9 +501,34 @@ export const parseReportContent = (content: string): CreditReportData => {
 };
 
 /**
+ * Get sample dispute language from previously successful disputes
+ */
+function getSampleDisputeLanguage(accountName: string, field: string, bureau: string): string {
+  // This would ideally search through sample reports for similar disputes
+  // For now, we'll return sample language based on the field type
+  
+  const sampleLanguage: Record<string, string> = {
+    'paymentStatus': 'This account is incorrectly reported as delinquent. According to my payment history and bank statements, all payments have been made on time. The other credit bureaus correctly report this account as current.',
+    'currentBalance': 'The balance shown on this account is incorrect. This account was paid in full on [DATE] as confirmed by [EVIDENCE]. The balance should be $0.',
+    'dateOpened': 'The account opening date is incorrectly reported. According to my records and statements, this account was opened on [CORRECT DATE], not [REPORTED DATE].',
+    'name': 'My legal name is incorrectly reported on my credit file. My correct legal name is [CORRECT NAME] as evidenced by my government-issued ID and other official documents.',
+    'address': 'The address information on my credit report is inaccurate. My correct current address is [CORRECT ADDRESS] as can be verified by my utility bills, lease agreement, and other documentation.'
+  };
+  
+  // Get the specific language for the field if available, otherwise use a generic template
+  const language = sampleLanguage[field] || 
+    `The ${field} for this account is being inaccurately reported by ${bureau}. This information is incorrect and should be investigated and corrected to reflect accurate information.`;
+  
+  return language;
+}
+
+/**
  * Process uploaded credit report file
  */
 export const processCreditReport = async (file: File): Promise<CreditReportData> => {
+  // First, ensure sample reports are loaded
+  await loadSampleReports();
+  
   const fileExtension = file.name.split('.').pop()?.toLowerCase();
   
   if (fileExtension === 'pdf') {
@@ -505,6 +569,50 @@ export const analyzeMultipleBureauReports = (
   
   // Since we're simulating, return the enhanced report with discrepancies
   return parseReportContent(""); // Our mock implementation already includes discrepancies
+};
+
+/**
+ * Get commonly successful dispute phrases from sample reports
+ */
+export const getSuccessfulDisputePhrases = async (): Promise<Record<string, string[]>> => {
+  await loadSampleReports();
+  
+  // In a real implementation, this would analyze sample dispute letters
+  // to extract commonly successful phrases for different dispute types
+  
+  // For now, return sample successful phrases
+  return {
+    'balanceDisputes': [
+      'Upon review of my financial records, I can confirm that the balance reported is incorrect.',
+      'My records indicate that the balance was paid in full on [DATE].',
+      'The balance shown on my credit report is inconsistent with the statements provided by the creditor.',
+      'This balance discrepancy appears to be due to a failure to process my payment made on [DATE].'
+    ],
+    'latePaymentDisputes': [
+      'I have never missed a payment on this account and have documentation to prove all payments were made on time.',
+      'The reported late payment occurred during a time when the account was subject to a payment deferral program.',
+      'I dispute this late payment as it occurred during a period of identified system errors acknowledged by the creditor.',
+      'This late payment report is incorrect as I have received confirmation from the creditor that all payments have been properly applied.'
+    ],
+    'accountOwnershipDisputes': [
+      'This account does not belong to me and I have never authorized or applied for this account.',
+      'I am a victim of identity theft and this account was fraudulently opened in my name.',
+      'This account appears to be confused with another individual with a similar name or identifying information.',
+      'I request a full investigation to determine how this account was opened, as it was never authorized by me.'
+    ],
+    'closedAccountDisputes': [
+      'This account was officially closed at my request on [DATE], but continues to be reported as open.',
+      'I have documentation confirming this account was closed with a zero balance on [DATE].',
+      'This account should be reported as "Closed by Consumer" rather than its current status.',
+      'I have confirmation number [REFERENCE] from the creditor acknowledging this account was closed.'
+    ],
+    'personalInfoDisputes': [
+      'The personal information reported is incorrect and requires immediate correction to prevent future confusion.',
+      'My legal name is incorrectly reported, and I have attached documentation showing the correct information.',
+      'My address information contains errors that must be corrected to ensure accurate credit reporting.',
+      'The employment information listed in my file is outdated and should be updated as follows:'
+    ]
+  };
 };
 
 /**
@@ -555,7 +663,10 @@ export const generateDisputeLetterForDiscrepancy = (
   // Build the dispute explanation based on the discrepancy details
   let disputeExplanation = dispute.description;
   
-  if (dispute.discrepancyDetails) {
+  // Use sample language if available
+  if (dispute.sampleDisputeLanguage) {
+    disputeExplanation += " " + dispute.sampleDisputeLanguage;
+  } else if (dispute.discrepancyDetails) {
     const { field, values, bureaus } = dispute.discrepancyDetails;
     
     // Add more specific details about the discrepancy
