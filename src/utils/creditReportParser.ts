@@ -5,7 +5,7 @@
  * for generating dispute letters and automatically identifies discrepancies and errors.
  */
 
-import { listSampleReports, downloadSampleReport } from '@/lib/supabase';
+import { listSampleReports, downloadSampleReport, listSampleDisputeLetters, downloadSampleDisputeLetter } from '@/lib/supabase';
 
 export interface CreditReportAccount {
   accountName: string;
@@ -122,6 +122,16 @@ export interface RecommendedDispute {
   discrepancyDetails?: AccountDiscrepancy;
   sampleDisputeLanguage?: string; // Added field for sample dispute language
   legalBasis?: LegalReference[]; // Added field for legal basis
+}
+
+// New interface for sample dispute letter data
+export interface SampleDisputeLetter {
+  content: string;
+  disputeType: string; // e.g., "balance", "late_payment", "account_ownership"
+  bureau?: string;
+  successfulOutcome?: boolean;
+  effectiveLanguage?: string[];
+  legalCitations?: string[];
 }
 
 // Credit Laws and Regulations Database
@@ -282,6 +292,8 @@ export const LEGAL_REFERENCES_BY_DISPUTE_TYPE: Record<string, LegalReference[]> 
 
 // Store sample reports data cache
 let sampleReportsCache: CreditReportData[] = [];
+// Store sample dispute letters cache
+let sampleDisputeLettersCache: SampleDisputeLetter[] = [];
 
 /**
  * Load all sample credit reports from Supabase Storage
@@ -313,6 +325,125 @@ export const loadSampleReports = async (): Promise<CreditReportData[]> => {
     return [];
   }
 };
+
+/**
+ * Load all sample dispute letters from Supabase Storage
+ */
+export const loadSampleDisputeLetters = async (): Promise<SampleDisputeLetter[]> => {
+  if (sampleDisputeLettersCache.length > 0) {
+    return sampleDisputeLettersCache;
+  }
+  
+  try {
+    const sampleFiles = await listSampleDisputeLetters();
+    const letters: SampleDisputeLetter[] = [];
+    
+    for (const file of sampleFiles) {
+      const letterContent = await downloadSampleDisputeLetter(file.name);
+      if (letterContent) {
+        // Determine dispute type from file name or content
+        const disputeType = determineDisputeTypeFromFileName(file.name);
+        const bureau = determineBureauFromFileName(file.name);
+        
+        // Extract effective language and legal citations
+        const { effectiveLanguage, legalCitations } = extractKeyComponentsFromLetter(letterContent);
+        
+        letters.push({
+          content: letterContent,
+          disputeType,
+          bureau,
+          successfulOutcome: file.name.toLowerCase().includes('successful'),
+          effectiveLanguage,
+          legalCitations
+        });
+      }
+    }
+    
+    sampleDisputeLettersCache = letters;
+    console.log(`Loaded ${letters.length} sample dispute letters`);
+    return letters;
+  } catch (error) {
+    console.error('Error loading sample dispute letters:', error);
+    return [];
+  }
+};
+
+/**
+ * Determine dispute type from file name
+ */
+function determineDisputeTypeFromFileName(fileName: string): string {
+  const lowerFileName = fileName.toLowerCase();
+  
+  if (lowerFileName.includes('balance') || lowerFileName.includes('amount')) {
+    return 'balance';
+  } else if (lowerFileName.includes('late') || lowerFileName.includes('payment')) {
+    return 'late_payment';
+  } else if (lowerFileName.includes('not_mine') || lowerFileName.includes('fraud') || lowerFileName.includes('identity')) {
+    return 'not_mine';
+  } else if (lowerFileName.includes('closed') || lowerFileName.includes('status')) {
+    return 'account_status';
+  } else if (lowerFileName.includes('date')) {
+    return 'dates';
+  } else if (lowerFileName.includes('personal') || lowerFileName.includes('address') || lowerFileName.includes('name')) {
+    return 'personal_information';
+  }
+  
+  return 'general';
+}
+
+/**
+ * Determine bureau from file name
+ */
+function determineBureauFromFileName(fileName: string): string | undefined {
+  const lowerFileName = fileName.toLowerCase();
+  
+  if (lowerFileName.includes('experian')) {
+    return 'experian';
+  } else if (lowerFileName.includes('equifax')) {
+    return 'equifax';
+  } else if (lowerFileName.includes('transunion')) {
+    return 'transunion';
+  }
+  
+  return undefined;
+}
+
+/**
+ * Extract key components from a dispute letter
+ */
+function extractKeyComponentsFromLetter(letterContent: string): { 
+  effectiveLanguage: string[], 
+  legalCitations: string[] 
+} {
+  const effectiveLanguage: string[] = [];
+  const legalCitations: string[] = [];
+  
+  // Look for paragraphs that appear to be describing the dispute
+  const paragraphs = letterContent.split(/\n\s*\n/);
+  
+  for (const paragraph of paragraphs) {
+    // Check for legal citations
+    if (paragraph.includes('FCRA') || 
+        paragraph.includes('Fair Credit Reporting Act') || 
+        paragraph.includes('Section') || 
+        paragraph.includes('METRO') || 
+        paragraph.includes('15 U.S.C')) {
+      legalCitations.push(paragraph.trim());
+    }
+    
+    // Check for dispute explanation paragraphs
+    if ((paragraph.includes('inaccurate') || 
+         paragraph.includes('incorrect') || 
+         paragraph.includes('error') || 
+         paragraph.includes('dispute')) && 
+        paragraph.length > 50 && 
+        paragraph.length < 500) {
+      effectiveLanguage.push(paragraph.trim());
+    }
+  }
+  
+  return { effectiveLanguage, legalCitations };
+}
 
 /**
  * Find applicable legal references for a specific dispute type
@@ -703,12 +834,64 @@ export const parseReportContent = (content: string): CreditReportData => {
 };
 
 /**
+ * Find the most appropriate sample dispute letter based on dispute type
+ */
+export const findSampleDispute = async (disputeType: string, bureau?: string): Promise<SampleDisputeLetter | null> => {
+  const sampleLetters = await loadSampleDisputeLetters();
+  
+  // First try to find an exact match for both dispute type and bureau
+  if (bureau) {
+    const exactMatch = sampleLetters.find(
+      l => l.disputeType === disputeType && 
+           l.bureau === bureau && 
+           l.successfulOutcome === true
+    );
+    
+    if (exactMatch) return exactMatch;
+  }
+  
+  // Then try to find a match just based on dispute type with successful outcome
+  const disputeTypeMatch = sampleLetters.find(
+    l => l.disputeType === disputeType && l.successfulOutcome === true
+  );
+  
+  if (disputeTypeMatch) return disputeTypeMatch;
+  
+  // Finally, just find any letter with this dispute type
+  const anyMatch = sampleLetters.find(l => l.disputeType === disputeType);
+  
+  return anyMatch || null;
+};
+
+/**
  * Get sample dispute language from previously successful disputes
  */
-function getSampleDisputeLanguage(accountName: string, field: string, bureau: string): string {
-  // This would ideally search through sample reports for similar disputes
-  // For now, we'll return sample language based on the field type
+async function getSampleDisputeLanguage(accountName: string, field: string, bureau: string): Promise<string> {
+  // Get dispute type from field
+  let disputeType = 'general';
   
+  const fieldLower = field.toLowerCase();
+  if (fieldLower.includes('balance')) {
+    disputeType = 'balance';
+  } else if (fieldLower.includes('payment') || fieldLower.includes('late')) {
+    disputeType = 'late_payment';
+  } else if (fieldLower.includes('status')) {
+    disputeType = 'account_status';
+  } else if (fieldLower.includes('date')) {
+    disputeType = 'dates';
+  } else if (accountName === "Personal Information") {
+    disputeType = 'personal_information';
+  }
+  
+  // Try to find a matching sample dispute letter
+  const sampleLetter = await findSampleDispute(disputeType, bureau.toLowerCase());
+  
+  if (sampleLetter && sampleLetter.effectiveLanguage && sampleLetter.effectiveLanguage.length > 0) {
+    // Return the first effective language paragraph
+    return sampleLetter.effectiveLanguage[0];
+  }
+  
+  // If no sample letter found, use default language
   const sampleLanguage: Record<string, string> = {
     'paymentStatus': 'This account is incorrectly reported as delinquent. According to my payment history and bank statements, all payments have been made on time. The other credit bureaus correctly report this account as current. This error violates FCRA Section 623 which requires furnishers to report accurate information to consumer reporting agencies.',
     'currentBalance': 'The balance shown on this account is incorrect. This account was paid in full on [DATE] as confirmed by [EVIDENCE]. The balance should be $0. This error violates Metro 2 reporting standards which require accurate balance reporting.',
@@ -728,8 +911,8 @@ function getSampleDisputeLanguage(accountName: string, field: string, bureau: st
  * Process uploaded credit report file
  */
 export const processCreditReport = async (file: File): Promise<CreditReportData> => {
-  // First, ensure sample reports are loaded
-  await loadSampleReports();
+  // First, ensure sample reports and dispute letters are loaded
+  await Promise.all([loadSampleReports(), loadSampleDisputeLetters()]);
   
   const fileExtension = file.name.split('.').pop()?.toLowerCase();
   
@@ -774,56 +957,133 @@ export const analyzeMultipleBureauReports = (
 };
 
 /**
- * Get commonly successful dispute phrases from sample reports
+ * Get commonly successful dispute phrases from sample reports and letters
  */
 export const getSuccessfulDisputePhrases = async (): Promise<Record<string, string[]>> => {
-  await loadSampleReports();
+  // Load sample reports and dispute letters
+  await Promise.all([loadSampleReports(), loadSampleDisputeLetters()]);
   
-  // In a real implementation, this would analyze sample dispute letters
-  // to extract commonly successful phrases for different dispute types
+  // Get all sample dispute letters
+  const sampleLetters = await loadSampleDisputeLetters();
   
-  // For now, return sample successful phrases
-  return {
-    'balanceDisputes': [
+  // Extract phrases from successful dispute letters by category
+  const balanceDisputes: string[] = [];
+  const latePaymentDisputes: string[] = [];
+  const accountOwnershipDisputes: string[] = [];
+  const closedAccountDisputes: string[] = [];
+  const personalInfoDisputes: string[] = [];
+  
+  // Categorize effective language from sample letters
+  sampleLetters.forEach(letter => {
+    if (letter.successfulOutcome && letter.effectiveLanguage && letter.effectiveLanguage.length > 0) {
+      const firstParagraph = letter.effectiveLanguage[0];
+      
+      switch (letter.disputeType) {
+        case 'balance':
+          balanceDisputes.push(firstParagraph);
+          break;
+        case 'late_payment':
+          latePaymentDisputes.push(firstParagraph);
+          break;
+        case 'not_mine':
+          accountOwnershipDisputes.push(firstParagraph);
+          break;
+        case 'account_status':
+          if (firstParagraph.toLowerCase().includes('closed')) {
+            closedAccountDisputes.push(firstParagraph);
+          }
+          break;
+        case 'personal_information':
+          personalInfoDisputes.push(firstParagraph);
+          break;
+      }
+    }
+  });
+  
+  // If we don't have enough sample phrases, add default ones
+  if (balanceDisputes.length === 0) {
+    balanceDisputes.push(
       'Upon review of my financial records, I can confirm that the balance reported is incorrect and violates FCRA Section 623 requiring accurate reporting.',
       'My records indicate that the balance was paid in full on [DATE]. The Metro 2 format requires furnishers to accurately report the current balance.',
       'The balance shown on my credit report is inconsistent with the statements provided by the creditor, which constitutes a violation of FCRA accuracy requirements.',
       'This balance discrepancy appears to be due to a failure to process my payment made on [DATE], which violates Metro 2 compliance for proper payment reporting.'
-    ],
-    'latePaymentDisputes': [
+    );
+  }
+  
+  if (latePaymentDisputes.length === 0) {
+    latePaymentDisputes.push(
       'I have never missed a payment on this account and have documentation to prove all payments were made on time. This error violates FCRA Section 623 requiring furnishers to report accurate information.',
       'The reported late payment occurred during a time when the account was subject to a payment deferral program, making this report inaccurate under FCRA standards.',
       'I dispute this late payment as it occurred during a period of identified system errors acknowledged by the creditor, violating Metro 2 requirements for payment history accuracy.',
       'This late payment report is incorrect as I have received confirmation from the creditor that all payments have been properly applied, making this a violation of both FCRA and Metro 2 standards.'
-    ],
-    'accountOwnershipDisputes': [
+    );
+  }
+  
+  if (accountOwnershipDisputes.length === 0) {
+    accountOwnershipDisputes.push(
       'This account does not belong to me and I have never authorized or applied for this account. Under FCRA Section 611(a), you are required to conduct a reasonable investigation into this matter.',
       'I am a victim of identity theft and this account was fraudulently opened in my name. Per FCRA Section 605B, this information should be blocked from my credit report.',
       'This account appears to be confused with another individual with a similar name or identifying information, violating Metro 2 standards for accurate consumer identification.',
       'I request a full investigation to determine how this account was opened, as it was never authorized by me, which is required under both FCRA and ECOA regulations.'
-    ],
-    'closedAccountDisputes': [
+    );
+  }
+  
+  if (closedAccountDisputes.length === 0) {
+    closedAccountDisputes.push(
       'This account was officially closed at my request on [DATE], but continues to be reported as open. This violates Metro 2 Format requirements for account status reporting.',
       'I have documentation confirming this account was closed with a zero balance on [DATE]. Under FCRA Section 623, furnishers must report accurate information about the status of accounts.',
       'This account should be reported as "Closed by Consumer" rather than its current status, per Metro 2 Account Status Code requirements.',
       'I have confirmation number [REFERENCE] from the creditor acknowledging this account was closed. Failing to update this status violates FCRA accuracy requirements.'
-    ],
-    'personalInfoDisputes': [
+    );
+  }
+  
+  if (personalInfoDisputes.length === 0) {
+    personalInfoDisputes.push(
       'The personal information reported is incorrect and requires immediate correction to prevent future confusion. This violates Metro 2 standards for consumer information accuracy.',
       'My legal name is incorrectly reported, and I have attached documentation showing the correct information. FCRA Section 611(a) requires you to correct this information upon dispute.',
       'My address information contains errors that must be corrected to ensure accurate credit reporting. Metro 2 Format requires correct consumer identification information.',
       'The employment information listed in my file is outdated and should be updated as follows, per FCRA requirements for accurate consumer information:'
-    ]
+    );
+  }
+  
+  return {
+    balanceDisputes,
+    latePaymentDisputes,
+    accountOwnershipDisputes,
+    closedAccountDisputes,
+    personalInfoDisputes
   };
 };
 
 /**
- * Generate legal citations for dispute letter
+ * Generate legal citations for dispute letter based on sample letters
  */
-export const generateLegalCitations = (dispute: RecommendedDispute): string => {
+export const generateLegalCitations = async (dispute: RecommendedDispute): Promise<string> => {
   let citations = "";
   
-  if (dispute.legalBasis && dispute.legalBasis.length > 0) {
+  // Try to find relevant citations from sample dispute letters
+  let disputeType = 'general';
+  if (dispute.reason.toLowerCase().includes('balance')) {
+    disputeType = 'balance';
+  } else if (dispute.reason.toLowerCase().includes('payment') || dispute.reason.toLowerCase().includes('late')) {
+    disputeType = 'late_payment';
+  } else if (dispute.reason.toLowerCase().includes('not mine') || dispute.reason.toLowerCase().includes('fraud')) {
+    disputeType = 'not_mine';
+  }
+  
+  const sampleLetter = await findSampleDispute(disputeType, dispute.bureau.toLowerCase());
+  
+  if (sampleLetter && sampleLetter.legalCitations && sampleLetter.legalCitations.length > 0) {
+    // Use legal citations from sample letter
+    citations = "I am asserting my rights under the following laws and regulations:\n\n";
+    
+    sampleLetter.legalCitations.forEach((citation, index) => {
+      citations += `${index + 1}. ${citation}\n`;
+    });
+    
+    citations += "\nThese laws and regulations require credit reporting agencies and furnishers of information to maintain and report accurate information.";
+  } else if (dispute.legalBasis && dispute.legalBasis.length > 0) {
+    // Use legal basis from dispute if no sample letter found
     citations = "I am asserting my rights under the following laws and regulations:\n\n";
     
     dispute.legalBasis.forEach((reference, index) => {
@@ -842,7 +1102,7 @@ export const generateLegalCitations = (dispute: RecommendedDispute): string => {
 /**
  * Generate dispute letter for a specific discrepancy
  */
-export const generateDisputeLetterForDiscrepancy = (
+export const generateDisputeLetterForDiscrepancy = async (
   dispute: RecommendedDispute,
   userInfo: {
     name: string;
@@ -851,7 +1111,7 @@ export const generateDisputeLetterForDiscrepancy = (
     state: string;
     zip: string;
   }
-): string => {
+): Promise<string> => {
   const bureauAddresses = {
     'experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
     'equifax': 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374',
@@ -887,8 +1147,24 @@ export const generateDisputeLetterForDiscrepancy = (
   // Build the dispute explanation based on the discrepancy details
   let disputeExplanation = dispute.description;
   
+  // Check if we have a sample dispute letter for this type of dispute
+  let disputeType = 'general';
+  if (dispute.reason.toLowerCase().includes('balance')) {
+    disputeType = 'balance';
+  } else if (dispute.reason.toLowerCase().includes('payment') || dispute.reason.toLowerCase().includes('late')) {
+    disputeType = 'late_payment';
+  } else if (dispute.reason.toLowerCase().includes('not mine') || dispute.reason.toLowerCase().includes('fraud')) {
+    disputeType = 'not_mine';
+  } else if (dispute.accountName === "Personal Information") {
+    disputeType = 'personal_information';
+  }
+  
+  const sampleLetter = await findSampleDispute(disputeType, dispute.bureau.toLowerCase());
+  
   // Use sample language if available
-  if (dispute.sampleDisputeLanguage) {
+  if (sampleLetter && sampleLetter.effectiveLanguage && sampleLetter.effectiveLanguage.length > 0) {
+    disputeExplanation += " " + sampleLetter.effectiveLanguage[0];
+  } else if (dispute.sampleDisputeLanguage) {
     disputeExplanation += " " + dispute.sampleDisputeLanguage;
   } else if (dispute.discrepancyDetails) {
     const { field, values, bureaus } = dispute.discrepancyDetails;
@@ -914,7 +1190,14 @@ export const generateDisputeLetterForDiscrepancy = (
   }
   
   // Generate legal citations
-  const legalCitations = generateLegalCitations(dispute);
+  const legalCitations = await generateLegalCitations(dispute);
+  
+  // Check if the sample letter has specific request language we can use
+  let requestItems = `1. Conduct a thorough investigation of this disputed information
+2. Forward all relevant information to the furnisher of this information
+3. Provide me with copies of any documentation used to verify this information
+4. Remove or correct the disputed item if it cannot be properly verified
+5. Send me an updated copy of my credit report showing the results of your investigation`;
   
   return `
 ${userInfo.name}
@@ -947,11 +1230,7 @@ ${legalCitations}
 Under ${fcraSections} of the FCRA, you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified. Additionally, the FCRA places responsibilities on furnishers of information to provide accurate data to consumer reporting agencies. The Metro 2 Format also requires furnishers to report accurate and complete information.
 
 I request that you:
-1. Conduct a thorough investigation of this disputed information
-2. Forward all relevant information to the furnisher of this information
-3. Provide me with copies of any documentation used to verify this information
-4. Remove or correct the disputed item if it cannot be properly verified
-5. Send me an updated copy of my credit report showing the results of your investigation
+${requestItems}
 
 Please complete your investigation within the 30-day timeframe (or 45 days if based on information I provide) as required by the FCRA. If you have any questions or need additional information, please contact me at the address listed above.
 

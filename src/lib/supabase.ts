@@ -30,6 +30,7 @@ export type UserSession = {
 
 // Sample credit reports related functions
 export const SAMPLE_REPORTS_BUCKET = 'sample-credit-reports';
+export const SAMPLE_LETTERS_BUCKET = 'sample-dispute-letters';
 
 /**
  * Fetch a list of all sample credit reports available in Supabase storage
@@ -76,6 +77,53 @@ export async function downloadSampleReport(fileName: string): Promise<File | nul
     });
   } catch (error) {
     console.error('Error in downloadSampleReport:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch a list of all sample dispute letters available in Supabase storage
+ */
+export async function listSampleDisputeLetters() {
+  try {
+    const { data, error } = await supabase
+      .storage
+      .from(SAMPLE_LETTERS_BUCKET)
+      .list();
+      
+    if (error) {
+      console.error('Error fetching sample dispute letters:', error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error in listSampleDisputeLetters:', error);
+    return [];
+  }
+}
+
+/**
+ * Download a specific sample dispute letter from Supabase storage
+ * @param fileName The name of the file to download
+ * @returns The text content or null if download failed
+ */
+export async function downloadSampleDisputeLetter(fileName: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .storage
+      .from(SAMPLE_LETTERS_BUCKET)
+      .download(fileName);
+      
+    if (error || !data) {
+      console.error('Error downloading sample dispute letter:', error);
+      return null;
+    }
+    
+    // Convert blob to text
+    return await data.text();
+  } catch (error) {
+    console.error('Error in downloadSampleDisputeLetter:', error);
     return null;
   }
 }
