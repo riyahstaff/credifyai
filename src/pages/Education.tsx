@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
-import { Book, Search, Play, FileText, BookOpen, ChevronRight, Tag, Clock, ArrowUpRight, Award, BarChart, CreditCard, DollarSign } from 'lucide-react';
+import { Book, Search, Play, FileText, BookOpen, ChevronRight, Tag, Clock, ArrowUpRight, Award, BarChart, CreditCard, DollarSign, Check } from 'lucide-react';
 
 const Education = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');

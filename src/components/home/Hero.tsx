@@ -28,14 +28,23 @@ const Hero = () => {
               Upload your credit report and our AI will find errors, generate dispute letters, and help improve your score in minutes, not months.
             </p>
             
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-12 animate-fade-in delay-300">
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-6 animate-fade-in delay-300">
               <Link to="/signup" className="btn-primary py-3 px-6 text-base w-full sm:w-auto">
                 Start Free Trial
               </Link>
-              <Link to="/how-it-works" className="btn-outline py-3 px-6 text-base w-full sm:w-auto">
-                Learn More
-              </Link>
+              <a 
+                href="https://www.annualcreditreport.com/index.action" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="btn-outline py-3 px-6 text-base w-full sm:w-auto"
+              >
+                Free Credit Reports
+              </a>
             </div>
+            
+            <Link to="/how-it-works" className="inline-flex items-center text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors mb-6 animate-fade-in delay-300">
+              Learn how it works →
+            </Link>
             
             <div className="grid grid-cols-2 gap-4 animate-fade-in delay-500">
               <div className="flex items-center gap-2 text-credify-navy-light dark:text-white/70">
