@@ -218,7 +218,7 @@ export const parseReportContent = (content: string): CreditReportData => {
           "equifax": "John Smith",
           "transunion": "John Smith"
         },
-        severity: "low",
+        severity: 'low', // Fixed: Using correct type 'low' instead of string
         suggestedDispute: "Name format inconsistency between bureaus"
       },
       {
@@ -229,7 +229,7 @@ export const parseReportContent = (content: string): CreditReportData => {
           "equifax": "123 Main Street, Anytown, CA 90210",
           "transunion": "123 Main St, Anytown, CA 90210"
         },
-        severity: "low",
+        severity: 'low', // Fixed: Using correct type 'low' instead of string
         suggestedDispute: "Address format inconsistency between bureaus"
       }
     ]
@@ -284,7 +284,7 @@ export const parseReportContent = (content: string): CreditReportData => {
             "equifax": "05/2018",
             "transunion": "05/15/2018"
           },
-          severity: "low",
+          severity: 'low',
           suggestedDispute: "Inconsistent account opening date reported by TransUnion"
         }
       ]
@@ -335,7 +335,7 @@ export const parseReportContent = (content: string): CreditReportData => {
             "equifax": "60 Days Late",
             "transunion": "30 Days Late"
           },
-          severity: "high",
+          severity: 'high',
           suggestedDispute: "Incorrect payment status reported by Equifax showing 60 days late instead of 30 days late as reported by other bureaus"
         }
       ]
@@ -380,7 +380,7 @@ export const parseReportContent = (content: string): CreditReportData => {
             "experian": "$0",
             "transunion": "$125"
           },
-          severity: "high",
+          severity: 'high',
           suggestedDispute: "Incorrect balance on closed account reported by TransUnion showing $125 instead of $0"
         }
       ]

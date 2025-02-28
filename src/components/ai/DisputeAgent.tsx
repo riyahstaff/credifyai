@@ -18,6 +18,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { processCreditReport, CreditReportData, CreditReportAccount, RecommendedDispute, generateDisputeLetterForDiscrepancy } from '@/utils/creditReportParser';
 import { useToast } from '@/hooks/use-toast';
+import { Profile } from '@/lib/supabase';
 
 interface DisputeAgentProps {
   onGenerateDispute?: (disputeData: any) => void;
@@ -198,7 +199,7 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
     const highSeverityDisputes = recommendedDisputes.filter(d => d.severity === 'high');
     
     if (highSeverityDisputes.length > 0) {
-      const highSeverityMessage = {
+      const highSeverityMessage: MessageType = {
         id: Date.now().toString(),
         content: `The most urgent issues to address are:\n\n${highSeverityDisputes.map((dispute, index) => 
           `${index + 1}. ${dispute.accountName}: ${dispute.description} (reported by ${dispute.bureau})`
@@ -209,7 +210,7 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
       
       setMessages(prev => [...prev, highSeverityMessage]);
     } else {
-      const recommendationMessage = {
+      const recommendationMessage: MessageType = {
         id: Date.now().toString(),
         content: `Would you like me to generate dispute letters for any of these issues automatically?`,
         sender: 'agent',
@@ -389,12 +390,13 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
         
         // Simulate generating the letter
         setTimeout(() => {
+          // Create user info with defaults if profile properties are missing
           const userInfo = {
             name: profile?.full_name || "[YOUR NAME]",
-            address: profile?.address || "[YOUR ADDRESS]",
-            city: profile?.city || "[CITY]",
-            state: profile?.state || "[STATE]",
-            zip: profile?.zip || "[ZIP]"
+            address: "[YOUR ADDRESS]", // Default as these are not in the Profile type
+            city: "[CITY]",
+            state: "[STATE]",
+            zip: "[ZIP]"
           };
           
           const letterContent = generateDisputeLetterForDiscrepancy(targetDispute, userInfo);
@@ -760,10 +762,10 @@ Enclosures:
                         if (onGenerateDispute && selectedDiscrepancy) {
                           const userInfo = {
                             name: profile?.full_name || "[YOUR NAME]",
-                            address: profile?.address || "[YOUR ADDRESS]",
-                            city: profile?.city || "[CITY]",
-                            state: profile?.state || "[STATE]",
-                            zip: profile?.zip || "[ZIP]"
+                            address: "[YOUR ADDRESS]", // Default values since these are not in Profile type
+                            city: "[CITY]",
+                            state: "[STATE]",
+                            zip: "[ZIP]"
                           };
                           
                           const letterContent = generateDisputeLetterForDiscrepancy(selectedDiscrepancy, userInfo);
