@@ -11,9 +11,13 @@ import {
   Download, 
   MessageSquare, 
   Sparkles,
-  Check
+  Check,
+  Upload,
+  FileUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { processCreditReport, CreditReportData, CreditReportAccount, RecommendedDispute, generateDisputeLetterForDiscrepancy } from '@/utils/creditReportParser';
+import { useToast } from '@/hooks/use-toast';
 
 interface DisputeAgentProps {
   onGenerateDispute?: (disputeData: any) => void;
@@ -25,6 +29,9 @@ type MessageType = {
   sender: 'user' | 'agent';
   timestamp: Date;
   isLoading?: boolean;
+  isFileUpload?: boolean;
+  hasDiscrepancies?: boolean;
+  discrepancies?: RecommendedDispute[];
 };
 
 type DisputeType = {
@@ -38,6 +45,7 @@ const AGENT_NAME = "CLEO";
 const AGENT_FULL_NAME = "Credit Litigation Expert Operator";
 
 const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
+  const { toast } = useToast();
   const { profile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<MessageType[]>([]);
@@ -45,16 +53,19 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
   const [isAgentTyping, setIsAgentTyping] = useState(false);
   const [currentDispute, setCurrentDispute] = useState<DisputeType | null>(null);
   const [disputeGenerated, setDisputeGenerated] = useState(false);
+  const [reportData, setReportData] = useState<CreditReportData | null>(null);
+  const [selectedDiscrepancy, setSelectedDiscrepancy] = useState<RecommendedDispute | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Initial welcome message
   useEffect(() => {
     if (messages.length === 0) {
       const welcomeMessage: MessageType = {
         id: Date.now().toString(),
-        content: `Hello${profile?.full_name ? ' ' + profile.full_name.split(' ')[0] : ''}! I'm ${AGENT_NAME}, your ${AGENT_FULL_NAME}. I can help you create personalized dispute letters for credit report errors. Tell me about the issue you'd like to dispute.`,
+        content: `Hello${profile?.full_name ? ' ' + profile.full_name.split(' ')[0] : ''}! I'm ${AGENT_NAME}, your ${AGENT_FULL_NAME}. I can help you analyze your credit reports and automatically identify errors and discrepancies across all three bureaus. Upload your credit report to get started!`,
         sender: 'agent',
         timestamp: new Date(),
       };
@@ -100,11 +111,122 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
     }, 1000 + Math.random() * 1000);
   };
   
+  const handleFileSelect = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+  
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Add upload message
+    const uploadMessage: MessageType = {
+      id: Date.now().toString(),
+      content: `Uploaded ${file.name}`,
+      sender: 'user',
+      timestamp: new Date(),
+      isFileUpload: true,
+    };
+    
+    setMessages(prev => [...prev, uploadMessage]);
+    setIsAgentTyping(true);
+    
+    // Now process the credit report
+    try {
+      const analyzeMessage: MessageType = {
+        id: Date.now().toString(),
+        content: `I'm analyzing your credit report from ${file.name}. This will take a moment...`,
+        sender: 'agent',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, analyzeMessage]);
+      
+      // Process the report
+      const data = await processCreditReport(file);
+      setReportData(data);
+      
+      // Handle analysis results
+      handleReportAnalysis(data);
+      
+    } catch (error) {
+      const errorMessage: MessageType = {
+        id: Date.now().toString(),
+        content: `I encountered an error processing your credit report: ${error instanceof Error ? error.message : "Unknown error"}. Please make sure you've uploaded a valid credit report file.`,
+        sender: 'agent',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+      setIsAgentTyping(false);
+    }
+  };
+  
+  const handleReportAnalysis = (data: CreditReportData) => {
+    if (!data.analysisResults || !data.analysisResults.recommendedDisputes || data.analysisResults.recommendedDisputes.length === 0) {
+      // No discrepancies found
+      const noIssuesMessage: MessageType = {
+        id: Date.now().toString(),
+        content: `I've analyzed your credit report and didn't find any significant discrepancies between bureaus. Your credit information appears to be consistent across the credit bureaus. Is there anything specific you're concerned about that I should look into further?`,
+        sender: 'agent',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, noIssuesMessage]);
+      setIsAgentTyping(false);
+      return;
+    }
+    
+    // Discrepancies found
+    const { totalDiscrepancies, highSeverityIssues, accountsWithIssues, recommendedDisputes } = data.analysisResults;
+    
+    // Create summary message
+    const summaryMessage: MessageType = {
+      id: Date.now().toString(),
+      content: `I've analyzed your credit report and found ${totalDiscrepancies} discrepancies across ${accountsWithIssues} accounts/items, including ${highSeverityIssues} high-severity issues that should be disputed immediately. Here are the key issues I found:`,
+      sender: 'agent',
+      timestamp: new Date(),
+      hasDiscrepancies: true,
+      discrepancies: recommendedDisputes,
+    };
+    
+    setMessages(prev => [...prev, summaryMessage]);
+    
+    // Add detailed explanation of high severity issues
+    const highSeverityDisputes = recommendedDisputes.filter(d => d.severity === 'high');
+    
+    if (highSeverityDisputes.length > 0) {
+      const highSeverityMessage = {
+        id: Date.now().toString(),
+        content: `The most urgent issues to address are:\n\n${highSeverityDisputes.map((dispute, index) => 
+          `${index + 1}. ${dispute.accountName}: ${dispute.description} (reported by ${dispute.bureau})`
+        ).join('\n\n')}\n\nWould you like me to generate dispute letters for these issues automatically?`,
+        sender: 'agent',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, highSeverityMessage]);
+    } else {
+      const recommendationMessage = {
+        id: Date.now().toString(),
+        content: `Would you like me to generate dispute letters for any of these issues automatically?`,
+        sender: 'agent',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, recommendationMessage]);
+    }
+    
+    setIsAgentTyping(false);
+  };
+  
   const handleAgentResponse = (userMessage: string) => {
     // Simple pattern matching to simulate AI conversation
     const lowerCaseMessage = userMessage.toLowerCase();
     
-    // If there's a current dispute in progress
+    // If there's a current dispute in progress - this is kept from the original flow for manual disputes
     if (currentDispute) {
       if (Object.values(currentDispute).filter(Boolean).length === 3) {
         // We need the explanation now
@@ -218,24 +340,144 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
       }
     }
     
-    // Handle initial inquiry about disputes
+    // Handle user asking to generate a dispute letter for a discrepancy
+    if (reportData && reportData.analysisResults && 
+       (lowerCaseMessage.includes('generate') || 
+        lowerCaseMessage.includes('create letter') || 
+        lowerCaseMessage.includes('dispute') || 
+        lowerCaseMessage.includes('yes') || 
+        lowerCaseMessage.includes('please'))) {
+      
+      // Look for reference to specific account or issue
+      let targetDispute: RecommendedDispute | null = null;
+      
+      const { recommendedDisputes } = reportData.analysisResults;
+      
+      // If user mentioned an account name, try to find a matching dispute
+      for (const dispute of recommendedDisputes) {
+        if (lowerCaseMessage.includes(dispute.accountName.toLowerCase())) {
+          targetDispute = dispute;
+          break;
+        }
+      }
+      
+      // If no specific account mentioned, take the highest priority dispute
+      if (!targetDispute && recommendedDisputes.length > 0) {
+        // Start with high severity disputes
+        const highSeverityDisputes = recommendedDisputes.filter(d => d.severity === 'high');
+        if (highSeverityDisputes.length > 0) {
+          targetDispute = highSeverityDisputes[0];
+        } else {
+          targetDispute = recommendedDisputes[0];
+        }
+      }
+      
+      if (targetDispute) {
+        // Store selected dispute for reference
+        setSelectedDiscrepancy(targetDispute);
+        
+        // Generate response about creating the dispute
+        const generatingMessage: MessageType = {
+          id: Date.now().toString(),
+          content: `I'll generate a dispute letter for the issue with ${targetDispute.accountName} regarding the ${targetDispute.reason.toLowerCase()} reported by ${targetDispute.bureau}. The letter will cite relevant FCRA regulations and include all necessary details.`,
+          sender: 'agent',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, generatingMessage]);
+        setIsAgentTyping(true);
+        
+        // Simulate generating the letter
+        setTimeout(() => {
+          const userInfo = {
+            name: profile?.full_name || "[YOUR NAME]",
+            address: profile?.address || "[YOUR ADDRESS]",
+            city: profile?.city || "[CITY]",
+            state: profile?.state || "[STATE]",
+            zip: profile?.zip || "[ZIP]"
+          };
+          
+          const letterContent = generateDisputeLetterForDiscrepancy(targetDispute, userInfo);
+          
+          const disputeData = {
+            bureau: targetDispute.bureau,
+            accountName: targetDispute.accountName,
+            accountNumber: targetDispute.accountNumber,
+            errorType: targetDispute.reason,
+            explanation: targetDispute.description,
+            timestamp: new Date(),
+            letterContent: letterContent
+          };
+          
+          // Notify parent component about generated dispute
+          if (onGenerateDispute) {
+            onGenerateDispute(disputeData);
+          }
+          
+          const generatedResponse: MessageType = {
+            id: Date.now().toString(),
+            content: `I've generated your dispute letter for ${targetDispute.accountName}! It includes all relevant details about the ${targetDispute.reason.toLowerCase()} and cites the appropriate FCRA regulations. You can now download it or send it directly to ${targetDispute.bureau}.`,
+            sender: 'agent',
+            timestamp: new Date(),
+          };
+          
+          setMessages(prev => [...prev, generatedResponse]);
+          setIsAgentTyping(false);
+          setDisputeGenerated(true);
+        }, 2000);
+        
+        return;
+      }
+    }
+    
+    // Handle upload requests
     if (
-      lowerCaseMessage.includes('dispute') || 
-      lowerCaseMessage.includes('letter') ||
-      lowerCaseMessage.includes('credit report') ||
-      lowerCaseMessage.includes('error') ||
-      lowerCaseMessage.includes('inaccurate') ||
-      lowerCaseMessage.includes('incorrect')
+      lowerCaseMessage.includes('upload') || 
+      lowerCaseMessage.includes('credit report') || 
+      lowerCaseMessage.includes('attach') || 
+      lowerCaseMessage.includes('file')
     ) {
       const response: MessageType = {
         id: Date.now().toString(),
-        content: "I'll help you create a dispute letter. Let's gather some information to make your dispute as effective as possible. Which credit bureau would you like to send this dispute to? (Experian, Equifax, or TransUnion)",
+        content: "I'd be happy to analyze your credit report. Please upload your credit report file using the attachment button below, and I'll automatically identify any discrepancies or errors across the three credit bureaus.",
         sender: 'agent',
         timestamp: new Date(),
       };
       
       setMessages(prev => [...prev, response]);
-      setCurrentDispute({} as DisputeType);
+      setIsAgentTyping(false);
+      return;
+    }
+    
+    // Handle initial inquiry about disputes
+    if (
+      lowerCaseMessage.includes('dispute') || 
+      lowerCaseMessage.includes('letter') || 
+      lowerCaseMessage.includes('error') ||
+      lowerCaseMessage.includes('inaccurate') ||
+      lowerCaseMessage.includes('incorrect')
+    ) {
+      // If we already have report data, reference it
+      if (reportData && reportData.analysisResults) {
+        const response: MessageType = {
+          id: Date.now().toString(),
+          content: "Based on the credit report you uploaded, I've already identified some discrepancies that you can dispute. Would you like me to help you create dispute letters for any of these issues?",
+          sender: 'agent',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, response]);
+      } else {
+        const response: MessageType = {
+          id: Date.now().toString(),
+          content: "I can help you identify errors and create dispute letters. To get started, please upload your credit report file using the attachment button below. I'll automatically analyze it and find discrepancies between the credit bureaus.",
+          sender: 'agent',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, response]);
+      }
+      
       setIsAgentTyping(false);
       return;
     }
@@ -243,7 +485,7 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
     // Default response if no specific patterns matched
     const defaultResponse: MessageType = {
       id: Date.now().toString(),
-      content: "I'm here to help with credit dispute letters. If you have an error on your credit report that you'd like to dispute, let me know and I can guide you through creating a personalized FCRA-compliant dispute letter.",
+      content: "I'm here to help analyze your credit reports and create dispute letters for any errors or discrepancies I find. Upload your credit report using the attachment button, and I'll automatically scan for issues across all three bureaus.",
       sender: 'agent',
       timestamp: new Date(),
     };
@@ -326,12 +568,14 @@ Enclosures:
     setMessages([]);
     setCurrentDispute(null);
     setDisputeGenerated(false);
+    setReportData(null);
+    setSelectedDiscrepancy(null);
     
     // Add back welcome message
     setTimeout(() => {
       const welcomeMessage: MessageType = {
         id: Date.now().toString(),
-        content: `Hello${profile?.full_name ? ' ' + profile.full_name.split(' ')[0] : ''}! I'm ${AGENT_NAME}, your ${AGENT_FULL_NAME}. I can help you create personalized dispute letters for credit report errors. Tell me about the issue you'd like to dispute.`,
+        content: `Hello${profile?.full_name ? ' ' + profile.full_name.split(' ')[0] : ''}! I'm ${AGENT_NAME}, your ${AGENT_FULL_NAME}. I can help you analyze your credit reports and automatically identify errors and discrepancies across all three bureaus. Upload your credit report to get started!`,
         sender: 'agent',
         timestamp: new Date(),
       };
@@ -340,8 +584,66 @@ Enclosures:
     }, 300);
   };
   
+  // Render a discrepancy item with action button
+  const renderDiscrepancy = (discrepancy: RecommendedDispute, index: number) => {
+    return (
+      <div 
+        key={`${discrepancy.accountName}-${discrepancy.reason}-${index}`}
+        className="bg-white dark:bg-credify-navy/40 rounded-lg p-3 mb-2 border border-gray-200 dark:border-gray-700/50 shadow-sm"
+      >
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center gap-2">
+            <div className={`p-1 rounded-full ${
+              discrepancy.severity === 'high' 
+                ? 'bg-red-100 dark:bg-red-900/30' 
+                : discrepancy.severity === 'medium'
+                  ? 'bg-yellow-100 dark:bg-yellow-900/30'
+                  : 'bg-blue-100 dark:bg-blue-900/30'
+            }`}>
+              <AlertCircle size={14} className={`${
+                discrepancy.severity === 'high' 
+                  ? 'text-red-600 dark:text-red-400' 
+                  : discrepancy.severity === 'medium'
+                    ? 'text-yellow-600 dark:text-yellow-400'
+                    : 'text-blue-600 dark:text-blue-400'
+              }`} />
+            </div>
+            <h4 className="font-medium text-credify-navy dark:text-white text-sm">
+              {discrepancy.accountName}
+            </h4>
+          </div>
+          <span className="text-xs bg-gray-100 dark:bg-gray-800/50 text-credify-navy-light dark:text-white/70 px-2 py-0.5 rounded">
+            {discrepancy.bureau}
+          </span>
+        </div>
+        <p className="text-xs text-credify-navy-light dark:text-white/70 mb-2">
+          {discrepancy.description}
+        </p>
+        <button
+          onClick={() => {
+            setInputValue(`Generate a dispute letter for the issue with ${discrepancy.accountName} reported by ${discrepancy.bureau}`);
+            setTimeout(() => handleSendMessage(), 100);
+          }}
+          className="text-xs bg-credify-teal/10 text-credify-teal hover:bg-credify-teal/20 transition-colors rounded px-2 py-1 flex items-center gap-1"
+        >
+          <FileText size={12} />
+          <span>Create Dispute Letter</span>
+        </button>
+      </div>
+    );
+  };
+  
   return (
     <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end">
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".pdf,.txt,.text"
+        className="hidden"
+      />
+      
       {/* Chat bubble */}
       <AnimatePresence>
         {isOpen && (
@@ -400,7 +702,31 @@ Enclosures:
                         : 'bg-gray-100 dark:bg-credify-navy/60 text-credify-navy dark:text-white rounded-tl-none'
                     }`}
                   >
-                    {message.content}
+                    {message.isFileUpload ? (
+                      <div className="flex items-center gap-2">
+                        <FileUp size={16} />
+                        <span>{message.content}</span>
+                      </div>
+                    ) : (
+                      message.content
+                    )}
+                    
+                    {/* Render discrepancies list if this message has them */}
+                    {message.hasDiscrepancies && message.discrepancies && message.discrepancies.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600/30">
+                        <h4 className="font-medium text-sm mb-2">Discrepancies Found:</h4>
+                        <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                          {message.discrepancies.slice(0, 3).map((discrepancy, index) => 
+                            renderDiscrepancy(discrepancy, index)
+                          )}
+                          {message.discrepancies.length > 3 && (
+                            <div className="text-center text-xs">
+                              + {message.discrepancies.length - 3} more issues found
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -431,7 +757,27 @@ Enclosures:
                       className="bg-credify-teal text-white py-1.5 px-3 rounded-lg text-sm flex items-center gap-1.5"
                       onClick={() => {
                         // This would trigger the download or preview in the parent component
-                        if (onGenerateDispute && currentDispute) {
+                        if (onGenerateDispute && selectedDiscrepancy) {
+                          const userInfo = {
+                            name: profile?.full_name || "[YOUR NAME]",
+                            address: profile?.address || "[YOUR ADDRESS]",
+                            city: profile?.city || "[CITY]",
+                            state: profile?.state || "[STATE]",
+                            zip: profile?.zip || "[ZIP]"
+                          };
+                          
+                          const letterContent = generateDisputeLetterForDiscrepancy(selectedDiscrepancy, userInfo);
+                          
+                          onGenerateDispute({
+                            bureau: selectedDiscrepancy.bureau,
+                            accountName: selectedDiscrepancy.accountName,
+                            accountNumber: selectedDiscrepancy.accountNumber,
+                            errorType: selectedDiscrepancy.reason,
+                            explanation: selectedDiscrepancy.description,
+                            timestamp: new Date(),
+                            letterContent: letterContent
+                          });
+                        } else if (onGenerateDispute && currentDispute) {
                           onGenerateDispute({
                             ...currentDispute,
                             timestamp: new Date(),
@@ -465,10 +811,10 @@ Enclosures:
                 />
                 <button 
                   className="p-2 text-credify-teal hover:bg-credify-teal/10 rounded-full transition-colors"
-                  onClick={() => {}}
-                  aria-label="Attach file"
+                  onClick={handleFileSelect}
+                  aria-label="Upload credit report"
                 >
-                  <Paperclip size={18} />
+                  <Upload size={18} />
                 </button>
                 <button 
                   className={`p-2 text-white bg-credify-teal rounded-full transition-colors ${!inputValue.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-credify-teal-dark'}`}
