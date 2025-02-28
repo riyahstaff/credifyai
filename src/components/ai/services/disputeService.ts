@@ -1,7 +1,10 @@
+
 import { Profile } from '@/lib/supabase';
 import { RecommendedDispute } from '../types';
-import { generateDisputeLetterForDiscrepancy } from '@/utils/creditReport/disputeLetters';
-import { getSampleDisputeLanguage as getSampleDisputeLanguageUtil } from '@/utils/creditReport/disputeLetters';
+import { 
+  generateDisputeLetterForDiscrepancy,
+  getSampleDisputeLanguage as getSampleDisputeLanguageUtil 
+} from '@/utils/creditReport/disputeLetters';
 
 export type DisputeType = {
   bureau: string;
