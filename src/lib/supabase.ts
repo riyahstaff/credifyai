@@ -263,7 +263,8 @@ export async function getSuccessfulDisputeExamples(disputeType: string): Promise
  * @returns Relevant FCRA sections
  */
 export async function getRelevantFCRASections(disputeType: string): Promise<string> {
-  const fcraMapping: Record<string, keyof typeof LEGAL_REFERENCES[]> = {
+  // Fixed type mapping to use arrays of valid keys of LEGAL_REFERENCES
+  const fcraMapping: Record<string, Array<keyof typeof LEGAL_REFERENCES>> = {
     'not_my_account': ['ACCURACY_REQUIREMENTS', 'INVESTIGATION_PROCEDURES'],
     'identity_theft': ['ACCURACY_REQUIREMENTS', 'INVESTIGATION_PROCEDURES'],
     'incorrect_balance': ['ACCURACY_REQUIREMENTS', 'FURNISHER_RESPONSIBILITIES'],
