@@ -1,26 +1,37 @@
 
-import { ReactNode } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface PrivateRouteProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
-const PrivateRoute = ({ children }: PrivateRouteProps) => {
-  const { user, isLoading } = useAuth();
+const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
+  const { user, isLoading, isTestMode } = useAuth();
   
-  // Show a loading state while checking authentication
+  // Get test user from localStorage if in test mode and no user is set
+  const getTestUser = () => {
+    if (isTestMode && !user) {
+      const testUserData = localStorage.getItem('test_user');
+      return testUserData ? true : false;
+    }
+    return false;
+  };
+  
+  const hasTestUser = getTestUser();
+  
   if (isLoading) {
+    // Loading state
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="h-8 w-8 border-4 border-credify-teal border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="h-12 w-12 border-4 border-credify-teal/30 border-t-credify-teal rounded-full animate-spin"></div>
       </div>
     );
   }
   
-  // Redirect to login if not authenticated
-  if (!user) {
+  if (!user && !hasTestUser) {
+    // Redirect to login if not authenticated
     return <Navigate to="/login" replace />;
   }
   

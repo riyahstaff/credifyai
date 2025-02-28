@@ -4,11 +4,19 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase, Profile, UserSession } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
+// Adding interface for test user
+interface TestUser {
+  email: string;
+  name: string;
+  isTestUser: boolean;
+}
+
 const AuthContext = createContext<{
   session: Session | null;
   user: User | null;
   profile: Profile | null;
   isLoading: boolean;
+  isTestMode: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ 
     error: Error | null; 
     success: boolean;
@@ -23,6 +31,7 @@ const AuthContext = createContext<{
   user: null,
   profile: null,
   isLoading: true,
+  isTestMode: false,
   signUp: async () => ({ error: null, success: false }),
   signIn: async () => ({ error: null, success: false }),
   signOut: async () => {},
@@ -33,6 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isTestMode, setIsTestMode] = useState(false);
   const { toast } = useToast();
 
   // Fetch the user's profile when they sign in
@@ -56,10 +66,62 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Check for test user in localStorage
+  const checkForTestUser = () => {
+    const testUserData = localStorage.getItem('test_user');
+    if (testUserData) {
+      try {
+        const testUser = JSON.parse(testUserData) as TestUser;
+        
+        // Create a mock user object
+        const mockUser = {
+          id: 'test-user-id',
+          email: testUser.email,
+          user_metadata: {
+            full_name: testUser.name
+          }
+        } as unknown as User;
+        
+        // Create a mock profile
+        const mockProfile = {
+          id: 'test-user-id',
+          email: testUser.email,
+          full_name: testUser.name,
+          created_at: new Date().toISOString()
+        } as Profile;
+        
+        setUser(mockUser);
+        setProfile(mockProfile);
+        setIsTestMode(true);
+        return true;
+      } catch (error) {
+        console.error('Error parsing test user data:', error);
+        localStorage.removeItem('test_user');
+      }
+    }
+    return false;
+  };
+
   useEffect(() => {
     // Check active sessions and sets the user
     const initAuth = async () => {
       setIsLoading(true);
+      
+      // First check if there's a test user
+      if (checkForTestUser()) {
+        setIsLoading(false);
+        return;
+      }
+      
+      // Check for Supabase connection issues
+      const hasDatabaseIssue = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
+      setIsTestMode(hasDatabaseIssue);
+      
+      if (hasDatabaseIssue) {
+        console.warn('Running in test mode due to missing Supabase credentials.');
+        setIsLoading(false);
+        return;
+      }
       
       try {
         const { data } = await supabase.auth.getSession();
@@ -81,37 +143,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     initAuth();
 
-    // Listen for changes to auth state
-    try {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (_event, session) => {
-          setSession(session);
-          setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            const profile = await fetchUserProfile(session.user.id);
-            setProfile(profile);
-          } else {
-            setProfile(null);
+    // Only set up subscription if not in test mode
+    if (!isTestMode) {
+      try {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (_event, session) => {
+            setSession(session);
+            setUser(session?.user ?? null);
+            
+            if (session?.user) {
+              const profile = await fetchUserProfile(session.user.id);
+              setProfile(profile);
+            } else {
+              setProfile(null);
+            }
+            
+            setIsLoading(false);
           }
-          
-          setIsLoading(false);
-        }
-      );
+        );
 
-      return () => {
-        subscription.unsubscribe();
-      };
-    } catch (error) {
-      console.error('Error setting up auth subscription:', error);
-      setIsLoading(false);
-      return () => {};
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error('Error setting up auth subscription:', error);
+        setIsLoading(false);
+        return () => {};
+      }
     }
   }, []);
 
   // Sign up a new user and create their profile
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
+      // If in test mode, simulate success
+      if (isTestMode) {
+        return { error: null, success: true };
+      }
+      
       // Create the user in Supabase auth
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -158,6 +227,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Sign in an existing user
   const signIn = async (email: string, password: string) => {
     try {
+      // If in test mode, simulate success
+      if (isTestMode) {
+        localStorage.setItem('test_user', JSON.stringify({
+          email,
+          name: email.split('@')[0], // Simple name from email
+          isTestUser: true
+        }));
+        
+        // Reload the page to trigger the test user check
+        window.location.reload();
+        
+        return { error: null, success: true };
+      }
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -183,6 +266,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Sign out
   const signOut = async () => {
     try {
+      // If in test mode, just clear localStorage
+      if (isTestMode) {
+        localStorage.removeItem('test_user');
+        setUser(null);
+        setProfile(null);
+        
+        toast({
+          title: "Signed out",
+          description: "You have been successfully logged out.",
+          duration: 3000,
+        });
+        
+        return;
+      }
+      
       await supabase.auth.signOut();
       toast({
         title: "Signed out",
@@ -207,6 +305,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         profile,
         isLoading,
+        isTestMode,
         signUp,
         signIn,
         signOut,

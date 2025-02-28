@@ -16,8 +16,13 @@ const SignupForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const [testMode, setTestMode] = useState(false); // Flag for test mode
 
   useEffect(() => {
+    // Check for Supabase connection issues from console logs
+    const hasDatabaseIssue = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
+    setTestMode(hasDatabaseIssue);
+
     // If already logged in, redirect to dashboard
     if (user) {
       navigate('/dashboard');
@@ -28,6 +33,22 @@ const SignupForm = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
+    // Test mode: skip actual API calls and simulate success
+    if (testMode) {
+      setTimeout(() => {
+        setIsSubmitting(false);
+        setShowDialog(true);
+        
+        toast({
+          title: "Test Mode Active",
+          description: "Signup simulated successfully. Click 'Go to Dashboard' to explore the app.",
+          duration: 5000,
+        });
+      }, 1500);
+      return;
+    }
+    
+    // Normal mode: use actual Supabase signup
     try {
       const { error, success } = await signUp(email, password, name);
       
@@ -54,6 +75,18 @@ const SignupForm = () => {
     }
   };
 
+  // For test mode: bypass verification and go straight to dashboard
+  const handleTestModeLogin = () => {
+    // Store test user data in localStorage to simulate being logged in
+    localStorage.setItem('test_user', JSON.stringify({
+      email: email || 'test@example.com',
+      name: name || 'Test User',
+      isTestUser: true
+    }));
+    
+    navigate('/dashboard');
+  };
+
   return (
     <section id="signup" className="py-16 md:py-24 bg-credify-navy/5 dark:bg-credify-navy/40 relative">
       <div className="container mx-auto px-4 md:px-6">
@@ -70,6 +103,13 @@ const SignupForm = () => {
           <h3 className="text-xl font-semibold text-credify-navy dark:text-white mb-6 text-center">
             Create Your Free Account
           </h3>
+          
+          {testMode && (
+            <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-sm">
+              <p className="font-medium">Test Mode Active</p>
+              <p className="text-xs mt-1">Database connection not available. You can still explore the app with simulated data.</p>
+            </div>
+          )}
           
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -157,9 +197,14 @@ const SignupForm = () => {
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl text-center">Check Your Email</DialogTitle>
+            <DialogTitle className="text-xl text-center">
+              {testMode ? "Test Account Created" : "Check Your Email"}
+            </DialogTitle>
             <DialogDescription className="text-center">
-              We've sent a verification link to <span className="font-medium">{email}</span>
+              {testMode 
+                ? "Your test account has been created successfully." 
+                : `We've sent a verification link to ${email}`
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="p-6 flex flex-col items-center">
@@ -167,17 +212,31 @@ const SignupForm = () => {
               <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
             
-            <h3 className="text-lg font-medium text-center mb-2">Verify Your Account</h3>
+            <h3 className="text-lg font-medium text-center mb-2">
+              {testMode ? "Explore the App" : "Verify Your Account"}
+            </h3>
             <p className="text-sm text-center text-credify-navy-light dark:text-white/70 mb-6">
-              Click the link in the email to verify your account and start improving your credit.
+              {testMode 
+                ? "Click the button below to explore the dashboard and features." 
+                : "Click the link in the email to verify your account and start improving your credit."
+              }
             </p>
             
-            <Link 
-              to="/login"
-              className="bg-credify-teal hover:bg-credify-teal-light text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center mb-4 w-full"
-            >
-              Go to Login Page
-            </Link>
+            {testMode ? (
+              <button 
+                onClick={handleTestModeLogin}
+                className="bg-credify-teal hover:bg-credify-teal-light text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center mb-4 w-full"
+              >
+                Go to Dashboard
+              </button>
+            ) : (
+              <Link 
+                to="/login"
+                className="bg-credify-teal hover:bg-credify-teal-light text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center mb-4 w-full"
+              >
+                Go to Login Page
+              </Link>
+            )}
             
             <div className="w-full border-t border-gray-200 dark:border-gray-700 my-4 pt-4">
               <h4 className="text-center font-medium mb-3">Before you start:</h4>
