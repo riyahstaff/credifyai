@@ -1,4 +1,4 @@
-<lov-code>
+
 /**
  * Credit Report Parser Utility
  * This module parses uploaded credit reports to extract relevant information
@@ -837,4 +837,306 @@ export const parseReportContent = (content: string): CreditReportData => {
   for (const pattern of namePatterns) {
     const match = content.match(pattern);
     if (match && match[1]?.trim()) {
-      personalInfo.name
+      personalInfo.name = match[1].trim();
+      break;
+    }
+  }
+  
+  // Look for address in the report
+  const addressPatterns = [
+    /Address:?\s*([^\n\r]+)/i,
+    /(?:Current|Present)\s+Address:?\s*([^\n\r]+(?:\n[^\n\r]+){0,2})/i,
+    /Personal\s+Information[\s\S]{0,100}(?:Address|Location):?\s*([^\n\r]+(?:\n[^\n\r]+){0,2})/i
+  ];
+  
+  for (const pattern of addressPatterns) {
+    const match = content.match(pattern);
+    if (match && match[1]?.trim()) {
+      personalInfo.address = match[1].trim().replace(/\n/g, ' ');
+      break;
+    }
+  }
+  
+  reportData.personalInfo = personalInfo;
+  
+  // Extract account information - look for sections that contain account details
+  const accountSectionPatterns = [
+    /(?:TRADE|ACCOUNT|TRADELINE)S?(?:\s+INFORMATION)?[\s\S]{0,100}(?=\n[-=]{3,}|\n\s*\n)/i,
+    /(?:CREDIT|LOAN|MORTGAGE|AUTO)\s+ACCOUNTS?[\s\S]{0,100}(?=\n[-=]{3,}|\n\s*\n)/i
+  ];
+  
+  let accountSections: string[] = [];
+  
+  for (const pattern of accountSectionPatterns) {
+    const match = content.match(pattern);
+    if (match && match[0]) {
+      accountSections.push(match[0]);
+    }
+  }
+  
+  // If we couldn't find specific account sections, try to divide the content into logical chunks
+  if (accountSections.length === 0) {
+    const contentChunks = content.split(/\n(?:[-=*]{3,}|_{3,}|\s{3,})\n/);
+    for (const chunk of contentChunks) {
+      if (chunk.match(/(?:ACCOUNT|TRADE|CREDIT|LOAN|MORTGAGE|CARD|AUTO)/i)) {
+        accountSections.push(chunk);
+      }
+    }
+  }
+  
+  console.log(`Found ${accountSections.length} potential account sections`);
+  
+  // Look for account entries within each section
+  if (accountSections.length === 0) {
+    // If we still couldn't find sections, treat the whole content as one section
+    accountSections = [content];
+  }
+  
+  // Create a list of creditor names to look for
+  const commonCreditors = [
+    'BANK OF AMERICA', 'CHASE', 'WELLS FARGO', 'CITIBANK', 'CAPITAL ONE', 
+    'DISCOVER', 'AMERICAN EXPRESS', 'AMEX', 'SYNCHRONY', 'CREDIT ONE',
+    'US BANK', 'BARCLAYS', 'PNC', 'TD BANK', 'NAVY FEDERAL', 'USAA',
+    'JPMORGAN', 'GOLDMAN SACHS', 'APPLE', 'PAYPAL', 'TOYOTA', 'HONDA',
+    'FORD', 'GM', 'CHRYSLER', 'NISSAN', 'HYUNDAI', 'KIA', 'BMW', 'MERCEDES',
+    'LEXUS', 'STUDENT LOAN', 'SALLIE MAE', 'NELNET', 'GREAT LAKES', 'FEDLOAN',
+    'NAVIENT', 'MORTGAGE', 'HOME LOAN', 'FLAGSTAR', 'CALIBER', 'FREEDOM',
+    'CARRINGTON', 'QUICKEN', 'ROCKET', 'LOAN DEPOT', 'CITIZENS', 'ALLY',
+    'SANTANDER', 'FIFTH THIRD', 'REGIONS', 'SUNTRUST', 'TRUIST', 'BB&T',
+    'HUNTINGTON', 'KEYBANK', 'M&T', 'FIRST NATIONAL', 'FIRST REPUBLIC', 'HSBC'
+  ];
+  
+  // Create a set of account names to avoid duplicates
+  const accountNameSet = new Set<string>();
+  
+  for (const section of accountSections) {
+    // For each section, try to extract account entries using various strategies
+    
+    // Strategy 1: Look for common patterns that indicate the start of an account entry
+    const accountPatterns = [
+      /(?:Account|Trade(?:line)?)\s+(?:Name|with):\s*([^\n\r]+)/i,
+      /(?:Creditor|Lender)(?:\s+Name)?:\s*([^\n\r]+)/i,
+      /Original\s+Creditor:\s*([^\n\r]+)/i,
+      /Opened\s+by:\s*([^\n\r]+)/i,
+      /(\b[A-Z][A-Z\s&,']+(?:\sBANK|\sFINANCIAL|\sCREDIT|\sMORTGAGE|\sLOAN|\sCARD|\sAUTO|\sFUNDING|\sCAPITAL|\sHOME|\sINC|\sCORP|\sLLC|\sNA|\sFSB|\sFCU)[A-Z\s&,']*)\b/
+    ];
+    
+    for (const pattern of accountPatterns) {
+      const matches = section.matchAll(pattern);
+      for (const match of matches) {
+        if (match[1] && match[1].trim()) {
+          const accountName = match[1].trim();
+          
+          // Skip if this account is already in our list
+          if (accountNameSet.has(accountName)) {
+            continue;
+          }
+          
+          // Create an account object with the available information
+          const account: CreditReportAccount = {
+            accountName: accountName,
+            // Extract other information within a reasonable distance from the account name match
+            bureau: determineBureauFromContent(section)
+          };
+          
+          // Look for account number
+          const accountNumberMatch = section.slice(match.index).match(/(?:Account|#)\s*(?:Number|#)?:?\s*([*#xX\d-]{4,})/i);
+          if (accountNumberMatch && accountNumberMatch[1]) {
+            account.accountNumber = accountNumberMatch[1].trim();
+          }
+          
+          // Look for balance
+          const balanceMatch = section.slice(match.index).match(/(?:Balance|Current\sBalance|Amount):?\s*[$]?(\d[\d,.]+)/i);
+          if (balanceMatch && balanceMatch[1]) {
+            account.balance = balanceMatch[1].trim();
+          }
+          
+          // Look for payment status
+          const statusPatterns = [
+            /Status:?\s*([^\n\r]+)/i,
+            /Payment\s+Status:?\s*([^\n\r]+)/i,
+            /(?:Current|Pay)\s+Status:?\s*([^\n\r]+)/i
+          ];
+          
+          for (const statusPattern of statusPatterns) {
+            const statusMatch = section.slice(match.index).match(statusPattern);
+            if (statusMatch && statusMatch[1]) {
+              account.paymentStatus = statusMatch[1].trim();
+              break;
+            }
+          }
+          
+          // Look for date opened
+          const dateOpenedMatch = section.slice(match.index).match(/(?:Date|Account)\s+Opened:?\s*([^\n\r,]+)/i);
+          if (dateOpenedMatch && dateOpenedMatch[1]) {
+            account.dateOpened = dateOpenedMatch[1].trim();
+          }
+          
+          // Look for date reported
+          const dateReportedMatch = section.slice(match.index).match(/(?:Date|Last)\s+Reported:?\s*([^\n\r,]+)/i);
+          if (dateReportedMatch && dateReportedMatch[1]) {
+            account.dateReported = dateReportedMatch[1].trim();
+          }
+          
+          // Add to our account list and track the name to avoid duplicates
+          reportData.accounts.push(account);
+          accountNameSet.add(accountName);
+        }
+      }
+    }
+    
+    // Strategy 2: Look for known creditor names
+    for (const creditor of commonCreditors) {
+      if (section.includes(creditor)) {
+        // If this creditor is already in our list, skip it
+        if (accountNameSet.has(creditor)) {
+          continue;
+        }
+        
+        // Create an account object with the available information
+        const account: CreditReportAccount = {
+          accountName: creditor,
+          bureau: determineBureauFromContent(section)
+        };
+        
+        // Look for account number nearby
+        const surroundingText = section.slice(
+          Math.max(0, section.indexOf(creditor) - 100),
+          Math.min(section.length, section.indexOf(creditor) + 500)
+        );
+        
+        // Extract account details from the surrounding text
+        const accountNumberMatch = surroundingText.match(/(?:Account|#)\s*(?:Number|#)?:?\s*([*#xX\d-]{4,})/i);
+        if (accountNumberMatch && accountNumberMatch[1]) {
+          account.accountNumber = accountNumberMatch[1].trim();
+        }
+        
+        const balanceMatch = surroundingText.match(/(?:Balance|Current\sBalance|Amount):?\s*[$]?(\d[\d,.]+)/i);
+        if (balanceMatch && balanceMatch[1]) {
+          account.balance = balanceMatch[1].trim();
+        }
+        
+        const statusPatterns = [
+          /Status:?\s*([^\n\r]+)/i,
+          /Payment\s+Status:?\s*([^\n\r]+)/i,
+          /(?:Current|Pay)\s+Status:?\s*([^\n\r]+)/i
+        ];
+        
+        for (const statusPattern of statusPatterns) {
+          const statusMatch = surroundingText.match(statusPattern);
+          if (statusMatch && statusMatch[1]) {
+            account.paymentStatus = statusMatch[1].trim();
+            break;
+          }
+        }
+        
+        const dateOpenedMatch = surroundingText.match(/(?:Date|Account)\s+Opened:?\s*([^\n\r,]+)/i);
+        if (dateOpenedMatch && dateOpenedMatch[1]) {
+          account.dateOpened = dateOpenedMatch[1].trim();
+        }
+        
+        const dateReportedMatch = surroundingText.match(/(?:Date|Last)\s+Reported:?\s*([^\n\r,]+)/i);
+        if (dateReportedMatch && dateReportedMatch[1]) {
+          account.dateReported = dateReportedMatch[1].trim();
+        }
+        
+        // Add to our account list and track the name to avoid duplicates
+        reportData.accounts.push(account);
+        accountNameSet.add(creditor);
+      }
+    }
+  }
+
+  console.log(`Extracted ${reportData.accounts.length} accounts from the report`);
+  
+  // If we couldn't find any accounts using structured approaches, use a fallback
+  if (reportData.accounts.length === 0) {
+    // Fallback: Look for patterns that typically appear near account information
+    const fallbackPatterns = [
+      /([A-Z][A-Z\s&,'\.]+)(?:[^\n\r]{0,30}(?:CREDIT CARD|LOAN|MORTGAGE|AUTO|ACCOUNT))?/g
+    ];
+    
+    for (const pattern of fallbackPatterns) {
+      const matches = content.matchAll(pattern);
+      for (const match of matches) {
+        if (match[1] && match[1].trim() && match[1].length > 5) {
+          const accountName = match[1].trim();
+          
+          // Skip if this account is already in our list or likely not a creditor name
+          if (accountNameSet.has(accountName) || 
+              commonCreditors.every(c => !accountName.includes(c)) ||
+              /Personal|Information|Address|Name|Date|Report/i.test(accountName)) {
+            continue;
+          }
+          
+          // Create a basic account object
+          const account: CreditReportAccount = {
+            accountName: accountName,
+            bureau: determineBureauFromContent(content.slice(
+              Math.max(0, match.index - 100),
+              Math.min(content.length, match.index + 200)
+            ))
+          };
+          
+          reportData.accounts.push(account);
+          accountNameSet.add(accountName);
+        }
+      }
+    }
+  }
+  
+  // Add a Personal Information "account" for disputing personal info
+  if (!accountNameSet.has("Personal Information")) {
+    reportData.accounts.push({
+      accountName: "Personal Information",
+      accountType: "Personal"
+    });
+  }
+  
+  return reportData;
+}
+
+/**
+ * Attempt to determine which bureau a section of text is related to
+ */
+function determineBureauFromContent(text: string): string | undefined {
+  const lowerText = text.toLowerCase();
+  
+  if (lowerText.includes('experian')) {
+    return 'experian';
+  } else if (lowerText.includes('equifax')) {
+    return 'equifax';
+  } else if (lowerText.includes('transunion')) {
+    return 'transunion';
+  }
+  
+  return undefined;
+}
+
+/**
+ * Process credit report file
+ */
+export const processCreditReport = async (file: File): Promise<CreditReportData> => {
+  try {
+    // Extract text from the file
+    const text = await extractTextFromPDF(file);
+    
+    // Parse the text into structured data
+    const reportData = parseReportContent(text);
+    
+    // Return the structured data
+    return reportData;
+  } catch (error) {
+    console.error("Error processing credit report:", error);
+    // Return a minimal valid report structure on error
+    return {
+      bureaus: {
+        experian: false,
+        equifax: false,
+        transunion: false
+      },
+      accounts: [],
+      rawText: "Error processing report: " + String(error)
+    };
+  }
+};
