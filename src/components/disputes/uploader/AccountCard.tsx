@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Building, Calendar, Clock, AlertCircle } from 'lucide-react';
-import { CreditReportAccount } from '@/utils/creditReportParser';
+import { CreditReportAccount } from '@/utils/creditReport/types';
 
 interface AccountCardProps {
   account: CreditReportAccount;

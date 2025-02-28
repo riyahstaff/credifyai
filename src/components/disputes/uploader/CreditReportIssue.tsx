@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { AlertCircle, ChevronRight } from 'lucide-react';
-import { CreditReportAccount } from '@/utils/creditReportParser';
+import { CreditReportAccount } from '@/utils/creditReport/types';
 
 interface CreditReportIssueProps {
   title: string;

@@ -8,7 +8,7 @@ import {
   ChevronUp,
   CreditCard
 } from 'lucide-react';
-import { processCreditReport, CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
+import { processCreditReport, CreditReportData, CreditReportAccount } from '@/utils/creditReport';
 import FileUploader from './uploader/FileUploader';
 import FilePreview from './uploader/FilePreview';
 import AccountCard from './uploader/AccountCard';

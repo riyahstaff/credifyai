@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { FileText } from 'lucide-react';
-import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
+import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
 import CreditReportUploader from './CreditReportUploader';
 import LetterTemplateManager from './LetterTemplateManager';
 import DisputeForm from './generator/DisputeForm';
