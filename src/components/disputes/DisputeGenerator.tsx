@@ -17,7 +17,7 @@ import {
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
 import CreditReportUploader from './CreditReportUploader';
 import LetterTemplateManager from './LetterTemplateManager';
-import AgentAvatar from '../ai/AgentAvatar';  // Fixed import path
+import AgentAvatar from '../ai/AgentAvatar';
 
 interface LetterTemplate {
   id: string;
@@ -57,13 +57,59 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
     'Late payments disputed',
     'Other (specify below)'
   ];
+
+  // Load report data and selected account from session storage if available
+  useEffect(() => {
+    const storedReportData = sessionStorage.getItem('creditReportData');
+    const storedSelectedAccount = sessionStorage.getItem('selectedAccount');
+    
+    if (storedReportData) {
+      try {
+        const parsedData = JSON.parse(storedReportData);
+        setReportData(parsedData);
+        
+        // Show toast that data was loaded
+        toast({
+          title: "Credit report loaded",
+          description: `Loaded credit report with ${parsedData.accounts?.length || 0} accounts.`,
+        });
+      } catch (error) {
+        console.error("Error parsing stored credit report data:", error);
+      }
+    }
+    
+    if (storedSelectedAccount) {
+      try {
+        const parsedAccount = JSON.parse(storedSelectedAccount);
+        setSelectedAccount(parsedAccount);
+        
+        // Try to determine which bureaus report this account
+        if (parsedAccount.bureau) {
+          const lowerBureau = parsedAccount.bureau.toLowerCase();
+          if (lowerBureau.includes('experian')) {
+            setSelectedBureau('Experian');
+          } else if (lowerBureau.includes('equifax')) {
+            setSelectedBureau('Equifax');
+          } else if (lowerBureau.includes('transunion')) {
+            setSelectedBureau('TransUnion');
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing stored selected account:", error);
+      }
+    }
+  }, [toast]);
   
   const handleReportProcessed = (data: CreditReportData) => {
     setReportData(data);
+    // Store in session storage
+    sessionStorage.setItem('creditReportData', JSON.stringify(data));
   };
   
   const handleAccountSelected = (account: CreditReportAccount) => {
     setSelectedAccount(account);
+    // Store in session storage
+    sessionStorage.setItem('selectedAccount', JSON.stringify(account));
     
     // Try to determine which bureaus report this account
     if (account.bureau) {
@@ -444,3 +490,4 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
 };
 
 export default DisputeGenerator;
+

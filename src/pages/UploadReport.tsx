@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { 
@@ -14,12 +14,28 @@ import {
   ChevronRight, 
   FileText 
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { processCreditReport, CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
 
 const UploadReport = () => {
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const [dragActive, setDragActive] = useState(false);
   const [fileUploaded, setFileUploaded] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
+  const [fileName, setFileName] = useState('');
+  const [fileSize, setFileSize] = useState('');
+  const [reportData, setReportData] = useState<CreditReportData | null>(null);
+  const [issues, setIssues] = useState<Array<{
+    type: string;
+    title: string;
+    description: string;
+    impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
+    impactColor: string;
+    account?: CreditReportAccount;
+    laws: string[];
+  }>>([]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -31,31 +47,221 @@ const UploadReport = () => {
     setDragActive(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      // Handle the file upload
-      setFileUploaded(true);
+      const file = e.dataTransfer.files[0];
+      handleFile(file);
     }
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      // Handle the file upload
-      setFileUploaded(true);
+      const file = e.target.files[0];
+      handleFile(file);
     }
   };
 
-  const startAnalysis = () => {
+  const handleFile = (file: File) => {
+    // Check if file is PDF or CSV
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    if (fileExt !== 'pdf' && fileExt !== 'csv' && fileExt !== 'txt') {
+      toast({
+        title: "Invalid file format",
+        description: "Please upload a PDF, CSV, or TXT file from one of the credit bureaus.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update file info
+    setFileName(file.name);
+    setFileSize(formatFileSize(file.size));
+    setFileUploaded(true);
+  };
+
+  const formatFileSize = (size: number): string => {
+    if (size < 1024) return size + ' B';
+    else if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB';
+    else return (size / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const startAnalysis = async () => {
+    if (!fileUploaded) return;
+    
     setAnalyzing(true);
     
-    // Simulate analysis completion after 3 seconds
-    setTimeout(() => {
+    try {
+      // Get file input element
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        throw new Error("No file found");
+      }
+      
+      const file = fileInput.files[0];
+      
+      // Process the credit report
+      const data = await processCreditReport(file);
+      setReportData(data);
+      
+      // Identify potential issues
+      const detectedIssues = identifyIssues(data);
+      setIssues(detectedIssues);
+      
+      // Show success toast
+      toast({
+        title: "Analysis complete",
+        description: `Found ${detectedIssues.length} potential issues in your credit report.`,
+      });
+      
       setAnalyzing(false);
       setAnalyzed(true);
-    }, 3000);
+    } catch (error) {
+      console.error("Error analyzing report:", error);
+      toast({
+        title: "Analysis failed",
+        description: error instanceof Error ? error.message : "Failed to process your credit report.",
+        variant: "destructive",
+      });
+      setAnalyzing(false);
+    }
+  };
+
+  const identifyIssues = (data: CreditReportData): Array<{
+    type: string;
+    title: string;
+    description: string;
+    impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
+    impactColor: string;
+    account?: CreditReportAccount;
+    laws: string[];
+  }> => {
+    const issues: Array<{
+      type: string;
+      title: string;
+      description: string;
+      impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
+      impactColor: string;
+      account?: CreditReportAccount;
+      laws: string[];
+    }> = [];
+    
+    // Check for duplicate accounts (accounts with similar names)
+    const accountNames = data.accounts.map(acc => acc.accountName.toLowerCase());
+    const duplicateNameMap = new Map<string, CreditReportAccount[]>();
+    
+    data.accounts.forEach(account => {
+      const simplifiedName = account.accountName.toLowerCase().replace(/\s+/g, '');
+      if (!duplicateNameMap.has(simplifiedName)) {
+        duplicateNameMap.set(simplifiedName, []);
+      }
+      duplicateNameMap.get(simplifiedName)?.push(account);
+    });
+    
+    // Add duplicate accounts as issues
+    for (const [name, accounts] of duplicateNameMap.entries()) {
+      if (accounts.length > 1) {
+        issues.push({
+          type: 'duplicate',
+          title: `Duplicate Account (${accounts[0].accountName})`,
+          description: `The same ${accounts[0].accountName} account appears ${accounts.length} times on your report with different account numbers. This may be inaccurate and affecting your utilization ratio.`,
+          impact: 'High Impact',
+          impactColor: 'orange',
+          account: accounts[0],
+          laws: ['FCRA § 611 (Procedure in case of disputed accuracy)', 'FCRA § 623 (Responsibilities of furnishers of information)']
+        });
+      }
+    }
+    
+    // Check for accounts with late payments or negative remarks
+    data.accounts.forEach(account => {
+      // Check payment status
+      if (account.paymentStatus && (
+        account.paymentStatus.includes('Late') || 
+        account.paymentStatus.includes('Delinquent') ||
+        account.paymentStatus.includes('Collection')
+      )) {
+        issues.push({
+          type: 'payment',
+          title: `Late Payment Status (${account.accountName})`,
+          description: `Your ${account.accountName} account shows a "${account.paymentStatus}" status, which could significantly impact your credit score.`,
+          impact: 'Critical Impact',
+          impactColor: 'red',
+          account: account,
+          laws: ['FCRA § 623 (Responsibilities of furnishers of information)']
+        });
+      }
+      
+      // Check for negative remarks
+      if (account.remarks && account.remarks.length > 0) {
+        issues.push({
+          type: 'remarks',
+          title: `Negative Remarks (${account.accountName})`,
+          description: `Your ${account.accountName} account has the following remarks: ${account.remarks.join(', ')}. These could be disputed if inaccurate.`,
+          impact: 'Critical Impact',
+          impactColor: 'red',
+          account: account,
+          laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
+        });
+      }
+    });
+    
+    // Check for personal information issues
+    if (data.personalInfo && data.personalInfo.addresses && data.personalInfo.addresses.length > 1) {
+      issues.push({
+        type: 'address',
+        title: 'Multiple Addresses Listed',
+        description: 'Your report shows multiple addresses. If any of these are incorrect or outdated, they should be disputed.',
+        impact: 'Medium Impact',
+        impactColor: 'yellow',
+        laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
+      });
+    }
+    
+    // If no issues found, add generic issue for educational purposes
+    if (issues.length === 0 && data.accounts.length > 0) {
+      const randomAccount = data.accounts[Math.floor(Math.random() * data.accounts.length)];
+      issues.push({
+        type: 'general',
+        title: `Review Account Information (${randomAccount.accountName})`,
+        description: `No obvious errors were detected, but you should carefully review your ${randomAccount.accountName} account details for accuracy.`,
+        impact: 'Medium Impact',
+        impactColor: 'yellow',
+        account: randomAccount,
+        laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
+      });
+    }
+    
+    return issues;
+  };
+
+  const handleGenerateDispute = (account?: CreditReportAccount) => {
+    // Store the report data in session storage to use in the dispute letters page
+    if (reportData) {
+      sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
+      
+      // If account is provided, also store that
+      if (account) {
+        sessionStorage.setItem('selectedAccount', JSON.stringify(account));
+      }
+      
+      navigate('/dispute-letters/new');
+    }
+  };
+
+  const getImpactColorClass = (color: string): string => {
+    switch (color.toLowerCase()) {
+      case 'red':
+        return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+      case 'orange':
+        return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300';
+      case 'yellow':
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
+      default:
+        return 'bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300';
+    }
   };
 
   return (
@@ -106,7 +312,7 @@ const UploadReport = () => {
                       <input
                         type="file"
                         className="hidden"
-                        accept=".pdf,.csv"
+                        accept=".pdf,.csv,.txt"
                         onChange={handleFileInput}
                       />
                     </label>
@@ -199,10 +405,12 @@ const UploadReport = () => {
                   <div className="bg-credify-teal/5 border border-credify-teal/20 rounded-lg p-4 mb-8">
                     <div className="flex items-center gap-2 mb-2">
                       <AlertCircle className="text-credify-teal" size={20} />
-                      <p className="font-medium text-credify-navy dark:text-white">AI Found 3 Potential Errors</p>
+                      <p className="font-medium text-credify-navy dark:text-white">AI Found {issues.length} Potential {issues.length === 1 ? 'Issue' : 'Issues'}</p>
                     </div>
                     <p className="text-credify-navy-light dark:text-white/70 text-sm">
-                      Our AI has identified 3 potential errors in your credit report that could negatively impact your score. Review the findings below and generate dispute letters.
+                      {issues.length > 0 
+                        ? `Our AI has identified ${issues.length} potential ${issues.length === 1 ? 'issue' : 'issues'} in your credit report that could ${issues.length === 1 ? 'be negatively impacting' : 'negatively impact'} your score. Review the findings below and generate dispute letters.`
+                        : 'Our AI did not detect any obvious issues in your credit report. However, you may still want to review it carefully for any inaccuracies.'}
                     </p>
                   </div>
                   
@@ -212,116 +420,62 @@ const UploadReport = () => {
                       Identified Issues
                     </h3>
                     
-                    {/* Issue 1 */}
-                    <div className="bg-white dark:bg-credify-navy/40 border border-gray-100 dark:border-gray-700/30 rounded-lg p-5">
-                      <div className="flex items-start justify-between">
-                        <div className="flex gap-3">
-                          <div className="mt-1">
-                            <AlertCircle className="text-orange-500" size={20} />
+                    {issues.length > 0 ? (
+                      issues.map((issue, index) => (
+                        <div key={index} className="bg-white dark:bg-credify-navy/40 border border-gray-100 dark:border-gray-700/30 rounded-lg p-5">
+                          <div className="flex items-start justify-between">
+                            <div className="flex gap-3">
+                              <div className="mt-1">
+                                <AlertCircle className={`${
+                                  issue.impactColor === 'red' ? 'text-red-500' : 
+                                  issue.impactColor === 'orange' ? 'text-orange-500' : 
+                                  'text-yellow-500'
+                                }`} size={20} />
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-credify-navy dark:text-white">{issue.title}</h4>
+                                <p className="text-sm text-credify-navy-light dark:text-white/70 mt-1">
+                                  {issue.description}
+                                </p>
+                              </div>
+                            </div>
+                            <div className={`flex items-center ${getImpactColorClass(issue.impactColor)} px-3 py-1 rounded-full text-xs font-medium`}>
+                              {issue.impact}
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-medium text-credify-navy dark:text-white">Duplicate Account (Bank of America)</h4>
-                            <p className="text-sm text-credify-navy-light dark:text-white/70 mt-1">
-                              The same Bank of America credit card appears twice on your report with different account numbers. This is inaccurate and may be negatively affecting your utilization ratio.
-                            </p>
+                          
+                          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                            <h5 className="text-sm font-medium text-credify-navy dark:text-white mb-2">Applicable Laws:</h5>
+                            <div className="flex flex-wrap gap-2">
+                              {issue.laws.map((law, idx) => (
+                                <div key={idx} className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded-full shadow-sm text-credify-navy-light dark:text-white/70">
+                                  {law}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-3 py-1 rounded-full text-xs font-medium">
-                          High Impact
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                        <h5 className="text-sm font-medium text-credify-navy dark:text-white mb-2">Applicable Laws:</h5>
-                        <div className="flex flex-wrap gap-2">
-                          <div className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded-full shadow-sm text-credify-navy-light dark:text-white/70">
-                            FCRA § 611 (Procedure in case of disputed accuracy)
-                          </div>
-                          <div className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded-full shadow-sm text-credify-navy-light dark:text-white/70">
-                            FCRA § 623 (Responsibilities of furnishers of information)
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-end mt-4">
-                        <button className="text-credify-teal hover:text-credify-teal-dark dark:hover:text-credify-teal-light font-medium text-sm flex items-center gap-1">
-                          Generate Dispute Letter
-                          <ChevronRight size={16} />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Issue 2 */}
-                    <div className="bg-white dark:bg-credify-navy/40 border border-gray-100 dark:border-gray-700/30 rounded-lg p-5">
-                      <div className="flex items-start justify-between">
-                        <div className="flex gap-3">
-                          <div className="mt-1">
-                            <AlertCircle className="text-red-500" size={20} />
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-credify-navy dark:text-white">Incorrect Balance (Chase Card)</h4>
-                            <p className="text-sm text-credify-navy-light dark:text-white/70 mt-1">
-                              Your Chase credit card shows a balance of $8,450, but your actual balance is $4,225. This error is significantly increasing your credit utilization ratio.
-                            </p>
+                          
+                          <div className="flex justify-end mt-4">
+                            <button 
+                              onClick={() => handleGenerateDispute(issue.account)}
+                              className="text-credify-teal hover:text-credify-teal-dark dark:hover:text-credify-teal-light font-medium text-sm flex items-center gap-1"
+                            >
+                              Generate Dispute Letter
+                              <ChevronRight size={16} />
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-3 py-1 rounded-full text-xs font-medium">
-                          Critical Impact
-                        </div>
+                      ))
+                    ) : (
+                      <div className="bg-white dark:bg-credify-navy/40 border border-gray-100 dark:border-gray-700/30 rounded-lg p-5 text-center">
+                        <p className="text-credify-navy-light dark:text-white/70">
+                          No issues were detected in your credit report. This could mean your report is accurate or our system couldn't identify any obvious problems.
+                        </p>
+                        <p className="text-credify-navy-light dark:text-white/70 mt-2">
+                          You may still want to review your report manually for any inaccuracies.
+                        </p>
                       </div>
-                      
-                      <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                        <h5 className="text-sm font-medium text-credify-navy dark:text-white mb-2">Applicable Laws:</h5>
-                        <div className="flex flex-wrap gap-2">
-                          <div className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded-full shadow-sm text-credify-navy-light dark:text-white/70">
-                            FCRA § 623 (Responsibilities of furnishers of information)
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-end mt-4">
-                        <button className="text-credify-teal hover:text-credify-teal-dark dark:hover:text-credify-teal-light font-medium text-sm flex items-center gap-1">
-                          Generate Dispute Letter
-                          <ChevronRight size={16} />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Issue 3 */}
-                    <div className="bg-white dark:bg-credify-navy/40 border border-gray-100 dark:border-gray-700/30 rounded-lg p-5">
-                      <div className="flex items-start justify-between">
-                        <div className="flex gap-3">
-                          <div className="mt-1">
-                            <AlertCircle className="text-yellow-500" size={20} />
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-credify-navy dark:text-white">Outdated Address Information</h4>
-                            <p className="text-sm text-credify-navy-light dark:text-white/70 mt-1">
-                              Your report shows an old address that you haven't lived at for over 3 years. This outdated information could potentially affect verification processes.
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-3 py-1 rounded-full text-xs font-medium">
-                          Medium Impact
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                        <h5 className="text-sm font-medium text-credify-navy dark:text-white mb-2">Applicable Laws:</h5>
-                        <div className="flex flex-wrap gap-2">
-                          <div className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded-full shadow-sm text-credify-navy-light dark:text-white/70">
-                            FCRA § 605 (Requirements relating to information contained in consumer reports)
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-end mt-4">
-                        <button className="text-credify-teal hover:text-credify-teal-dark dark:hover:text-credify-teal-light font-medium text-sm flex items-center gap-1">
-                          Generate Dispute Letter
-                          <ChevronRight size={16} />
-                        </button>
-                      </div>
-                    </div>
+                    )}
                   </div>
                   
                   <div className="flex justify-center gap-4">
@@ -329,6 +483,8 @@ const UploadReport = () => {
                       onClick={() => {
                         setFileUploaded(false);
                         setAnalyzed(false);
+                        setReportData(null);
+                        setIssues([]);
                       }}
                       className="btn-outline flex items-center gap-1"
                     >
@@ -339,6 +495,11 @@ const UploadReport = () => {
                     <Link
                       to="/dispute-letters/new"
                       className="btn-primary flex items-center gap-1"
+                      onClick={() => {
+                        if (reportData) {
+                          sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
+                        }
+                      }}
                     >
                       <FileCheck size={18} />
                       <span>Generate All Letters</span>
@@ -366,8 +527,8 @@ const UploadReport = () => {
                         <FileText size={20} className="text-credify-navy-light dark:text-white/70" />
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-medium text-credify-navy dark:text-white">credit_report_may2023.pdf</p>
-                        <p className="text-xs text-credify-navy-light dark:text-white/70">2.4 MB</p>
+                        <p className="text-sm font-medium text-credify-navy dark:text-white">{fileName}</p>
+                        <p className="text-xs text-credify-navy-light dark:text-white/70">{fileSize}</p>
                       </div>
                       <button
                         onClick={() => setFileUploaded(false)}
@@ -476,3 +637,4 @@ const UploadReport = () => {
 };
 
 export default UploadReport;
+
