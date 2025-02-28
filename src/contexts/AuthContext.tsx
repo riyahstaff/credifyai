@@ -58,40 +58,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Check active sessions and sets the user
-    setIsLoading(true);
-    
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    const initAuth = async () => {
+      setIsLoading(true);
       
-      if (session?.user) {
-        const profile = await fetchUserProfile(session.user.id);
-        setProfile(profile);
-      }
-      
-      setIsLoading(false);
-    });
-
-    // Listen for changes to auth state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           const profile = await fetchUserProfile(session.user.id);
           setProfile(profile);
-        } else {
-          setProfile(null);
         }
-        
+      } catch (error) {
+        console.error('Error getting session:', error);
+      } finally {
         setIsLoading(false);
       }
-    );
-
-    return () => {
-      subscription.unsubscribe();
     };
+
+    initAuth();
+
+    // Listen for changes to auth state
+    try {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (_event, session) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            const profile = await fetchUserProfile(session.user.id);
+            setProfile(profile);
+          } else {
+            setProfile(null);
+          }
+          
+          setIsLoading(false);
+        }
+      );
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    } catch (error) {
+      console.error('Error setting up auth subscription:', error);
+      setIsLoading(false);
+      return () => {};
+    }
   }, []);
 
   // Sign up a new user and create their profile
