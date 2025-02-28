@@ -191,7 +191,17 @@ export const parseReportContent = (content: string): CreditReportData => {
   const hasNameMatch = content.match(/Name:\s*(.*)/i);
   const hasAddressMatch = content.match(/Address:\s*(.*)/i);
   
-  const personalInfo = {
+  // Define personal info with proper type annotations
+  const personalInfo: {
+    name?: string;
+    address?: string;
+    bureauSpecificInfo?: {
+      experian?: PersonalBureauData;
+      equifax?: PersonalBureauData;
+      transunion?: PersonalBureauData;
+    };
+    discrepancies?: PersonalInfoDiscrepancy[];
+  } = {
     name: hasNameMatch ? hasNameMatch[1] : undefined,
     address: hasAddressMatch ? hasAddressMatch[1] : undefined,
     // Simulated cross-bureau personal info discrepancies
@@ -218,7 +228,7 @@ export const parseReportContent = (content: string): CreditReportData => {
           "equifax": "John Smith",
           "transunion": "John Smith"
         },
-        severity: 'low', // Fixed: Using correct type 'low' instead of string
+        severity: 'low', // Using proper type literal
         suggestedDispute: "Name format inconsistency between bureaus"
       },
       {
@@ -229,7 +239,7 @@ export const parseReportContent = (content: string): CreditReportData => {
           "equifax": "123 Main Street, Anytown, CA 90210",
           "transunion": "123 Main St, Anytown, CA 90210"
         },
-        severity: 'low', // Fixed: Using correct type 'low' instead of string
+        severity: 'low', // Using proper type literal
         suggestedDispute: "Address format inconsistency between bureaus"
       }
     ]
@@ -428,7 +438,7 @@ export const parseReportContent = (content: string): CreditReportData => {
           bureau: bureau,
           reason: `Incorrect ${discrepancy.field}`,
           description: discrepancy.suggestedDispute || `The ${discrepancy.field} reported by ${bureau} is inconsistent with other bureaus.`,
-          severity: discrepancy.severity
+          severity: discrepancy.severity,
         });
       });
     });
