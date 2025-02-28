@@ -1,4 +1,4 @@
-<lov-code>
+
 /**
  * Credit Report Parser Utility
  * This module parses uploaded credit reports to extract relevant information
@@ -325,6 +325,109 @@ export const loadSampleReports = async (): Promise<CreditReportData[]> => {
   } catch (error) {
     console.error('Error loading sample reports:', error);
     return [];
+  }
+};
+
+/**
+ * Retrieve successful dispute phrases for various dispute types
+ * These are phrases that have been effective in getting disputes approved
+ */
+export const getSuccessfulDisputePhrases = async (): Promise<Record<string, string[]>> => {
+  // Return cached phrases if available
+  if (Object.keys(successfulDisputePhrasesCache).length > 0) {
+    return successfulDisputePhrasesCache;
+  }
+  
+  try {
+    // Load sample dispute letters if not already loaded
+    const sampleLetters = await loadSampleDisputeLetters();
+    
+    // Extract successful dispute phrases by category
+    const phrases: Record<string, string[]> = {
+      balanceDisputes: [],
+      latePaymentDisputes: [],
+      accountOwnershipDisputes: [],
+      closedAccountDisputes: [],
+      personalInfoDisputes: [],
+      inquiryDisputes: [],
+      general: []
+    };
+    
+    // Process each sample letter to extract phrases
+    for (const letter of sampleLetters) {
+      if (letter.effectiveLanguage && letter.effectiveLanguage.length > 0) {
+        // Categorize by dispute type
+        switch (letter.disputeType) {
+          case 'balance':
+            phrases.balanceDisputes.push(...letter.effectiveLanguage);
+            break;
+          case 'late_payment':
+            phrases.latePaymentDisputes.push(...letter.effectiveLanguage);
+            break;
+          case 'not_mine':
+            phrases.accountOwnershipDisputes.push(...letter.effectiveLanguage);
+            break;
+          case 'account_status':
+            phrases.closedAccountDisputes.push(...letter.effectiveLanguage);
+            break;
+          case 'personal_information':
+            phrases.personalInfoDisputes.push(...letter.effectiveLanguage);
+            break;
+          case 'dates':
+          case 'general':
+          default:
+            phrases.general.push(...letter.effectiveLanguage);
+            break;
+        }
+      }
+    }
+    
+    // If we don't have enough sample phrases, add some default ones
+    if (phrases.balanceDisputes.length === 0) {
+      phrases.balanceDisputes = [
+        "The balance reported is incorrect and does not reflect my actual financial obligation. My records indicate a different balance.",
+        "This account shows an incorrect balance that does not match my payment history or account statements."
+      ];
+    }
+    
+    if (phrases.latePaymentDisputes.length === 0) {
+      phrases.latePaymentDisputes = [
+        "I have never been late on this account and have documentation to prove all payments were made on time.",
+        "The reported late payment is incorrect. I made all payments within the required timeframe as evidenced by my bank statements."
+      ];
+    }
+    
+    if (phrases.accountOwnershipDisputes.length === 0) {
+      phrases.accountOwnershipDisputes = [
+        "This account does not belong to me and I have never authorized its opening. I request a full investigation into how this account was opened.",
+        "I have no knowledge of this account and it appears to be the result of identity theft or a mixed credit file."
+      ];
+    }
+    
+    if (phrases.closedAccountDisputes.length === 0) {
+      phrases.closedAccountDisputes = [
+        "This account was closed on [DATE] but is being reported as open. Please update the status to reflect the account is closed.",
+        "I closed this account and it should not be reporting as open. This misrepresentation affects my credit utilization ratio."
+      ];
+    }
+    
+    // Cache and return the phrases
+    successfulDisputePhrasesCache = phrases;
+    console.log("Successfully loaded dispute phrases:", Object.keys(phrases).map(k => `${k}: ${phrases[k as keyof typeof phrases].length} phrases`).join(', '));
+    return phrases;
+  } catch (error) {
+    console.error("Error loading successful dispute phrases:", error);
+    
+    // Return default phrases on error
+    return {
+      balanceDisputes: ["The balance shown is incorrect and does not reflect my actual financial obligation."],
+      latePaymentDisputes: ["I have never been late on this account and have documentation to prove all payments were made on time."],
+      accountOwnershipDisputes: ["This account does not belong to me and I have never authorized its opening."],
+      closedAccountDisputes: ["This account was closed but is being incorrectly reported as open."],
+      personalInfoDisputes: ["My personal information is reported incorrectly."],
+      inquiryDisputes: ["I never authorized this inquiry on my credit report."],
+      general: ["The information reported is inaccurate and violates the Fair Credit Reporting Act."]
+    };
   }
 };
 
@@ -825,3 +928,976 @@ export const parseReportContent = (content: string): CreditReportData => {
       // Line starts with a known creditor name
       knownCreditors.some(creditor => line.toUpperCase().includes(creditor)) ||
       // Line contains account number pattern
+      /ACCOUNT\s*(#|NUMBER|NO|ID):\s*\S+/i.test(line) ||
+      // Line matches date opened pattern
+      /(?:OPENED|OPEN\s*DATE):\s*\d{1,2}\/\d{1,2}\/\d{2,4}/i.test(line) ||
+      // Line has account/tradeline header
+      /^(?:ACCOUNT|TRADELINE|TRADE\s*LINE)\s*\d+\s*$/i.test(line) ||
+      // Line has ALL CAPS text that might be an account name
+      /^[A-Z\s\d#&\-\.]{10,}$/.test(line);
+    
+    if (isAccountStart && (lastLineWasEmpty || !inAccountSection)) {
+      // If we already have account lines, save them first
+      if (inAccountSection && currentAccountLines.length > 0) {
+        accountTextSections.push(currentAccountLines.join('\n'));
+        currentAccountLines = [];
+      }
+      
+      inAccountSection = true;
+      currentAccountLines = [line];
+      lastLineWasEmpty = false;
+    } else if (inAccountSection) {
+      // Add this line to the current account
+      currentAccountLines.push(line);
+      lastLineWasEmpty = false;
+    } else {
+      // Not in an account section, but this line doesn't start a new one
+      // If it has keywords that suggest it's account-related, start a new section
+      const hasAccountKeywords = 
+        /balance|payment|status|open|closed|credit|loan|account|date|repor/i.test(line);
+      
+      if (hasAccountKeywords) {
+        inAccountSection = true;
+        currentAccountLines = [line];
+      }
+      
+      lastLineWasEmpty = false;
+    }
+  }
+  
+  // Add the last account if we have one
+  if (currentAccountLines.length > 0) {
+    accountTextSections.push(currentAccountLines.join('\n'));
+  }
+  
+  console.log(`Identified ${accountTextSections.length} potential account sections`);
+  
+  // Process each account section to extract structured data
+  const accounts: CreditReportAccount[] = [];
+  
+  for (let i = 0; i < accountTextSections.length; i++) {
+    const accountText = accountTextSections[i];
+    console.log(`Processing account section ${i + 1}`);
+    
+    // Extract account name - look at the first line or lines with all caps
+    let accountName = "";
+    const firstLine = accountText.split('\n')[0].trim();
+    
+    if (/^[A-Z\s&\.\-,#]{5,}$/.test(firstLine)) {
+      accountName = firstLine;
+    } else {
+      // Look for creditor names in the text
+      for (const creditor of knownCreditors) {
+        if (accountText.toUpperCase().includes(creditor)) {
+          // Look for the line containing the creditor name
+          const lines = accountText.split('\n');
+          for (const line of lines) {
+            if (line.toUpperCase().includes(creditor)) {
+              // Extract a reasonable account name
+              const beforeCreditor = line.substring(0, line.toUpperCase().indexOf(creditor)).trim();
+              const afterCreditor = line.substring(line.toUpperCase().indexOf(creditor) + creditor.length).trim();
+              
+              if (beforeCreditor.length < afterCreditor.length) {
+                accountName = creditor + (afterCreditor.length > 20 ? ' ' + afterCreditor.substring(0, 20) : ' ' + afterCreditor);
+              } else {
+                accountName = (beforeCreditor.length > 20 ? beforeCreditor.substring(0, 20) + ' ' : beforeCreditor + ' ') + creditor;
+              }
+              
+              break;
+            }
+          }
+          if (accountName) break;
+        }
+      }
+    }
+    
+    // If still no account name, use a generic one
+    if (!accountName) {
+      accountName = `Account ${i + 1}`;
+    }
+    
+    // Extract account details
+    const accountNumberPatterns = [
+      /(?:ACCOUNT|ACCT)[\s#]*(?:NUMBER|NO|ID)?:?\s*([*x\d\-]+\d{1,4})/i,
+      /(?:ACCOUNT|ACCT)[\s#]*(?:NUMBER|NO|ID)?:?\s*(\*+\d{1,4})/i,
+      /(?:NUMBER|NO|ID):?\s*([*x\d\-]+\d{1,4})/i
+    ];
+    
+    const accountTypePatterns = [
+      /(?:ACCOUNT|TYPE):?\s*([^\n\r,\.;]+)/i,
+      /(?:LOAN|CREDIT)\s+TYPE:?\s*([^\n\r,\.;]+)/i
+    ];
+    
+    const balancePatterns = [
+      /(?:CURRENT\s+)?BALANCE:?\s*(\$?[\d,]+\.?\d*)/i,
+      /(?:BALANCE|AMOUNT):?\s*(\$?[\d,]+\.?\d*)/i,
+      /(?:CURRENT\s+)?BAL:?\s*(\$?[\d,]+\.?\d*)/i
+    ];
+    
+    const statusPatterns = [
+      /STATUS:?\s*([^\n\r,\.;]+)/i,
+      /PAYMENT\s+STATUS:?\s*([^\n\r,\.;]+)/i,
+      /(?:CURRENT\s+)?STATUS:?\s*([^\n\r,\.;]+)/i
+    ];
+    
+    const dateOpenedPatterns = [
+      /(?:DATE\s+)?OPENED:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\/\d{2,4}|\d{1,2}\-\d{1,2}\-\d{2,4})/i,
+      /(?:OPEN\s+)?DATE:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\/\d{2,4}|\d{1,2}\-\d{1,2}\-\d{2,4})/i,
+      /OPENED:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\/\d{2,4}|\d{1,2}\-\d{1,2}\-\d{2,4})/i
+    ];
+    
+    const dateReportedPatterns = [
+      /(?:LAST\s+)?REPORTED:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\/\d{2,4}|\d{1,2}\-\d{1,2}\-\d{2,4})/i,
+      /REPORT\s+DATE:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\/\d{2,4}|\d{1,2}\-\d{1,2}\-\d{2,4})/i,
+      /LAST\s+UPDATE:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\/\d{2,4}|\d{1,2}\-\d{1,2}\-\d{2,4})/i
+    ];
+    
+    // Apply patterns and extract data
+    let accountNumber: string | undefined;
+    for (const pattern of accountNumberPatterns) {
+      const match = accountText.match(pattern);
+      if (match && match[1]) {
+        accountNumber = match[1].trim();
+        break;
+      }
+    }
+    
+    let accountType: string | undefined;
+    for (const pattern of accountTypePatterns) {
+      const match = accountText.match(pattern);
+      if (match && match[1]) {
+        accountType = match[1].trim();
+        break;
+      }
+    }
+    
+    let currentBalance: string | undefined;
+    for (const pattern of balancePatterns) {
+      const match = accountText.match(pattern);
+      if (match && match[1]) {
+        currentBalance = match[1].trim();
+        break;
+      }
+    }
+    
+    let paymentStatus: string | undefined;
+    for (const pattern of statusPatterns) {
+      const match = accountText.match(pattern);
+      if (match && match[1]) {
+        paymentStatus = match[1].trim();
+        break;
+      }
+    }
+    
+    let dateOpened: string | undefined;
+    for (const pattern of dateOpenedPatterns) {
+      const match = accountText.match(pattern);
+      if (match && match[1]) {
+        dateOpened = match[1].trim();
+        break;
+      }
+    }
+    
+    let dateReported: string | undefined;
+    for (const pattern of dateReportedPatterns) {
+      const match = accountText.match(pattern);
+      if (match && match[1]) {
+        dateReported = match[1].trim();
+        break;
+      }
+    }
+    
+    // Extract bureau reporting information
+    let bureauReporting = "Unknown";
+    if (accountText.match(/(?:REPORTED|REPORTING)\s+(?:TO|BY):?\s*([^\n\r]+)/i)) {
+      bureauReporting = accountText.match(/(?:REPORTED|REPORTING)\s+(?:TO|BY):?\s*([^\n\r]+)/i)![1].trim();
+    } else {
+      // Determine from the context
+      const bureauMentions = [];
+      if (reportData.bureaus.experian && accountText.toLowerCase().includes('experian')) {
+        bureauMentions.push('Experian');
+      }
+      if (reportData.bureaus.equifax && accountText.toLowerCase().includes('equifax')) {
+        bureauMentions.push('Equifax');
+      }
+      if (reportData.bureaus.transunion && accountText.toLowerCase().includes('transunion')) {
+        bureauMentions.push('TransUnion');
+      }
+      
+      if (bureauMentions.length > 0) {
+        bureauReporting = bureauMentions.join(', ');
+      } else if (reportData.bureaus.experian && reportData.bureaus.equifax && reportData.bureaus.transunion) {
+        // If all bureaus are in the report but not specifically mentioned for this account,
+        // assume it's reported to all
+        bureauReporting = "Experian, Equifax, TransUnion";
+      }
+    }
+    
+    // Look for remarks/comments
+    const remarks: string[] = [];
+    const remarkPatterns = [
+      /(?:REMARKS|COMMENTS|NOTES?):?\s*([^\n\r]+)/ig,
+      /(?:LATE|DELINQUENT|PAST\s+DUE)(?:\s+PAYMENT|\s+\d{1,2}\/\d{1,2}\/\d{2,4}|\s+\w+\s+\d{4})/ig,
+      /(?:CHARGE[\s\-]OFF|COLLECTION|BANKRUPTCY|SETTLED|CHARGED)/ig
+    ];
+    
+    for (const pattern of remarkPatterns) {
+      const matches = [...accountText.matchAll(pattern)];
+      for (const match of matches) {
+        if (match[1]) {
+          // Extract the remark text
+          const remarkText = match[1].trim();
+          if (remarkText && !remarks.includes(remarkText)) {
+            remarks.push(remarkText);
+          }
+        } else if (match[0]) {
+          // Extract the whole match if no capture group
+          const remarkText = match[0].trim();
+          if (remarkText && !remarks.includes(remarkText)) {
+            remarks.push(remarkText);
+          }
+        }
+      }
+    }
+    
+    // Check for late payment mentions directly in the text
+    if (accountText.toLowerCase().includes('late') || 
+        accountText.toLowerCase().includes('delinquent') || 
+        accountText.toLowerCase().includes('past due')) {
+      
+      // Find dates associated with late payments
+      const lateDatePattern = /(?:LATE|DELINQUENT|PAST\s+DUE).*?(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\/\d{2,4}|\w+\s+\d{4})/i;
+      const lateMatch = accountText.match(lateDatePattern);
+      
+      if (lateMatch && lateMatch[1] && !remarks.some(r => r.includes(lateMatch[1]))) {
+        remarks.push(`Late payment reported ${lateMatch[1]}`);
+      } else if (!remarks.some(r => r.toLowerCase().includes('late') || r.toLowerCase().includes('delinquent'))) {
+        // If no specific date found but late payments mentioned, add a generic remark
+        remarks.push('Late payment history reported');
+      }
+    }
+    
+    // Create account object with extracted data
+    const account: CreditReportAccount = {
+      accountName: accountName,
+      accountNumber: accountNumber,
+      accountType: accountType,
+      currentBalance: currentBalance,
+      paymentStatus: paymentStatus,
+      dateOpened: dateOpened,
+      dateReported: dateReported,
+      bureau: bureauReporting,
+      remarks: remarks.length > 0 ? remarks : undefined
+    };
+    
+    // If we found at least some data, add the account
+    if (accountName && (
+      accountNumber || accountType || currentBalance || 
+      paymentStatus || dateOpened || dateReported || 
+      bureauReporting !== "Unknown" || remarks.length > 0
+    )) {
+      console.log(`Extracted account: ${accountName}`);
+      accounts.push(account);
+    }
+  }
+  
+  // If we didn't find any accounts, look for them using direct keyword matching
+  if (accounts.length === 0) {
+    for (const creditor of knownCreditors) {
+      // Look for sections with this creditor mentioned
+      const creditorPattern = new RegExp(`(^|\\s)${creditor}[\\s\\S]{0,500}`, 'i');
+      const match = content.match(creditorPattern);
+      
+      if (match && match[0]) {
+        const accountText = match[0];
+        
+        // Extract basic information using the same patterns as above
+        let accountNumber: string | undefined;
+        const accountNumberMatch = accountText.match(/(?:ACCOUNT|ACCT)[\s#]*(?:NUMBER|NO|ID)?:?\s*([*x\d\-]+\d{1,4})/i);
+        if (accountNumberMatch) accountNumber = accountNumberMatch[1];
+        
+        let currentBalance: string | undefined;
+        const balanceMatch = accountText.match(/(?:CURRENT\s+)?BALANCE:?\s*(\$?[\d,]+\.?\d*)/i);
+        if (balanceMatch) currentBalance = balanceMatch[1];
+        
+        let paymentStatus: string | undefined;
+        const statusMatch = accountText.match(/STATUS:?\s*([^\n\r,\.;]+)/i);
+        if (statusMatch) paymentStatus = statusMatch[1];
+        
+        accounts.push({
+          accountName: creditor,
+          accountNumber: accountNumber,
+          currentBalance: currentBalance,
+          paymentStatus: paymentStatus,
+          bureau: "Unknown"
+        });
+        
+        console.log(`Added account based on creditor keyword: ${creditor}`);
+      }
+    }
+  }
+  
+  // Add the accounts to the report data
+  reportData.accounts = accounts;
+  
+  // Extract inquiries
+  const inquiriesSectionPatterns = [
+    /(?:INQUIRIES|CREDIT\s+INQUIRIES)[:\s]*(?:\n|.)+?(?=ACCOUNTS|TRADELINES|PUBLIC\s+RECORDS|PERSONAL\s+INFORMATION|$)/i
+  ];
+  
+  let inquiriesSection = "";
+  for (const pattern of inquiriesSectionPatterns) {
+    const match = content.match(pattern);
+    if (match && match[0]) {
+      inquiriesSection = match[0];
+      break;
+    }
+  }
+  
+  const inquiries: Array<{inquiryDate: string; creditor: string; bureau: string}> = [];
+  
+  if (inquiriesSection) {
+    console.log("Inquiries section found");
+    
+    // Look for patterns like "MM/DD/YYYY CREDITOR NAME"
+    const inquiryPattern = /(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\/\d{2,4}|\d{1,2}\-\d{1,2}\-\d{2,4})[\s\-]+([A-Z][A-Za-z\s&,\.\-]+)/g;
+    const inquiryMatches = [...inquiriesSection.matchAll(inquiryPattern)];
+    
+    for (const match of inquiryMatches) {
+      if (match[1] && match[2]) {
+        let bureau = "Unknown";
+        
+        // Try to determine which bureau reported this inquiry
+        if (inquiriesSection.toLowerCase().includes('experian') && 
+            !inquiriesSection.toLowerCase().includes('equifax') && 
+            !inquiriesSection.toLowerCase().includes('transunion')) {
+          bureau = "Experian";
+        } else if (!inquiriesSection.toLowerCase().includes('experian') && 
+                   inquiriesSection.toLowerCase().includes('equifax') && 
+                   !inquiriesSection.toLowerCase().includes('transunion')) {
+          bureau = "Equifax";
+        } else if (!inquiriesSection.toLowerCase().includes('experian') && 
+                   !inquiriesSection.toLowerCase().includes('equifax') && 
+                   inquiriesSection.toLowerCase().includes('transunion')) {
+          bureau = "TransUnion";
+        } else if (reportData.bureaus.experian && reportData.bureaus.equifax && reportData.bureaus.transunion) {
+          bureau = "All bureaus";
+        }
+        
+        inquiries.push({
+          inquiryDate: match[1].trim(),
+          creditor: match[2].trim(),
+          bureau: bureau
+        });
+      }
+    }
+    
+    // If that didn't work, try a simpler approach
+    if (inquiries.length === 0) {
+      // Look for known creditors in the inquiries section
+      for (const creditor of knownCreditors) {
+        if (inquiriesSection.toUpperCase().includes(creditor)) {
+          // Try to find dates near this creditor
+          const creditorPosition = inquiriesSection.toUpperCase().indexOf(creditor);
+          const potentialDateSection = inquiriesSection.substring(
+            Math.max(0, creditorPosition - 20),
+            Math.min(inquiriesSection.length, creditorPosition + creditor.length + 20)
+          );
+          
+          const dateMatch = potentialDateSection.match(/(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{1,2}\/\d{2,4}|\d{1,2}\-\d{1,2}\-\d{2,4})/);
+          
+          if (dateMatch && dateMatch[1]) {
+            inquiries.push({
+              inquiryDate: dateMatch[1].trim(),
+              creditor: creditor,
+              bureau: "Unknown"
+            });
+          }
+        }
+      }
+    }
+  }
+  
+  // Add inquiries to the report data
+  if (inquiries.length > 0) {
+    reportData.inquiries = inquiries;
+    console.log(`Extracted ${inquiries.length} inquiries`);
+  }
+  
+  // Identify potential discrepancies and issues
+  const recommendedDisputes: RecommendedDispute[] = [];
+  
+  // Check for accounts with late payments
+  for (const account of accounts) {
+    if (account.paymentStatus && (
+      account.paymentStatus.toLowerCase().includes('late') ||
+      account.paymentStatus.toLowerCase().includes('delinq') ||
+      account.paymentStatus.toLowerCase().includes('past due') ||
+      account.paymentStatus.toLowerCase().includes('charged off') ||
+      account.paymentStatus.toLowerCase().includes('collection')
+    )) {
+      // This account has a negative payment status
+      recommendedDisputes.push({
+        accountName: account.accountName,
+        accountNumber: account.accountNumber,
+        bureau: account.bureau?.split(',')[0].trim() || "Unknown",
+        reason: "Incorrect payment status",
+        description: `The account is reported as "${account.paymentStatus}" which may be inaccurate or unverifiable.`,
+        severity: 'high',
+        legalBasis: getLegalReferencesForDispute("paymentStatus", "late payment")
+      });
+      
+      console.log(`Added dispute for late payment status on ${account.accountName}`);
+    }
+    
+    // Check for accounts with remarks indicating issues
+    if (account.remarks && account.remarks.length > 0) {
+      for (const remark of account.remarks) {
+        if (remark.toLowerCase().includes('late') || 
+            remark.toLowerCase().includes('delinq') || 
+            remark.toLowerCase().includes('past due') ||
+            remark.toLowerCase().includes('charge') ||
+            remark.toLowerCase().includes('collection')) {
+          
+          // Add dispute for negative remark if not already added
+          if (!recommendedDisputes.some(d => 
+            d.accountName === account.accountName && 
+            d.description.toLowerCase().includes(remark.toLowerCase())
+          )) {
+            recommendedDisputes.push({
+              accountName: account.accountName,
+              accountNumber: account.accountNumber,
+              bureau: account.bureau?.split(',')[0].trim() || "Unknown",
+              reason: "Incorrect remark or comment",
+              description: `The account contains a negative remark: "${remark}" which may be inaccurate or unverifiable.`,
+              severity: 'medium',
+              legalBasis: getLegalReferencesForDispute("account_information")
+            });
+            
+            console.log(`Added dispute for negative remark on ${account.accountName}: ${remark}`);
+          }
+        }
+      }
+    }
+    
+    // Look for duplicate accounts (same creditor with variations)
+    const similarAccounts = accounts.filter(a => 
+      a !== account && 
+      (a.accountName.includes(account.accountName) || 
+       account.accountName.includes(a.accountName) ||
+       // Compare using a simplified name (remove common words)
+       simplifyName(a.accountName) === simplifyName(account.accountName))
+    );
+    
+    if (similarAccounts.length > 0) {
+      const dupAccount = similarAccounts[0]; // Example: just take the first one
+      
+      // Only add if not already disputed
+      if (!recommendedDisputes.some(d => 
+        d.accountName === account.accountName && 
+        d.reason.toLowerCase().includes('duplicate')
+      )) {
+        recommendedDisputes.push({
+          accountName: account.accountName,
+          accountNumber: account.accountNumber,
+          bureau: account.bureau?.split(',')[0].trim() || "Unknown",
+          reason: "Duplicate account reporting",
+          description: `This appears to be a duplicate of another ${simplifyName(account.accountName)} account on your report.`,
+          severity: 'high', 
+          legalBasis: getLegalReferencesForDispute("account_information")
+        });
+        
+        console.log(`Added dispute for duplicate account: ${account.accountName}`);
+      }
+    }
+    
+    // Look for closed accounts still reporting a balance
+    if (account.paymentStatus && 
+        account.paymentStatus.toLowerCase().includes('closed') && 
+        account.currentBalance && 
+        !account.currentBalance.includes('0') && 
+        !account.currentBalance.includes('$0')) {
+      
+      recommendedDisputes.push({
+        accountName: account.accountName,
+        accountNumber: account.accountNumber,
+        bureau: account.bureau?.split(',')[0].trim() || "Unknown",
+        reason: "Incorrect balance on closed account",
+        description: `This account is closed but still showing a balance of ${account.currentBalance}, which violates proper reporting standards.`,
+        severity: 'high',
+        legalBasis: getLegalReferencesForDispute("balance")
+      });
+      
+      console.log(`Added dispute for balance on closed account: ${account.accountName}`);
+    }
+  }
+  
+  // Look for inconsistencies in personal information
+  if (personalInfo.name) {
+    // Check for potential name variations in the report
+    const nameVariations = findNameVariations(content, personalInfo.name);
+    
+    if (nameVariations.length > 0) {
+      recommendedDisputes.push({
+        accountName: "Personal Information",
+        bureau: "All bureaus",
+        reason: "Inconsistent name reporting",
+        description: `Your name is reported in multiple variations: ${personalInfo.name}, ${nameVariations.join(', ')}`,
+        severity: 'medium',
+        legalBasis: getLegalReferencesForDispute("name")
+      });
+      
+      console.log(`Added dispute for name variations: ${nameVariations.join(', ')}`);
+    }
+  }
+  
+  if (personalInfo.address) {
+    // Check for potential address variations
+    const addressVariations = findAddressVariations(content, personalInfo.address);
+    
+    if (addressVariations.length > 0) {
+      recommendedDisputes.push({
+        accountName: "Personal Information",
+        bureau: "All bureaus",
+        reason: "Outdated address information",
+        description: `Multiple addresses are reported on your credit file: ${personalInfo.address}, ${addressVariations.join(', ')}`,
+        severity: 'low',
+        legalBasis: getLegalReferencesForDispute("address")
+      });
+      
+      console.log(`Added dispute for address variations: ${addressVariations.join(', ')}`);
+    }
+  }
+  
+  // Check for excessive inquiries
+  if (reportData.inquiries && reportData.inquiries.length > 5) {
+    // Look for inquiries in the last 30 days
+    const recentInquiries = reportData.inquiries.filter(inquiry => {
+      try {
+        // Parse the inquiry date
+        const dateParts = inquiry.inquiryDate.split(/[\/\-]/);
+        if (dateParts.length >= 3) {
+          const inquiryDate = new Date(
+            parseInt(dateParts[2].length === 2 ? '20' + dateParts[2] : dateParts[2]),
+            parseInt(dateParts[0]) - 1,
+            parseInt(dateParts[1])
+          );
+          
+          // Check if it's within last 30 days
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          
+          return inquiryDate > thirtyDaysAgo;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    });
+    
+    if (recentInquiries.length >= 3) {
+      recommendedDisputes.push({
+        accountName: "Credit Inquiries",
+        bureau: "All bureaus",
+        reason: "Excessive recent inquiries",
+        description: `There are ${recentInquiries.length} inquiries within the last 30 days, which may indicate unauthorized credit pulls or identity theft.`,
+        severity: 'medium',
+        legalBasis: [
+          { law: "FCRA", section: "Section 604", description: "Defines permissible purposes for accessing consumer credit information." },
+          { law: "FCRA", section: "Section 611", description: "You have the right to dispute inquiries made without proper authorization." }
+        ]
+      });
+      
+      console.log(`Added dispute for excessive inquiries: ${recentInquiries.length} recent inquiries`);
+    }
+  }
+  
+  // Try to identify inquiries from the same creditor multiple times
+  if (reportData.inquiries && reportData.inquiries.length > 0) {
+    const inquiriesByCreditor: Record<string, number> = {};
+    
+    for (const inquiry of reportData.inquiries) {
+      const simplifiedCreditor = simplifyName(inquiry.creditor);
+      inquiriesByCreditor[simplifiedCreditor] = (inquiriesByCreditor[simplifiedCreditor] || 0) + 1;
+    }
+    
+    // Check for creditors with multiple inquiries
+    for (const [creditor, count] of Object.entries(inquiriesByCreditor)) {
+      if (count > 2) {
+        recommendedDisputes.push({
+          accountName: "Credit Inquiries",
+          bureau: "All bureaus",
+          reason: "Multiple inquiries from same creditor",
+          description: `${creditor} has made ${count} inquiries on your credit, which may be excessive and could be consolidated.`,
+          severity: 'low',
+          legalBasis: [
+            { law: "FCRA", section: "Section 604", description: "Defines permissible purposes for accessing consumer credit information." },
+            { law: "FCRA", section: "Section 611", description: "You have the right to dispute inquiries made without proper authorization." }
+          ]
+        });
+        
+        console.log(`Added dispute for multiple inquiries from same creditor: ${creditor} (${count} inquiries)`);
+      }
+    }
+  }
+  
+  // Create analysis summary if we found any disputes
+  if (recommendedDisputes.length > 0) {
+    // Populate sample dispute language for all recommended disputes
+    for (let i = 0; i < recommendedDisputes.length; i++) {
+      try {
+        recommendedDisputes[i].sampleDisputeLanguage = "The information reported is inaccurate and should be investigated according to the Fair Credit Reporting Act.";
+      } catch (error) {
+        console.error("Error getting sample dispute language:", error);
+      }
+    }
+    
+    reportData.analysisResults = {
+      totalDiscrepancies: recommendedDisputes.length,
+      highSeverityIssues: recommendedDisputes.filter(d => d.severity === 'high').length,
+      accountsWithIssues: new Set(recommendedDisputes.map(d => d.accountName)).size,
+      recommendedDisputes: recommendedDisputes
+    };
+    
+    console.log(`Analysis complete: ${recommendedDisputes.length} issues found`);
+  } else {
+    // If no disputes were identified but we have some accounts, add a "no issues found" result
+    if (accounts.length > 0) {
+      reportData.analysisResults = {
+        totalDiscrepancies: 0,
+        highSeverityIssues: 0,
+        accountsWithIssues: 0,
+        recommendedDisputes: []
+      };
+    }
+  }
+  
+  return reportData;
+};
+
+/**
+ * Simplify an account/creditor name for comparison purposes
+ */
+function simplifyName(name: string): string {
+  // Convert to uppercase and remove common words and punctuation
+  return name.toUpperCase()
+    .replace(/\b(BANK|OF|AMERICA|CARD|CREDIT|LOAN|FINANCIAL|SERVICES|INC|LLC|CO|CORP|NA|SSC|CORPORATION)\b/g, '')
+    .replace(/[^\w\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Find variations of a name in the text
+ */
+function findNameVariations(text: string, baseName: string): string[] {
+  const variations: string[] = [];
+  const baseNameParts = baseName.trim().split(/\s+/);
+  
+  // Only proceed if we have a multi-part name
+  if (baseNameParts.length <= 1) return variations;
+  
+  // Look for patterns with the same first part but different rest
+  const firstName = baseNameParts[0];
+  const firstNamePattern = new RegExp(`(${firstName}\\s+[A-Za-z\\.\\s\\-]{2,30})\\b`, 'g');
+  const firstNameMatches = [...text.matchAll(firstNamePattern)];
+  
+  for (const match of firstNameMatches) {
+    const foundName = match[1].trim();
+    if (foundName !== baseName && !variations.includes(foundName)) {
+      variations.push(foundName);
+    }
+  }
+  
+  // Look for patterns with different initials
+  if (baseNameParts.length >= 3) {
+    const lastName = baseNameParts[baseNameParts.length - 1];
+    const lastNamePattern = new RegExp(`([A-Za-z\\.]{1,2}\\s+[A-Za-z\\.\\s\\-]{0,20}\\s+${lastName})\\b`, 'g');
+    const lastNameMatches = [...text.matchAll(lastNamePattern)];
+    
+    for (const match of lastNameMatches) {
+      const foundName = match[1].trim();
+      if (foundName !== baseName && !variations.includes(foundName)) {
+        variations.push(foundName);
+      }
+    }
+  }
+  
+  return variations;
+}
+
+/**
+ * Find variations of an address in the text
+ */
+function findAddressVariations(text: string, baseAddress: string): string[] {
+  const variations: string[] = [];
+  
+  // Look for address patterns
+  const addressPatterns = [
+    /(\d+\s+[A-Za-z\.\s]+(?:ST|STREET|AVE|AVENUE|RD|ROAD|DR|DRIVE|BLVD|LN|LANE|WAY|CIR|CIRCLE|CT|COURT|PLZ|PLAZA|TER|TERRACE)\.?(?:\s*(?:APT|UNIT|#)\s*[A-Za-z0-9\-]+)?)/gi,
+    /(\d+\s+[A-Za-z\.\s]+,\s*[A-Za-z\.\s]+,\s*[A-Z]{2}\s*\d{5})/gi
+  ];
+  
+  for (const pattern of addressPatterns) {
+    const matches = [...text.matchAll(pattern)];
+    
+    for (const match of matches) {
+      const foundAddress = match[1].trim();
+      if (foundAddress !== baseAddress && !variations.includes(foundAddress) && 
+          // Make sure it doesn't look like a completely different address
+          (foundAddress.includes(baseAddress.substring(0, 5)) || 
+           baseAddress.includes(foundAddress.substring(0, 5)))) {
+        variations.push(foundAddress);
+      }
+    }
+  }
+  
+  return variations;
+}
+
+/**
+ * Process uploaded credit report file
+ */
+export const processCreditReport = async (file: File): Promise<CreditReportData> => {
+  console.log(`Processing credit report file: ${file.name} (${file.type}), size: ${file.size} bytes`);
+  
+  try {
+    // First, ensure sample reports and dispute letters are loaded
+    await Promise.all([loadSampleReports(), loadSampleDisputeLetters()]);
+    
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    let textContent = "";
+    
+    if (fileExtension === 'pdf' || file.type === 'application/pdf') {
+      // Extract text from PDF
+      console.log("Processing PDF file");
+      textContent = await extractTextFromPDF(file);
+    } else if (fileExtension === 'txt' || fileExtension === 'text' || file.type === 'text/plain') {
+      // Read text file directly
+      console.log("Processing text file");
+      textContent = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            resolve(e.target.result as string);
+          } else {
+            reject(new Error("Failed to read text file"));
+          }
+        };
+        reader.onerror = () => reject(new Error("Error reading text file"));
+        reader.readAsText(file);
+      });
+    } else {
+      // Try to process as text anyway
+      console.log("Processing unknown file type as text");
+      textContent = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            resolve(e.target.result.toString());
+          } else {
+            reject(new Error("Failed to read file"));
+          }
+        };
+        reader.onerror = () => reject(new Error("Error reading file"));
+        reader.readAsText(file);
+      });
+    }
+    
+    console.log(`Successfully extracted ${textContent.length} characters of text from the file`);
+    
+    if (textContent.length < 100) {
+      console.error("Extracted text is too short, might be an unsupported format");
+      throw new Error("Could not extract enough text from the file. Please upload a TXT or PDF file with text content.");
+    }
+    
+    // Parse the text content into a structured credit report
+    const reportData = parseReportContent(textContent);
+    
+    console.log("Credit report processing complete");
+    return reportData;
+  } catch (error) {
+    console.error("Error in processCreditReport:", error);
+    throw error;
+  }
+};
+
+/**
+ * Find applicable legal references for a specific dispute type
+ */
+export const generateLegalCitations = async (dispute: RecommendedDispute): Promise<string> => {
+  let citations = "";
+  
+  // Try to find relevant citations from sample dispute letters
+  let disputeType = 'general';
+  if (dispute.reason.toLowerCase().includes('balance')) {
+    disputeType = 'balance';
+  } else if (dispute.reason.toLowerCase().includes('payment') || dispute.reason.toLowerCase().includes('late')) {
+    disputeType = 'late_payment';
+  } else if (dispute.reason.toLowerCase().includes('not mine') || dispute.reason.toLowerCase().includes('fraud')) {
+    disputeType = 'not_mine';
+  }
+  
+  const sampleLetter = await findSampleDispute(disputeType, dispute.bureau.toLowerCase());
+  
+  if (sampleLetter && sampleLetter.legalCitations && sampleLetter.legalCitations.length > 0) {
+    // Use legal citations from sample letter
+    citations = "I am asserting my rights under the following laws and regulations:\n\n";
+    
+    sampleLetter.legalCitations.forEach((citation, index) => {
+      citations += `${index + 1}. ${citation}\n`;
+    });
+    
+    citations += "\nThese laws and regulations require credit reporting agencies and furnishers of information to maintain and report accurate information.";
+  } else if (dispute.legalBasis && dispute.legalBasis.length > 0) {
+    // Use legal basis from dispute if no sample letter found
+    citations = "I am asserting my rights under the following laws and regulations:\n\n";
+    
+    dispute.legalBasis.forEach((reference, index) => {
+      citations += `${index + 1}. ${reference.law} ${reference.section}: ${reference.description}\n`;
+    });
+    
+    citations += "\nThese laws and regulations require credit reporting agencies and furnishers of information to maintain and report accurate information.";
+  } else {
+    // Default legal references if none specifically provided
+    citations = "I am asserting my rights under the Fair Credit Reporting Act (FCRA), specifically Section 611(a) which requires consumer reporting agencies to conduct a reasonable investigation of disputed information and Section 623 which requires furnishers to provide accurate information to consumer reporting agencies.";
+  }
+  
+  return citations;
+};
+
+/**
+ * Generate dispute letter for a specific discrepancy
+ */
+export const generateDisputeLetterForDiscrepancy = async (
+  dispute: RecommendedDispute,
+  userInfo: {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+  }
+): Promise<string> => {
+  const bureauAddresses = {
+    'experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
+    'equifax': 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374',
+    'transunion': 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016'
+  };
+  
+  const bureauName = dispute.bureau.charAt(0).toUpperCase() + dispute.bureau.slice(1);
+  const bureauAddress = bureauAddresses[dispute.bureau.toLowerCase() as keyof typeof bureauAddresses] || 
+                        `${bureauName}\n[ADDRESS NEEDED]`;
+  
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
+  // Generate a more specific subject line based on the dispute type
+  let subjectLine = `Re: Dispute of Inaccurate Information`;
+  if (dispute.accountName !== "Personal Information") {
+    subjectLine += ` - Account #${dispute.accountNumber || "[Account Number]"}`;
+  } else {
+    subjectLine += ` - Personal Information`;
+  }
+  
+  // Generate specific FCRA sections based on the dispute type
+  let fcraSections = "Section 611(a)";
+  if (dispute.reason.includes("balance") || dispute.reason.includes("payment")) {
+    fcraSections += " and Section 623";
+  }
+  if (dispute.reason.includes("not mine") || dispute.reason.includes("fraud")) {
+    fcraSections += " and Section 605B";
+  }
+  
+  // Build the dispute explanation based on the discrepancy details
+  let disputeExplanation = dispute.description;
+  
+  // Try to add some specific details to strengthen the dispute
+  if (dispute.discrepancyDetails) {
+    const { field, values, bureaus } = dispute.discrepancyDetails;
+    
+    // Add more specific details about the discrepancy
+    const correctValue = Object.entries(values)
+      .filter(([bureau]) => !bureaus.includes(bureau))
+      .map(([_, value]) => value)[0];
+    
+    const incorrectValue = values[dispute.bureau];
+    
+    if (correctValue && incorrectValue) {
+      disputeExplanation += ` The correct ${field} should be ${correctValue}, not ${incorrectValue}.`;
+    }
+    
+    // Add evidence statement
+    if (Object.keys(values).length > 2) {
+      const otherBureaus = Object.keys(values)
+        .filter(b => b !== dispute.bureau)
+        .map(b => b.charAt(0).toUpperCase() + b.slice(1))
+        .join(" and ");
+      
+      if (correctValue) {
+        disputeExplanation += ` This is confirmed by ${otherBureaus}, which correctly report the ${field} as ${correctValue}.`;
+      }
+    }
+  }
+  
+  // Check if we have a sampleDisputeLanguage to use
+  if (dispute.sampleDisputeLanguage) {
+    disputeExplanation += " " + dispute.sampleDisputeLanguage;
+  }
+  
+  // Generate legal citations
+  const legalCitations = await generateLegalCitations(dispute);
+  
+  // Default request items
+  let requestItems = `1. Conduct a thorough investigation of this disputed information
+2. Forward all relevant information to the furnisher of this information
+3. Provide me with copies of any documentation used to verify this information
+4. Remove or correct the disputed item if it cannot be properly verified
+5. Send me an updated copy of my credit report showing the results of your investigation`;
+  
+  // Build the letter with all components
+  return `
+${userInfo.name}
+${userInfo.address}
+${userInfo.city}, ${userInfo.state} ${userInfo.zip}
+
+${currentDate}
+
+${bureauName}
+${bureauAddress}
+
+${subjectLine}
+
+To Whom It May Concern:
+
+I am writing to dispute inaccurate information appearing on my credit report. After reviewing my credit report from ${bureauName}, I have identified the following item that is inaccurate and requires investigation and correction:
+
+${dispute.accountName !== "Personal Information" 
+  ? `Account Name: ${dispute.accountName}
+Account Number: ${dispute.accountNumber || "[Account Number]"}
+Reason for Dispute: ${dispute.reason}`
+  : `Information Type: Personal Information
+Reason for Dispute: ${dispute.reason}`}
+
+${disputeExplanation}
+
+${legalCitations}
+
+Under the provisions of the Fair Credit Reporting Act (FCRA), specifically ${fcraSections}, I formally request that you:
+
+${requestItems}
+
+I have attached copies of relevant documentation that supports my dispute. Please complete your investigation within 30 days as required by the FCRA.
+
+If you have any questions or need additional information, please contact me at the address listed above.
+
+Sincerely,
+
+${userInfo.name}
+
+Enclosures: [List any attached documents]
+`;
+};
