@@ -52,7 +52,7 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
   // Initial welcome message
   useEffect(() => {
     if (messages.length === 0) {
-      const welcomeMessage = {
+      const welcomeMessage: MessageType = {
         id: Date.now().toString(),
         content: `Hello${profile?.full_name ? ' ' + profile.full_name.split(' ')[0] : ''}! I'm ${AGENT_NAME}, your ${AGENT_FULL_NAME}. I can help you create personalized dispute letters for credit report errors. Tell me about the issue you'd like to dispute.`,
         sender: 'agent',
@@ -300,7 +300,7 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
     
     // Add back welcome message
     setTimeout(() => {
-      const welcomeMessage = {
+      const welcomeMessage: MessageType = {
         id: Date.now().toString(),
         content: `Hello${profile?.full_name ? ' ' + profile.full_name.split(' ')[0] : ''}! I'm ${AGENT_NAME}, your ${AGENT_FULL_NAME}. I can help you create personalized dispute letters for credit report errors. Tell me about the issue you'd like to dispute.`,
         sender: 'agent',
