@@ -173,3 +173,14 @@ export async function saveDisputeLetter(userId: string, disputeData: any) {
     return false;
   }
 }
+
+// Application routes
+export const APP_ROUTES = {
+  DASHBOARD: '/dashboard',
+  DISPUTE_LETTERS: '/dispute-letters',
+  CREATE_DISPUTE: '/dispute-letters', // Changed from '/dispute-letters/new' to fix 404 error
+  UPLOAD_REPORT: '/upload-report',
+  EDUCATION: '/education',
+  LOGIN: '/login',
+  SIGNUP: '/signup'
+};
