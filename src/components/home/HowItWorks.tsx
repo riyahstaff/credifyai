@@ -89,7 +89,7 @@ const HowItWorks = () => {
                       <p className="text-credify-navy-light dark:text-white/70">{step.description}</p>
                     </div>
                   ) : (
-                    <div className="md:hidden bg-white dark:bg-credify-navy/40 p-6 rounded-xl shadow-soft border border-gray-100 dark:border-gray-700/30">
+                    <div className="block md:hidden bg-white dark:bg-credify-navy/40 p-6 rounded-xl shadow-soft border border-gray-100 dark:border-gray-700/30">
                       <h3 className="text-xl font-semibold text-credify-navy dark:text-white mb-2">{step.title}</h3>
                       <p className="text-credify-navy-light dark:text-white/70">{step.description}</p>
                     </div>
