@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
-  const { user, signIn, isTestMode } = useAuth();
+  const { user, signIn } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -39,17 +39,11 @@ const Login = () => {
           duration: 5000,
         });
       } else if (success) {
-        if (!isTestMode) {
-          // Normal flow - will be redirected by the auth state change
-          toast({
-            title: "Login successful",
-            description: "Welcome back!",
-            duration: 3000,
-          });
-        } else {
-          // Test mode - redirect manually
-          navigate('/dashboard');
-        }
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+          duration: 3000,
+        });
       }
     } catch (error) {
       toast({
@@ -74,13 +68,6 @@ const Login = () => {
             <h1 className="text-2xl font-bold text-credify-navy dark:text-white mb-6 text-center">
               Log In to Your Account
             </h1>
-            
-            {isTestMode && (
-              <div className="mb-6 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-sm">
-                <p className="font-medium">Test Mode Active</p>
-                <p className="text-xs mt-1">Enter any email and password to explore the app with simulated data.</p>
-              </div>
-            )}
             
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>

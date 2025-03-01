@@ -9,18 +9,7 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscription = false }) => {
-  const { user, isLoading, isTestMode, profile } = useAuth();
-  
-  // Get test user from localStorage if in test mode and no user is set
-  const getTestUser = () => {
-    if (isTestMode && !user) {
-      const testUserData = localStorage.getItem('test_user');
-      return testUserData ? true : false;
-    }
-    return false;
-  };
-  
-  const hasTestUser = getTestUser();
+  const { user, isLoading, profile } = useAuth();
   
   if (isLoading) {
     // Loading state
@@ -31,7 +20,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
     );
   }
   
-  if (!user && !hasTestUser) {
+  if (!user) {
     // Redirect to login if not authenticated
     return <Navigate to="/login" replace />;
   }
