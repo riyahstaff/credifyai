@@ -58,7 +58,7 @@ const HowItWorks = () => {
           <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700/50 transform -translate-x-1/2"></div>
           
           {/* Mobile view - simple cards stacked vertically */}
-          <div className="md:hidden space-y-6">
+          <div className="block md:hidden space-y-6">
             {steps.map((step, index) => (
               <div 
                 key={index} 
