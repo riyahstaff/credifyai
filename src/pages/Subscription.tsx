@@ -79,7 +79,7 @@ const Subscription = () => {
               
               <div className="mb-6">
                 <div className="flex items-baseline mb-1">
-                  <span className="text-3xl font-bold text-credify-navy dark:text-white">$19.99</span>
+                  <span className="text-3xl font-bold text-credify-navy dark:text-white">$34.99</span>
                   <span className="text-credify-navy-light dark:text-white/70 ml-1">/month</span>
                 </div>
                 <p className="text-credify-navy-light dark:text-white/70 text-sm">
