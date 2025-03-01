@@ -5,7 +5,7 @@
  */
 import { CreditReportData } from '../types';
 import { extractPersonalInfo } from './extractPersonalInfo';
-import { extractAccounts } from './extractAccounts';
+import { extractAccounts } from './accounts';
 import { extractInquiries } from './extractInquiries';
 import { extractPublicRecords } from './extractPublicRecords';
 import { generateAnalysisResults } from './analysisGenerator';

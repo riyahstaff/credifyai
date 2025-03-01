@@ -9,7 +9,7 @@ export { parseReportContent } from './parseReportContent';
 
 // Re-export utility functions
 export * from './extractPersonalInfo';
-export * from './extractAccounts';
+export * from './accounts';
 export * from './extractInquiries';
 export * from './extractPublicRecords';
 export * from './analysisGenerator';
