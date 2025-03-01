@@ -9,6 +9,7 @@ interface TestUser {
   email: string;
   name: string;
   isTestUser: boolean;
+  hasSubscription?: boolean;
 }
 
 const AuthContext = createContext<{
@@ -26,6 +27,7 @@ const AuthContext = createContext<{
     success: boolean;
   }>;
   signOut: () => Promise<void>;
+  updateSubscriptionStatus: (hasSubscription: boolean) => Promise<void>;
 }>({
   session: null,
   user: null,
@@ -35,6 +37,7 @@ const AuthContext = createContext<{
   signUp: async () => ({ error: null, success: false }),
   signIn: async () => ({ error: null, success: false }),
   signOut: async () => {},
+  updateSubscriptionStatus: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -87,6 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: 'test-user-id',
           email: testUser.email,
           full_name: testUser.name,
+          has_subscription: testUser.hasSubscription || false,
           created_at: new Date().toISOString()
         } as Profile;
         
@@ -100,6 +104,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     return false;
+  };
+
+  // Update user's subscription status
+  const updateSubscriptionStatus = async (hasSubscription: boolean) => {
+    if (isTestMode && profile) {
+      // Update test user subscription status
+      const testUserData = localStorage.getItem('test_user');
+      if (testUserData) {
+        try {
+          const testUser = JSON.parse(testUserData) as TestUser;
+          testUser.hasSubscription = hasSubscription;
+          localStorage.setItem('test_user', JSON.stringify(testUser));
+          
+          // Update the profile state
+          setProfile({
+            ...profile,
+            has_subscription: hasSubscription
+          });
+          
+          toast({
+            title: hasSubscription ? "Subscription activated" : "Subscription deactivated",
+            description: hasSubscription ? "You now have full access to all features." : "Your premium features have been deactivated.",
+          });
+          
+          return;
+        } catch (error) {
+          console.error('Error updating test user subscription status:', error);
+        }
+      }
+    } else if (user) {
+      try {
+        // Update the subscription status in the database
+        const { error } = await supabase
+          .from('profiles')
+          .update({ has_subscription: hasSubscription })
+          .eq('id', user.id);
+          
+        if (error) {
+          throw error;
+        }
+        
+        // Update the profile state
+        if (profile) {
+          setProfile({
+            ...profile,
+            has_subscription: hasSubscription
+          });
+        }
+        
+        toast({
+          title: hasSubscription ? "Subscription activated" : "Subscription deactivated",
+          description: hasSubscription ? "You now have full access to all features." : "Your premium features have been deactivated.",
+        });
+      } catch (error) {
+        console.error('Error updating subscription status:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update subscription status.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   useEffect(() => {
@@ -309,6 +375,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signUp,
         signIn,
         signOut,
+        updateSubscriptionStatus,
       }}
     >
       {children}

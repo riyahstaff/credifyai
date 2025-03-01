@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -10,6 +9,8 @@ import {
   Download, 
   MessageSquare, 
   Sparkles,
+  CreditCard,
+  Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -31,6 +32,7 @@ import {
   getSampleDisputeLanguage 
 } from './services/disputeService';
 import { useReportAnalysis } from './hooks/useReportAnalysis';
+import { Link } from 'react-router-dom';
 
 interface DisputeAgentProps {
   onGenerateDispute?: (disputeData: any) => void;
@@ -86,7 +88,39 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
     }
   }, [profile, messages]);
   
+  // Check subscription status
+  const hasSubscription = profile?.has_subscription === true;
+  
+  // Modified handleSendMessage to check subscription
   const handleSendMessage = () => {
+    if (!inputValue.trim()) return;
+    
+    // Check for subscription if user is trying to use functionality
+    if (!hasSubscription && inputValue.trim().toLowerCase().includes('dispute')) {
+      // Add user message
+      const userMessage: MessageType = {
+        id: Date.now().toString(),
+        content: inputValue,
+        sender: 'user',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, userMessage]);
+      setInputValue('');
+      
+      // Add subscription required message
+      const subscriptionMessage: MessageType = {
+        id: Date.now().toString(),
+        content: "I'd love to help you with dispute letters, but this feature requires a premium subscription. Would you like to upgrade to access the dispute letter generator and AI analysis?",
+        sender: 'agent',
+        timestamp: new Date(),
+        requiresSubscription: true,
+      };
+      
+      setMessages(prev => [...prev, subscriptionMessage]);
+      return;
+    }
+    
     if (!inputValue.trim()) return;
     
     // Add user message
@@ -714,9 +748,44 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
         className="hidden"
       />
       
-      {/* Chat bubble */}
+      {/* Subscription required message */}
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && !hasSubscription && (
+          <motion.div 
+            className="bg-white dark:bg-credify-navy/80 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700/50 w-full max-w-md mb-4 flex flex-col"
+            initial={{ opacity: 0, y: 20, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: 20, height: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-credify-teal/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="text-credify-teal" size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-credify-navy dark:text-white mb-2">
+                Premium Feature
+              </h3>
+              <p className="text-credify-navy-light dark:text-white/70 mb-6">
+                CLEO, your AI credit assistant, is available with a premium subscription. Upgrade to get personalized dispute letter assistance.
+              </p>
+              <Link
+                to="/subscription"
+                className="w-full bg-credify-teal hover:bg-credify-teal-dark text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <CreditCard size={18} />
+                <span>Upgrade to Premium</span>
+              </Link>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="mt-4 text-credify-navy-light dark:text-white/70 hover:text-credify-navy dark:hover:text-white underline text-sm"
+              >
+                Maybe Later
+              </button>
+            </div>
+          </motion.div>
+        )}
+        
+        {isOpen && hasSubscription && (
           <motion.div 
             className="bg-white dark:bg-credify-navy/80 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700/50 w-full max-w-md mb-4 flex flex-col"
             initial={{ opacity: 0, y: 20, height: 0 }}

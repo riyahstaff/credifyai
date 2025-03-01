@@ -5,10 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
+  requiresSubscription?: boolean;
 }
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  const { user, isLoading, isTestMode } = useAuth();
+const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscription = false }) => {
+  const { user, isLoading, isTestMode, profile } = useAuth();
   
   // Get test user from localStorage if in test mode and no user is set
   const getTestUser = () => {
@@ -34,8 +35,19 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     // Redirect to login if not authenticated
     return <Navigate to="/login" replace />;
   }
+
+  // Check if this route requires subscription
+  if (requiresSubscription && profile) {
+    // Check if user has an active subscription
+    const hasActiveSubscription = profile.has_subscription === true;
+    
+    if (!hasActiveSubscription) {
+      // Redirect to subscription page if no active subscription
+      return <Navigate to="/subscription" replace />;
+    }
+  }
   
-  // Render children if authenticated
+  // Render children if authenticated and subscription requirements are met
   return <>{children}</>;
 };
 
