@@ -1,10 +1,10 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import MessageItem from './MessageItem';
 import AgentAvatar from '../AgentAvatar';
 import DisputeSuccessCard from './DisputeSuccessCard';
-import { MessageType, RecommendedDispute } from '../types';
+import { MessageType } from '../types';
+import { RecommendedDispute } from '../types';
 
 interface ChatMessagesProps {
   messages: MessageType[];

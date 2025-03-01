@@ -1,6 +1,9 @@
 
 import { RecommendedDispute } from '@/utils/creditReportParser';
 
+// Re-export RecommendedDispute type so components can import it from here
+export type { RecommendedDispute };
+
 export interface MessageType {
   id: string;
   content: string;
