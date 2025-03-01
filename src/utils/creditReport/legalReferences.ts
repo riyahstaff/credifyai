@@ -78,6 +78,22 @@ export const CREDIT_LAWS = {
       "Dates": {
         title: "Date Reporting",
         description: "Standardizes reporting of dates including date opened, date of last payment, date reported."
+      },
+      "BlockingSegment": {
+        title: "Blocking Segment",
+        description: "Specifies format for blocking accounts from appearing on credit reports."
+      },
+      "DisputeFlags": {
+        title: "Dispute Flags",
+        description: "Codes indicating consumer disputes under FCRA section 611(a)(1)."
+      },
+      "CorrectionFlags": {
+        title: "Correction Flags",
+        description: "Codes indicating information was corrected after investigation."
+      },
+      "SpecialComment": {
+        title: "Special Comment Codes",
+        description: "Additional information about account that doesn't fit in standard fields."
       }
     }
   },
@@ -118,6 +134,31 @@ export const CREDIT_LAWS = {
         description: "Requires debt collectors to validate debts when disputed by consumers."
       }
     }
+  },
+  CDIA: {
+    name: "Consumer Data Industry Association Guidelines",
+    sections: {
+      "e-OSCAR": {
+        title: "e-OSCAR Platform",
+        description: "Electronic system used by consumer reporting agencies to communicate consumer disputes."
+      },
+      "ACDV": {
+        title: "Automated Consumer Dispute Verification",
+        description: "Format for communicating disputes between CRAs and data furnishers."
+      },
+      "AUD": {
+        title: "Automated Universal Dataform",
+        description: "Format for adding or correcting consumer information."
+      },
+      "FCRA_Compliance": {
+        title: "FCRA Compliance Guidelines",
+        description: "CDIA guidelines for complying with FCRA requirements."
+      },
+      "DisputeProcessing": {
+        title: "Dispute Processing Standards",
+        description: "Industry standards for processing consumer disputes."
+      }
+    }
   }
 };
 
@@ -133,7 +174,7 @@ export const LEGAL_REFERENCES_BY_DISPUTE_TYPE: Record<string, LegalReference[]> 
   ],
   "late_payment": [
     { law: "FCRA", section: "Section 611(a)", description: "You have the right to dispute inaccurate information about your payment history." },
-    { law: "METRO 2", section: "Payment History Profile", description: "Creditors must accurately report payment history according to Metro 2 standards." }
+    { law: "METRO 2", section: "PaymentHistory", description: "Creditors must accurately report payment history according to Metro 2 standards." }
   ],
   "balance": [
     { law: "FCRA", section: "Section 611(a)", description: "You have the right to dispute inaccurate balance information." },
@@ -158,6 +199,20 @@ export const LEGAL_REFERENCES_BY_DISPUTE_TYPE: Record<string, LegalReference[]> 
   "dates": [
     { law: "FCRA", section: "Section 611(a)", description: "You have the right to dispute inaccurate dates on your credit report." },
     { law: "METRO 2", section: "Dates", description: "Dates must be reported accurately according to Metro 2 standards." }
+  ],
+  "secondary_furnisher": [
+    { law: "FCRA", section: "Section 611", description: "All consumer reporting agencies must investigate disputed information." },
+    { law: "FCRA", section: "Section 623(a)(1)(B)", description: "Furnishers may not report information they know or have reason to believe is inaccurate." },
+    { law: "CDIA", section: "FCRA_Compliance", description: "Secondary furnishers must comply with FCRA dispute requirements." }
+  ],
+  "credit_freeze": [
+    { law: "FCRA", section: "Section 605A(i)", description: "Consumers have the right to place a security freeze on their credit report." },
+    { law: "FCRA", section: "Section 605A(i)(4)", description: "Credit bureaus must place a freeze within one business day of receiving the request." }
+  ],
+  "metro2_violation": [
+    { law: "METRO 2", section: "Compliance", description: "Furnishers must adhere to Metro 2 Format when reporting to credit bureaus." },
+    { law: "FCRA", section: "Section 623(a)(2)", description: "Furnishers must correctly report the date of delinquency for derogatory accounts." },
+    { law: "CDIA", section: "ACDV", description: "Disputes must be processed according to CDIA's Automated Consumer Dispute Verification format." }
   ]
 };
 
@@ -171,7 +226,14 @@ export function getLegalReferencesForDispute(field: string, context?: string): L
   const fieldLower = field.toLowerCase();
   const contextLower = context?.toLowerCase() || '';
   
-  if (fieldLower.includes('name') || fieldLower.includes('address')) {
+  if (fieldLower.includes('innovis') || fieldLower.includes('lexis') || fieldLower.includes('corelogic') || 
+      fieldLower.includes('sagestream') || fieldLower.includes('ars') || contextLower.includes('secondary')) {
+    disputeType = 'secondary_furnisher';
+  } else if (fieldLower.includes('freeze') || contextLower.includes('freeze')) {
+    disputeType = 'credit_freeze';
+  } else if (fieldLower.includes('metro') || fieldLower.includes('cdia') || contextLower.includes('e-oscar')) {
+    disputeType = 'metro2_violation';
+  } else if (fieldLower.includes('name') || fieldLower.includes('address')) {
     disputeType = 'personal_information';
   } else if (fieldLower.includes('balance') || contextLower.includes('balance')) {
     disputeType = 'balance';
