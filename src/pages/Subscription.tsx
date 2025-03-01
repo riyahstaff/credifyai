@@ -23,9 +23,7 @@ const Subscription = () => {
       setIsProcessing(true);
       
       // In a real implementation, this would create a checkout session via Supabase
-      // For production, you would integrate with Paddle, Stripe, etc.
       
-      // Production version - no test mode
       const subscriptionData = {
         user_id: user?.id,
         plan_type: plan,

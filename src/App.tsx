@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +15,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import Subscription from "./pages/Subscription";
+import Pricing from "./pages/Pricing";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +31,7 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/pricing" element={<Pricing />} />
               <Route path="/subscription" element={
                 <PrivateRoute>
                   <Subscription />
