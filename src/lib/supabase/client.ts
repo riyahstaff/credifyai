@@ -18,6 +18,7 @@ export type Profile = {
   email: string;
   full_name: string;
   created_at: string;
+  has_subscription?: boolean; // Add this property with optional flag
 }
 
 // User session context
