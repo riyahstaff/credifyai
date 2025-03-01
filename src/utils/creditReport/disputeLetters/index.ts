@@ -15,7 +15,8 @@ export { generateDisputeLetterForDiscrepancy } from './letterGenerator';
 export { getSampleDisputeLanguage, getSuccessfulDisputePhrases } from './sampleLanguage';
 
 // Re-export sample letter functions
-export { findSampleDispute, loadSampleDisputeLetters } from './sampleLetters';
+export { findSampleDispute } from './sampleDisputes';
+export { loadSampleDisputeLetters } from './sampleLettersLoader';
 
 // Re-export utility functions
 export { 
@@ -23,3 +24,6 @@ export {
   determineBureauFromFileName, 
   extractKeyComponentsFromLetter 
 } from './utils';
+
+// Re-export fallback templates
+export * from './fallbackTemplates';
