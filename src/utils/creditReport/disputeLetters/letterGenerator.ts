@@ -12,6 +12,8 @@ export const generateDisputeLetterForDiscrepancy = async (
   discrepancy: RecommendedDispute, 
   userInfo: UserInfo
 ): Promise<string> => {
+  console.log("Generating dispute letter for:", discrepancy);
+
   // Get the bureau address
   const bureauAddresses = {
     'experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
@@ -19,8 +21,12 @@ export const generateDisputeLetterForDiscrepancy = async (
     'transunion': 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016'
   };
   
-  const bureau = discrepancy.bureau.toLowerCase();
-  const bureauAddress = bureauAddresses[bureau as keyof typeof bureauAddresses] || '[BUREAU ADDRESS]';
+  // Normalize bureau name to match our address keys
+  const bureauKey = discrepancy.bureau.toLowerCase().replace(/\s+/g, '');
+  
+  // Choose the correct address or use a placeholder
+  const bureauAddress = bureauAddresses[bureauKey as keyof typeof bureauAddresses] || 
+                       `${discrepancy.bureau}\n[BUREAU ADDRESS]`;
   
   // Get the current date in a formatted string
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -29,7 +35,7 @@ export const generateDisputeLetterForDiscrepancy = async (
     day: 'numeric'
   });
   
-  // Get legal references if available
+  // Get legal references if available or fetch them
   const legalReferences = discrepancy.legalBasis || 
     getLegalReferencesForDispute(discrepancy.reason, discrepancy.description);
   
