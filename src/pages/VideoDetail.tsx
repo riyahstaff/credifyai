@@ -1,3 +1,4 @@
+<lov-code>
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -442,4 +443,3 @@ const VideoDetail = () => {
         <h3>Monitoring Your Progress</h3>
         <p>Check your credit regularly using free services like Credit Karma, Credit Sesame, or the free reports from AnnualCreditReport.com. Many banks and credit cards also offer free FICO score access.</p>
         <p>Look for:</p>
-        <ul>
