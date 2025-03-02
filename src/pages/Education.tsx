@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -77,7 +78,7 @@ const Education = () => {
     {
       id: 4,
       title: 'Credit Utilization: Why 30% Is the Magic Number',
-      excerpt: 'Discover why keeping your credit utilization below 30% is crucial for your credit score, how it's calculated across individual and total accounts, and actionable strategies to lower it quickly and effectively.',
+      excerpt: 'Discover why keeping your credit utilization below 30% is crucial for your credit score, how it\'s calculated across individual and total accounts, and actionable strategies to lower it quickly and effectively.',
       category: 'basics',
       readTime: '6 min read',
       icon: <CreditCard size={18} className="text-credify-teal" />,
