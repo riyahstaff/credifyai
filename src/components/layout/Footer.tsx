@@ -3,9 +3,19 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Logo from '../ui/Logo';
 import { Facebook, Twitter, Instagram, Linkedin, Mail } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const navigate = useNavigate();
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
 
   return (
     <footer className="bg-gray-50 dark:bg-credify-dark border-t border-gray-200/50 dark:border-gray-700/30 pt-16 pb-8">
@@ -38,29 +48,44 @@ const Footer = () => {
             </h3>
             <ul className="space-y-3">
               <li>
-                <Link to="/" className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors">
+                <button
+                  onClick={() => handleNavigation('/')}
+                  className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors"
+                >
                   Home
-                </Link>
+                </button>
               </li>
               <li>
-                <Link to="/dashboard" className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors">
+                <button
+                  onClick={() => handleNavigation('/dashboard')}
+                  className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors"
+                >
                   Dashboard
-                </Link>
+                </button>
               </li>
               <li>
-                <Link to="/upload-report" className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors">
+                <button
+                  onClick={() => handleNavigation('/upload-report')}
+                  className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors"
+                >
                   Upload Report
-                </Link>
+                </button>
               </li>
               <li>
-                <Link to="/dispute-letters" className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors">
+                <button
+                  onClick={() => handleNavigation('/dispute-letters')}
+                  className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors"
+                >
                   Dispute Letters
-                </Link>
+                </button>
               </li>
               <li>
-                <Link to="/education" className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors">
+                <button
+                  onClick={() => handleNavigation('/education')}
+                  className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors"
+                >
                   Education
-                </Link>
+                </button>
               </li>
             </ul>
           </div>
@@ -71,24 +96,36 @@ const Footer = () => {
             </h3>
             <ul className="space-y-3">
               <li>
-                <Link to="/terms" className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors">
+                <button
+                  onClick={() => handleNavigation('/terms')}
+                  className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors"
+                >
                   Terms of Service
-                </Link>
+                </button>
               </li>
               <li>
-                <Link to="/privacy" className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors">
+                <button
+                  onClick={() => handleNavigation('/privacy')}
+                  className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors"
+                >
                   Privacy Policy
-                </Link>
+                </button>
               </li>
               <li>
-                <Link to="/disclaimer" className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors">
+                <button
+                  onClick={() => handleNavigation('/disclaimer')}
+                  className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors"
+                >
                   Disclaimer
-                </Link>
+                </button>
               </li>
               <li>
-                <Link to="/compliance" className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors">
+                <button
+                  onClick={() => handleNavigation('/compliance')}
+                  className="text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors"
+                >
                   FCRA Compliance
-                </Link>
+                </button>
               </li>
             </ul>
           </div>
