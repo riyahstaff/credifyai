@@ -5,9 +5,25 @@ import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { FileUp, FileText, Brain, AlertCircle, Clock, CheckCircle, User, RefreshCw, ChartLine, FileCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
 
 const Dashboard = () => {
-  const { profile } = useAuth();
+  const { profile, isLoading, user } = useAuth();
+
+  // If auth is still loading, show a smaller loading indicator
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow pt-24 pb-20">
+          <div className="container mx-auto px-4 md:px-6 flex items-center justify-center">
+            <div className="h-12 w-12 border-4 border-credify-teal/30 border-t-credify-teal rounded-full animate-spin"></div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -19,26 +35,32 @@ const Dashboard = () => {
           <div className="mb-10">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
               <div>
-                <h1 className="text-3xl font-bold text-credify-navy dark:text-white mb-1">Welcome Back, {profile?.full_name || 'User'}</h1>
+                <h1 className="text-3xl font-bold text-credify-navy dark:text-white mb-1">Welcome Back, {profile?.full_name || user?.email?.split('@')[0] || 'User'}</h1>
                 <p className="text-credify-navy-light dark:text-white/70">Your credit repair journey is in progress</p>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  to="/upload-report"
-                  className="btn-primary flex items-center justify-center gap-2"
+                <Button
+                  variant="credify"
+                  asChild
+                  className="flex items-center justify-center gap-2"
                 >
-                  <FileUp size={18} />
-                  <span>Upload New Report</span>
-                </Link>
+                  <Link to="/upload-report">
+                    <FileUp size={18} />
+                    <span>Upload New Report</span>
+                  </Link>
+                </Button>
                 
-                <Link
-                  to="/dispute-letters"
-                  className="btn-outline flex items-center justify-center gap-2"
+                <Button
+                  variant="credifyOutline"
+                  asChild
+                  className="flex items-center justify-center gap-2"
                 >
-                  <FileText size={18} />
-                  <span>View Letters</span>
-                </Link>
+                  <Link to="/dispute-letters">
+                    <FileText size={18} />
+                    <span>View Letters</span>
+                  </Link>
+                </Button>
               </div>
             </div>
             
