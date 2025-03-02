@@ -20,7 +20,7 @@ import {
   PlaySquare
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { useToast } from "../hooks/use-toast";
+import { useToast } from "../components/ui/use-toast";
 
 const VideoDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -35,7 +35,7 @@ const VideoDetail = () => {
       description: "A complete breakdown of each section of your credit report, what the codes and statuses mean, and how to identify potential errors or discrepancies.",
       duration: "18:24",
       thumbnail: "https://images.unsplash.com/photo-1560520031-3a4dc4e9de0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
-      videoUrl: "https://www.youtube.com/embed/Y_EHY25Q-Rg", // Credit report analysis video
+      videoUrl: "https://www.youtube.com/embed/UvTyIrxPplE", // Updated link
       publishDate: "February 15, 2024",
       views: "15,628",
       category: "basics",
@@ -102,7 +102,7 @@ const VideoDetail = () => {
       description: "Learn proven dispute strategies that go beyond the basics, including procedural requests, method of verification demands, and escalation tactics when bureaus are unresponsive.",
       duration: "22:15",
       thumbnail: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
-      videoUrl: "https://www.youtube.com/embed/TJBgQvjWoSo", // Credit dispute techniques video
+      videoUrl: "https://www.youtube.com/embed/dLo6SUmLFEw", // Updated link to valid dispute techniques video
       publishDate: "March 10, 2024",
       views: "12,843",
       category: "disputes",
@@ -221,7 +221,7 @@ const VideoDetail = () => {
       description: "Watch a real debt settlement negotiation call, with analysis of effective tactics, settlement offer frameworks, and how to get agreements in writing before making payments.",
       duration: "31:07",
       thumbnail: "https://images.unsplash.com/photo-1573164574472-797cdf4a583a?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
-      videoUrl: "https://www.youtube.com/embed/L4N1q4RNi9I", // Debt negotiation video
+      videoUrl: "https://www.youtube.com/embed/Jbs1bxS_Lrw", // Updated link to valid debt negotiation video
       publishDate: "January 22, 2024",
       views: "9,754",
       category: "debt",
@@ -341,7 +341,7 @@ const VideoDetail = () => {
       description: "The complete roadmap for establishing credit for the first time, including secured cards, credit builder loans, becoming an authorized user, and avoiding common beginner mistakes.",
       duration: "15:42",
       thumbnail: "https://images.unsplash.com/photo-1579621970795-87facc2f976d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
-      videoUrl: "https://www.youtube.com/embed/K6N6ZnSfcOc", // Credit building video
+      videoUrl: "https://www.youtube.com/embed/_cUNxOR2gV8", // Updated link to valid credit building video 
       publishDate: "April 5, 2024",
       views: "18,349",
       category: "basics",
@@ -472,7 +472,7 @@ const VideoDetail = () => {
       description: "Step-by-step guide to creating your own credit repair action plan, from obtaining and analyzing your reports to prioritizing negative items and tracking your progress.",
       duration: "28:53",
       thumbnail: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
-      videoUrl: "https://www.youtube.com/embed/QH7G_BJ-JUM", // DIY credit repair video
+      videoUrl: "https://www.youtube.com/embed/PQYnTSauwzw", // Updated link to valid DIY credit repair video
       publishDate: "May 12, 2024",
       views: "7,623",
       category: "repair",
