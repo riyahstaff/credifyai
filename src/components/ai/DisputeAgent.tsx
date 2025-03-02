@@ -1,3 +1,4 @@
+<lov-code>
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -869,4 +870,4 @@ Sincerely,
     setTimeout(() => {
       const welcomeMessage: MessageType = {
         id: Date.now().toString(),
-        content: `Hello${profile
+        content: `
