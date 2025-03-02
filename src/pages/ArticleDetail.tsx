@@ -1,4 +1,4 @@
-<lov-code>
+
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -200,11 +200,11 @@ const ArticleDetail = () => {
         
         <h2>Common Misconceptions About Credit Utilization</h2>
         <ul>
-          <li><strong>Misconception:</strong> You need to carry a balance to have good utilization.<br>
+          <li><strong>Misconception:</strong> You need to carry a balance to have good utilization.<br />
               <strong>Reality:</strong> Paying your balance in full each month is always the best practice and doesn't negatively impact your utilization ratio.</li>
-          <li><strong>Misconception:</strong> Closing unused cards improves your credit.<br>
+          <li><strong>Misconception:</strong> Closing unused cards improves your credit.<br />
               <strong>Reality:</strong> Closing accounts reduces your available credit and can increase your utilization ratio.</li>
-          <li><strong>Misconception:</strong> Utilization doesn't matter if you pay in full each month.<br>
+          <li><strong>Misconception:</strong> Utilization doesn't matter if you pay in full each month.<br />
               <strong>Reality:</strong> Even if you pay in full, if the balance is high when reported to credit bureaus, it can negatively impact your score.</li>
         </ul>
         
@@ -472,4 +472,191 @@ const ArticleDetail = () => {
         <p>While rebuilding your own credit, avoid cosigning loans for others. If they default, you'll be legally responsible for the debt, which could derail your credit recovery.</p>
         
         <h2>The Light at the End of the Tunnel</h2>
-        <p>Rebuilding credit after bankruptcy requires patience and discipline, but it's
+        <p>Rebuilding credit after bankruptcy requires patience and discipline, but it's entirely possible to achieve a good credit score again. Many people find that their credit scores are actually higher a few years after bankruptcy than they were before filing, thanks to improved financial habits and a fresh start without overwhelming debt.</p>
+      `,
+      relatedArticles: [
+        {
+          id: 1,
+          title: "Understanding Your FICO Score: The 5 Key Factors",
+          excerpt: "Learn how payment history (35%), credit utilization (30%), length of credit history (15%), new credit (10%), and credit mix (10%) impact your FICO score and what you can do to improve each factor.",
+          slug: "understanding-fico-score"
+        },
+        {
+          id: 4,
+          title: "Credit Utilization: Why 30% Is the Magic Number",
+          excerpt: "Discover why keeping your credit utilization below 30% is crucial for your credit score, how it's calculated across individual and total accounts, and actionable strategies to lower it quickly and effectively.",
+          slug: "credit-utilization-strategies"
+        },
+        {
+          id: 9,
+          title: "Understanding Hard vs. Soft Credit Inquiries",
+          excerpt: "A complete explanation of how credit inquiries work, which types affect your score, how long they impact your credit, and strategic ways to minimize the effect of necessary hard inquiries.",
+          slug: "hard-soft-credit-inquiries"
+        }
+      ]
+    }
+  };
+
+  // Find the article based on the slug
+  const article = allArticles[slug as keyof typeof allArticles];
+
+  // Function to copy article URL to clipboard
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast({
+      title: "Link copied to clipboard",
+      description: "You can now share this article with others.",
+      duration: 3000,
+    });
+  };
+
+  // If article not found
+  if (!article) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Article Not Found</h1>
+            <p className="mb-6">The article you're looking for doesn't exist or has been moved.</p>
+            <Link to="/education">
+              <Button>
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Return to Education
+              </Button>
+            </Link>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Parse HTML content to React components
+  const createMarkup = () => {
+    return { __html: article.content };
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      
+      <main className="flex-1">
+        {/* Back to education page */}
+        <div className="max-w-4xl mx-auto px-4 pt-8">
+          <Link to="/education" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to Articles
+          </Link>
+        </div>
+
+        {/* Article header */}
+        <div className="max-w-4xl mx-auto px-4 pb-8">
+          <div className="mb-4">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+              <Tag className="h-3.5 w-3.5 mr-1" />
+              {article.category}
+            </span>
+          </div>
+          
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">{article.title}</h1>
+          
+          <div className="flex flex-wrap items-center text-gray-600 mb-8 gap-4">
+            <div className="flex items-center">
+              <Clock className="h-4 w-4 mr-1.5" />
+              <span>{article.readTime}</span>
+            </div>
+            <div className="flex items-center">
+              <CalendarDays className="h-4 w-4 mr-1.5" />
+              <span>Published: {article.publishDate}</span>
+            </div>
+            {article.updateDate && (
+              <div className="flex items-center">
+                <CalendarDays className="h-4 w-4 mr-1.5" />
+                <span>Updated: {article.updateDate}</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Author info */}
+          <div className="flex items-center mb-8">
+            <img 
+              src={article.author.image} 
+              alt={article.author.name} 
+              className="h-12 w-12 rounded-full object-cover mr-4"
+            />
+            <div>
+              <h3 className="font-medium">{article.author.name}</h3>
+              <p className="text-gray-600 text-sm">{article.author.title}</p>
+            </div>
+          </div>
+          
+          {/* Featured image */}
+          <div className="mb-8">
+            <img 
+              src={article.image} 
+              alt={article.title} 
+              className="w-full h-64 md:h-96 object-cover rounded-lg shadow-md"
+            />
+          </div>
+        </div>
+        
+        {/* Article content */}
+        <div className="max-w-4xl mx-auto px-4 pb-12">
+          <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={createMarkup()} />
+        </div>
+        
+        {/* Social share */}
+        <div className="max-w-4xl mx-auto px-4 pb-12">
+          <div className="border-t border-b py-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center">
+              <Share2 className="h-5 w-5 mr-2" />
+              Share this article
+            </h3>
+            <div className="flex gap-3">
+              <Button variant="outline" size="icon" className="rounded-full">
+                <Facebook className="h-5 w-5" />
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-full">
+                <Twitter className="h-5 w-5" />
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-full">
+                <Linkedin className="h-5 w-5" />
+              </Button>
+              <Button onClick={copyToClipboard} variant="outline" size="icon" className="rounded-full">
+                <Copy className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Related articles */}
+        {article.relatedArticles && article.relatedArticles.length > 0 && (
+          <div className="max-w-4xl mx-auto px-4 pb-16">
+            <h2 className="text-2xl font-bold mb-6">Related Articles</h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              {article.relatedArticles.map((related) => (
+                <Link to={`/education/articles/${related.slug}`} key={related.id} className="group">
+                  <div className="border rounded-lg overflow-hidden transition-all duration-300 hover:shadow-md">
+                    <div className="p-5">
+                      <h3 className="font-semibold text-lg mb-2 group-hover:text-blue-600 transition-colors">{related.title}</h3>
+                      <p className="text-gray-600 text-sm">{related.excerpt}</p>
+                      <div className="mt-4 flex items-center text-blue-600 font-medium text-sm">
+                        Read more
+                        <ArrowUpRight className="h-4 w-4 ml-1" />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
+
+export default ArticleDetail;
