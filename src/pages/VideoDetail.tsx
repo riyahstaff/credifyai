@@ -1,4 +1,4 @@
-
+<lov-code>
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -43,6 +43,29 @@ const VideoDetail = () => {
         title: "Consumer Credit Analyst",
         image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80"
       },
+      relatedVideos: [
+        {
+          id: 2,
+          title: "The 5 Most Effective Dispute Techniques That Actually Work",
+          slug: "effective-dispute-techniques",
+          thumbnail: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "22:15"
+        },
+        {
+          id: 4,
+          title: "Building Credit from Scratch: A Beginner's Guide",
+          slug: "build-credit-beginners",
+          thumbnail: "https://images.unsplash.com/photo-1579621970795-87facc2f976d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "15:42"
+        },
+        {
+          id: 5,
+          title: "DIY Credit Repair: Create Your Personal Action Plan",
+          slug: "diy-credit-repair-plan",
+          thumbnail: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "28:53"
+        }
+      ],
       transcript: `
         <h3>Introduction</h3>
         <p>Welcome to our Credit Report Walkthrough. Today, we're going to break down each section of your credit report and help you understand what all those codes and numbers actually mean.</p>
@@ -87,6 +110,29 @@ const VideoDetail = () => {
         title: "Credit Repair Specialist",
         image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80"
       },
+      relatedVideos: [
+        {
+          id: 1,
+          title: "Credit Report Walkthrough: How to Read & Understand Your Report",
+          slug: "credit-report-walkthrough",
+          thumbnail: "https://images.unsplash.com/photo-1560520031-3a4dc4e9de0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "18:24"
+        },
+        {
+          id: 3,
+          title: "How to Negotiate with Debt Collectors (Live Example)",
+          slug: "debt-collector-negotiation",
+          thumbnail: "https://images.unsplash.com/photo-1573164574472-797cdf4a583a?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "31:07"
+        },
+        {
+          id: 5,
+          title: "DIY Credit Repair: Create Your Personal Action Plan",
+          slug: "diy-credit-repair-plan",
+          thumbnail: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "28:53"
+        }
+      ],
       transcript: `
         <h3>Introduction</h3>
         <p>Hello and welcome to another credit repair masterclass. I'm Michael Roberts, and today we're diving deep into five advanced dispute techniques that actually work in today's credit reporting environment.</p>
@@ -183,6 +229,29 @@ const VideoDetail = () => {
         title: "Debt Settlement Expert",
         image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80"
       },
+      relatedVideos: [
+        {
+          id: 2,
+          title: "The 5 Most Effective Dispute Techniques That Actually Work",
+          slug: "effective-dispute-techniques",
+          thumbnail: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "22:15"
+        },
+        {
+          id: 4,
+          title: "Building Credit from Scratch: A Beginner's Guide",
+          slug: "build-credit-beginners",
+          thumbnail: "https://images.unsplash.com/photo-1579621970795-87facc2f976d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "15:42"
+        },
+        {
+          id: 5,
+          title: "DIY Credit Repair: Create Your Personal Action Plan",
+          slug: "diy-credit-repair-plan",
+          thumbnail: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "28:53"
+        }
+      ],
       transcript: `
         <h3>Introduction</h3>
         <p>Hello everyone, I'm Alex Wilson, and today I'm going to walk you through a real debt settlement negotiation call. What you're about to hear is a recording of an actual negotiation with a debt collector, with permission from my client and with identifying details changed to protect privacy.</p>
@@ -280,6 +349,29 @@ const VideoDetail = () => {
         title: "Financial Educator",
         image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80"
       },
+      relatedVideos: [
+        {
+          id: 1,
+          title: "Credit Report Walkthrough: How to Read & Understand Your Report",
+          slug: "credit-report-walkthrough",
+          thumbnail: "https://images.unsplash.com/photo-1560520031-3a4dc4e9de0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "18:24"
+        },
+        {
+          id: 2,
+          title: "The 5 Most Effective Dispute Techniques That Actually Work",
+          slug: "effective-dispute-techniques",
+          thumbnail: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "22:15"
+        },
+        {
+          id: 5,
+          title: "DIY Credit Repair: Create Your Personal Action Plan",
+          slug: "diy-credit-repair-plan",
+          thumbnail: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "28:53"
+        }
+      ],
       transcript: `
         <h3>Introduction</h3>
         <p>Hello everyone! I'm Emma Chen, and today we're talking about how to build credit from scratch. Whether you're a young adult just starting out, new to the country, or simply never established credit before, this video will give you a clear roadmap to building a solid credit foundation.</p>
@@ -353,438 +445,4 @@ const VideoDetail = () => {
         <ul>
           <li>Your accounts reporting correctly</li>
           <li>Your payment history showing as positive</li>
-          <li>Any unexpected items that could indicate errors or fraud</li>
-        </ul>
-        
-        <h3>Common Beginner Mistakes to Avoid</h3>
-        <ul>
-          <li>Applying for too many products at once (multiple hard inquiries)</li>
-          <li>Missing payments, even by a day</li>
-          <li>Maxing out credit cards</li>
-          <li>Closing your first account once you get better offers</li>
-          <li>Paying for expensive "credit repair" services</li>
-        </ul>
-        
-        <h3>Timeline Expectations</h3>
-        <p>Building credit takes time. Here's a typical timeline:</p>
-        <ul>
-          <li>1-6 months: Establish a credit file</li>
-          <li>6 months: Become eligible for a FICO score</li>
-          <li>12 months: Good payment history may qualify you for better products</li>
-          <li>24 months: With perfect payment history, you may qualify for premium cards and good loan rates</li>
-        </ul>
-        
-        <h3>Conclusion</h3>
-        <p>Remember, building credit is a marathon, not a sprint. Focus on consistent responsible behavior over time. The habits you establish now will serve you for decades to come.</p>
-        <p>In the description below, I've linked to detailed reviews of the credit products mentioned. If you found this helpful, please give this video a thumbs up and subscribe for more personal finance guidance.</p>
-        <p>Thanks for watching, and here's to building a solid financial foundation!</p>
-      `
-    },
-    'diy-credit-repair-plan': {
-      id: 5,
-      title: "DIY Credit Repair: Create Your Personal Action Plan",
-      description: "A step-by-step workshop on creating a personalized credit improvement strategy, with downloadable templates and trackers for managing disputes, debt payoff, and score improvement.",
-      duration: "28:53",
-      thumbnail: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
-      videoUrl: "https://www.youtube.com/embed/igPIk79WR-g", // Credit repair planning video
-      publishDate: "March 27, 2024",
-      views: "7,625",
-      category: "repair",
-      author: {
-        name: "David Jackson",
-        title: "Credit Repair Coach",
-        image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80"
-      },
-      transcript: `
-        <h3>Introduction</h3>
-        <p>Welcome to our DIY Credit Repair workshop. I'm David Jackson, and today we're going to create a comprehensive, personalized credit repair plan together. By the end of this video, you'll have a clear roadmap for improving your credit score with actionable steps tailored to your situation.</p>
-        
-        <h3>Why a Personalized Plan Matters</h3>
-        <p>Generic credit advice is everywhere, but everyone's credit situation is unique. The strategies that work for someone with collection accounts won't necessarily help someone dealing with high utilization or identity theft. That's why we're focusing on building a personalized plan today.</p>
-        
-        <h3>Step 1: Assess Your Current Credit Situation</h3>
-        <p>The first step is a thorough assessment of where you stand. You'll need to:</p>
-        <ol>
-          <li>Get copies of all three credit reports (Experian, Equifax, TransUnion)</li>
-          <li>Check your FICO scores from all three bureaus</li>
-          <li>Make a comprehensive list of all credit accounts and their statuses</li>
-          <li>Identify all negative items on your reports</li>
-        </ol>
-        <p>For this step, I've created a Credit Assessment Worksheet that you can download from the link in the description. This will help you organize all your information in one place.</p>
-        
-        <h3>Step 2: Set Specific Credit Goals</h3>
-        <p>Now that you know where you stand, decide where you want to go. Effective goals are specific and have deadlines. Examples might be:</p>
-        <ul>
-          <li>"Increase FICO score from 620 to 680 within 6 months"</li>
-          <li>"Remove 3 collection accounts by December"</li>
-          <li>"Reduce credit card utilization from 65% to under 30% by September"</li>
-        </ul>
-        <p>Write down 1-3 specific goals on your worksheet.</p>
-        
-        <h3>Step 3: Identify Your Score Factors</h3>
-        <p>Next, identify which factors are most impacting your credit score. When you check your score online, you'll usually see key factors affecting it. The most common include:</p>
-        <ul>
-          <li>Payment history issues (late payments, collections, charge-offs)</li>
-          <li>High credit utilization</li>
-          <li>Limited credit history</li>
-          <li>Recent hard inquiries</li>
-          <li>Derogatory public records</li>
-          <li>Limited credit mix</li>
-        </ul>
-        <p>On your worksheet, rank these factors from most to least impactful for your situation.</p>
-        
-        <h3>Step 4: Create Your Dispute Strategy</h3>
-        <p>If you have inaccurate negative items, create a dispute strategy:</p>
-        <ol>
-          <li>Identify all errors (inaccurate dates, amounts, account status, etc.)</li>
-          <li>Prioritize disputes (highest impact items first)</li>
-          <li>Decide on dispute methods (online, mail, phone, or through original creditor)</li>
-          <li>Create a dispute calendar (staggering disputes instead of sending all at once)</li>
-          <li>Prepare documentation for supporting your disputes</li>
-        </ol>
-        <p>Your dispute strategy should include what to dispute, how, when, and what evidence you'll provide.</p>
-        
-        <h3>Step 5: Design Your Debt Management Plan</h3>
-        <p>If you have outstanding debts, develop a debt management strategy:</p>
-        <ol>
-          <li>List all debts with balances, interest rates, minimum payments</li>
-          <li>Decide on a payoff strategy (avalanche or snowball method)</li>
-          <li>Consider settlement offers for old collections</li>
-          <li>Evaluate consolidation options if appropriate</li>
-          <li>Create monthly payment targets and deadlines</li>
-        </ol>
-        <p>My Debt Payoff Calculator spreadsheet can help you compare different repayment strategies - find it in the description.</p>
-        
-        <h3>Step 6: Plan Your Utilization Improvement</h3>
-        <p>If high utilization is hurting your score:</p>
-        <ol>
-          <li>Calculate current overall and per-card utilization</li>
-          <li>Set target utilization percentages (under 30%, ideally under 10%)</li>
-          <li>Create a payment schedule to reach those targets</li>
-          <li>Consider requesting credit limit increases (soft pulls only)</li>
-          <li>Optimize statement closing dates for reporting</li>
-        </ol>
-        <p>The Utilization Tracker in your download package will help you monitor this.</p>
-        
-        <h3>Step 7: Develop Your Positive Credit Building Strategy</h3>
-        <p>While removing negatives is important, adding positives is equally crucial:</p>
-        <ol>
-          <li>Identify gaps in your credit profile</li>
-          <li>Research credit products that might help (secured cards, credit builder loans, etc.)</li>
-          <li>Create a strategy for appropriate new accounts (timing, type)</li>
-          <li>Set up perfect payment systems (autopay, calendar reminders)</li>
-          <li>Plan strategic credit usage patterns</li>
-        </ol>
-        <p>Remember, new credit should be added thoughtfully and gradually.</p>
-        
-        <h3>Step 8: Create Your Monthly Action Calendar</h3>
-        <p>Now, combine all these strategies into a month-by-month action calendar:</p>
-        <ul>
-          <li>Month 1 actions (initial disputes, utilization reduction targets, etc.)</li>
-          <li>Month 2 actions (follow-up on disputes, payment targets)</li>
-          <li>Month 3 actions (secondary disputes, credit building steps)</li>
-          <li>And so on for 12 months</li>
-        </ul>
-        <p>The 12-month planner in your download package gives you space to map this out.</p>
-        
-        <h3>Step 9: Establish Your Progress Tracking System</h3>
-        <p>Decide how you'll track progress:</p>
-        <ul>
-          <li>Monthly score checks (which source you'll use)</li>
-          <li>Dispute response tracking</li>
-          <li>Payment and utilization tracking</li>
-          <li>Monthly calendar review and adjustment</li>
-        </ul>
-        <p>The Progress Tracker spreadsheet will help you monitor these metrics over time.</p>
-        
-        <h3>Step 10: Plan for Plateaus and Setbacks</h3>
-        <p>Finally, prepare for inevitable challenges:</p>
-        <ul>
-          <li>Identify potential setbacks (denied disputes, unexpected expenses)</li>
-          <li>Create contingency plans</li>
-          <li>Set regular plan review dates (quarterly)</li>
-          <li>Establish a credit maintenance plan for after reaching your goals</li>
-        </ul>
-        
-        <h3>Example Case Study: Sarah's Plan</h3>
-        <p>Let's look at how this all comes together with an example. Sarah has:</p>
-        <ul>
-          <li>Current FICO: 580</li>
-          <li>Two collection accounts ($1,200 and $800)</li>
-          <li>One credit card at 85% utilization</li>
-          <li>Two hard inquiries from 6 months ago</li>
-          <li>Goal: Qualify for a mortgage in 12 months (needs 640+ score)</li>
-        </ul>
-        <p>Sarah's plan includes:</p>
-        <ol>
-          <li>Disputing the smaller collection (legitimately incorrect date)</li>
-          <li>Saving for a settlement offer on the larger collection</li>
-          <li>Paying down her credit card to under 30% in 4 months</li>
-          <li>Adding a secured card to diversify her credit</li>
-          <li>Setting up automatic payments for perfect payment history</li>
-        </ol>
-        <p>Her monthly calendar shows exactly when each action happens, with regular score check milestones.</p>
-        
-        <h3>Conclusion</h3>
-        <p>Your personalized credit repair plan is a living document. Review it monthly, adjust as needed, and celebrate small victories along the way. Remember that consistent, strategic action over time is the key to credit improvement.</p>
-        <p>Download all the templates and trackers mentioned using the link in the description. If you found this workshop helpful, please give it a thumbs up and subscribe for more credit improvement strategies.</p>
-        <p>Thanks for watching, and here's to taking control of your credit future!</p>
-      `
-    }
-  };
-
-  // Find the video based on the slug parameter
-  const video = videoDatabase[slug as keyof typeof videoDatabase];
-
-  const copyLinkToClipboard = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast({
-      title: "Link copied",
-      description: "The video link has been copied to your clipboard.",
-      duration: 3000,
-    });
-  };
-
-  if (!video) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-grow flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-credify-navy dark:text-white mb-4">Video not found</h1>
-            <p className="text-credify-navy-light dark:text-white/70 mb-6">
-              Sorry, the video you're looking for doesn't exist or has been moved.
-            </p>
-            <Link 
-              to="/education"
-              className="inline-flex items-center bg-credify-teal hover:bg-credify-teal-light transition-colors text-white font-medium px-6 py-3 rounded-lg"
-            >
-              Back to Education
-            </Link>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      
-      <main className="flex-grow pt-24 pb-20">
-        <div className="container mx-auto px-4 md:px-6">
-          {/* Breadcrumb navigation */}
-          <div className="mb-6">
-            <Link 
-              to="/education" 
-              className="inline-flex items-center text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors text-sm"
-            >
-              <ChevronLeft size={16} className="mr-1" />
-              Back to Education
-            </Link>
-          </div>
-          
-          {/* Video Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            <div className="col-span-8">
-              {/* Video Player */}
-              <div className="aspect-video w-full bg-gray-900 rounded-xl overflow-hidden mb-6">
-                <iframe 
-                  src={video.videoUrl} 
-                  title={video.title}
-                  className="w-full h-full"
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
-              </div>
-              
-              {/* Video Info */}
-              <div className="mb-8">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-credify-teal/10 text-credify-teal capitalize">
-                    {video.category}
-                  </span>
-                  <span className="text-xs text-credify-navy-light dark:text-white/60 flex items-center">
-                    <Clock size={14} className="mr-1" />
-                    {video.duration}
-                  </span>
-                </div>
-                
-                <h1 className="text-2xl md:text-3xl font-bold text-credify-navy dark:text-white mb-4">
-                  {video.title}
-                </h1>
-                
-                <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-                  <div className="flex items-center gap-3">
-                    <img 
-                      src={video.author.image} 
-                      alt={video.author.name} 
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                    <div>
-                      <h3 className="font-medium text-credify-navy dark:text-white">
-                        {video.author.name}
-                      </h3>
-                      <p className="text-sm text-credify-navy-light dark:text-white/60">
-                        {video.author.title}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-sm text-credify-navy-light dark:text-white/60">
-                    <div className="flex items-center">
-                      <CalendarDays size={14} className="mr-1" />
-                      <span>{video.publishDate}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <PlaySquare size={14} className="mr-1" />
-                      <span>{video.views} views</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <p className="text-credify-navy-light dark:text-white/80 mb-6">
-                  {video.description}
-                </p>
-                
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <ThumbsUp size={16} />
-                    Like
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <Bookmark size={16} />
-                    Save
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={copyLinkToClipboard}>
-                    <Share2 size={16} />
-                    Share
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Transcript */}
-              <div className="bg-white dark:bg-credify-navy/20 rounded-xl shadow-soft border border-gray-100 dark:border-gray-700/30 p-6 mb-8">
-                <h2 className="text-xl font-semibold text-credify-navy dark:text-white mb-4">
-                  Video Transcript
-                </h2>
-                <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:text-credify-navy dark:prose-headings:text-white prose-p:text-credify-navy-light dark:prose-p:text-white/80 prose-strong:text-credify-navy dark:prose-strong:text-white overflow-y-auto max-h-[600px] pr-4">
-                  <div dangerouslySetInnerHTML={{ __html: video.transcript }} />
-                </div>
-              </div>
-              
-              {/* Tags */}
-              <div className="pt-6 border-t border-gray-200 dark:border-gray-700/30">
-                <div className="flex items-center flex-wrap gap-2">
-                  <span className="text-credify-navy-light dark:text-white/70 mr-2">
-                    <Tag size={16} className="inline mr-1" />
-                    Topics:
-                  </span>
-                  <Link
-                    to={`/education?category=disputes`}
-                    className="text-xs font-medium px-2.5 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800/50 text-credify-navy-light dark:text-white/70 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors"
-                  >
-                    Dispute Strategies
-                  </Link>
-                  <Link
-                    to={`/education?category=laws`}
-                    className="text-xs font-medium px-2.5 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800/50 text-credify-navy-light dark:text-white/70 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors"
-                  >
-                    Legal Rights
-                  </Link>
-                  <Link
-                    to={`/education?category=repair`}
-                    className="text-xs font-medium px-2.5 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800/50 text-credify-navy-light dark:text-white/70 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors"
-                  >
-                    Credit Repair
-                  </Link>
-                </div>
-              </div>
-              
-              {/* Share */}
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700/30">
-                <h3 className="font-medium text-credify-navy dark:text-white mb-4">Share this video</h3>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <Facebook size={16} />
-                    Facebook
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <Twitter size={16} />
-                    Twitter
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <Linkedin size={16} />
-                    LinkedIn
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={copyLinkToClipboard}>
-                    <Copy size={16} />
-                    Copy Link
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Sidebar */}
-            <div className="col-span-4">
-              <div className="sticky top-24">
-                {/* Related Videos */}
-                <div className="bg-white dark:bg-credify-navy/20 rounded-xl shadow-soft border border-gray-100 dark:border-gray-700/30 p-6 mb-6">
-                  <h3 className="font-semibold text-lg text-credify-navy dark:text-white mb-4">Related Videos</h3>
-                  <div className="space-y-4">
-                    {video.relatedVideos.map((relatedVideo) => (
-                      <Link 
-                        key={relatedVideo.id}
-                        to={`/education/videos/${relatedVideo.slug}`}
-                        className="flex gap-3 group"
-                      >
-                        <div className="relative w-24 h-16 flex-shrink-0 rounded overflow-hidden">
-                          <img 
-                            src={relatedVideo.thumbnail} 
-                            alt={relatedVideo.title} 
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1 py-0.5 rounded">
-                            {relatedVideo.duration}
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-sm text-credify-navy dark:text-white group-hover:text-credify-teal transition-colors line-clamp-2">
-                            {relatedVideo.title}
-                          </h4>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* CTA */}
-                <div className="bg-credify-navy text-white rounded-xl shadow-lg overflow-hidden">
-                  <div className="p-6">
-                    <h3 className="font-semibold text-lg mb-3">Ready to improve your credit?</h3>
-                    <p className="text-white/80 mb-4">
-                      Upload your credit report and let our AI-powered tools help you identify issues and generate dispute letters.
-                    </p>
-                    <Link 
-                      to="/upload-report"
-                      className="inline-flex items-center bg-credify-teal hover:bg-credify-teal-light transition-colors text-white font-medium px-4 py-2 rounded-lg w-full justify-center"
-                    >
-                      Upload Your Report
-                      <ArrowUpRight size={16} className="ml-1" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-      
-      <Footer />
-    </div>
-  );
-};
-
-export default VideoDetail;
+          <li>Any
