@@ -56,11 +56,9 @@ function App() {
                   <DisputeLetters />
                 </PrivateRoute>
               } />
-              <Route path="/education" element={
-                <PrivateRoute>
-                  <Education />
-                </PrivateRoute>
-              } />
+              
+              {/* Public Routes */}
+              <Route path="/education" element={<Education />} />
               
               {/* Not Found Route */}
               <Route path="*" element={<NotFound />} />
