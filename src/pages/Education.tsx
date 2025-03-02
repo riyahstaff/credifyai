@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -153,7 +154,7 @@ const Education = () => {
                   key={article.id} 
                   className="relative group rounded-xl overflow-hidden shadow-md h-64 card-hover"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-10"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent z-10"></div>
                   
                   <img 
                     src={article.image} 
@@ -161,7 +162,7 @@ const Education = () => {
                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   
-                  <div className="absolute inset-0 z-20 flex flex-col justify-end p-6">
+                  <div className="absolute inset-0 z-20 flex flex-col justify-end p-6 text-white">
                     <div className="flex items-center gap-1.5 text-white text-xs font-medium mb-2">
                       <Tag size={14} />
                       <span className="capitalize">{article.category}</span>
