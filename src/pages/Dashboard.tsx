@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,8 +11,17 @@ import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
 const Dashboard = () => {
   const { profile, isLoading, user } = useAuth();
 
+  useEffect(() => {
+    // Force re-render to ensure auth state is correctly reflected
+    const timer = setTimeout(() => {
+      console.log("Dashboard checking auth state:", { user, isLoading, profile });
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [user, isLoading, profile]);
+
   // If auth is still loading, show a loading indicator
-  if (isLoading) {
+  if (isLoading || !user) {
     return <LoadingIndicator />;
   }
 
