@@ -44,7 +44,7 @@ const Hero = () => {
                 href="https://myfreescorenow.com/enroll/?AID=CredBloom&PID=75931" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="btn-outline py-3 px-6 text-base text-nowrap w-full sm:w-auto bg-credify-teal/10 hover:bg-credify-teal/20 border-credify-teal/30"
+                className="btn-outline py-3 px-6 text-base w-full sm:w-auto bg-credify-teal/10 hover:bg-credify-teal/20 border-credify-teal/30"
               >
                 Scores & Monitoring $29/mo
               </a>
