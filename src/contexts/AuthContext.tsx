@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, Profile, UserSession } from '@/lib/supabase';
+import { supabase, Profile, UserSession } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const AuthContext = createContext<{
@@ -150,15 +150,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Sign up a new user and create their profile
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
+      console.log('Signing up with:', { email, fullName });
+      
       // Create the user in Supabase auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
       });
 
       if (error) {
+        console.error('Signup error:', error);
         return { error, success: false };
       }
+
+      console.log('Signup successful, user data:', data);
 
       if (data?.user) {
         // Create the user's profile in the profiles table
@@ -176,6 +186,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.error('Error creating user profile:', profileError);
           return { error: profileError, success: false };
         }
+
+        console.log('Profile created successfully');
 
         toast({
           title: "Account created!",

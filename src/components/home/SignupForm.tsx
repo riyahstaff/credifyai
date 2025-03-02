@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -16,6 +15,7 @@ const SignupForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     // If already logged in, redirect to dashboard
@@ -27,28 +27,45 @@ const SignupForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage('');
     
     try {
+      console.log('Starting signup process for:', email);
       const { error, success } = await signUp(email, password, name);
       
       if (error) {
+        console.error('Signup error details:', error);
+        let errorMsg = error.message || "Failed to create account. Please try again.";
+        
+        // Provide more user-friendly error messages
+        if (error.message?.includes('User already registered')) {
+          errorMsg = "This email is already registered. Please login instead.";
+        } else if (error.message?.includes('password')) {
+          errorMsg = "Password doesn't meet requirements. Use at least 8 characters.";
+        }
+        
+        setErrorMessage(errorMsg);
+        
         toast({
           title: "Signup failed",
-          description: error.message || "Failed to create account. Please try again.",
+          description: errorMsg,
           variant: "destructive",
           duration: 5000,
         });
       } else if (success) {
+        console.log('Signup successful, showing confirmation dialog');
         setShowDialog(true);
       }
     } catch (error) {
+      console.error('Unexpected signup error:', error);
+      setErrorMessage("An unexpected error occurred. Please try again.");
+      
       toast({
         title: "Signup failed",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
         duration: 5000,
       });
-      console.error('Signup error:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -70,6 +87,12 @@ const SignupForm = () => {
           <h3 className="text-xl font-semibold text-credify-navy dark:text-white mb-6 text-center">
             Create Your Free Account
           </h3>
+          
+          {errorMessage && (
+            <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-lg text-red-600 dark:text-red-400 text-sm">
+              {errorMessage}
+            </div>
+          )}
           
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
