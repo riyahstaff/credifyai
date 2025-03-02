@@ -175,6 +175,15 @@ const Education = () => {
       thumbnail: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
       slug: 'deal-with-debt-collectors',
       videoId: 'WiIe2FzRsFc'
+    },
+    {
+      id: 2,
+      title: 'Understanding Credit Score Factors: What Really Matters',
+      description: 'A detailed breakdown of what factors impact your credit score the most, common misconceptions, and actionable tips to improve your score quickly.',
+      duration: '12:47',
+      thumbnail: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+      slug: 'understanding-credit-score-factors',
+      videoId: 'UvTyIrxPplE'
     }
   ];
 
