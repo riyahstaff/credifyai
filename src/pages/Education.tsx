@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -170,52 +169,13 @@ const Education = () => {
   const videos = [
     {
       id: 1,
-      title: 'Credit Report Walkthrough: How to Read & Understand Your Report',
-      description: 'A complete breakdown of each section of your credit report, what the codes and statuses mean, and how to identify potential errors or discrepancies.',
-      duration: '18:24',
-      thumbnail: 'https://images.unsplash.com/photo-1560520031-3a4dc4e9de0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
-      slug: 'credit-report-walkthrough'
-    },
-    {
-      id: 2,
-      title: 'The 5 Most Effective Dispute Techniques That Actually Work',
-      description: 'Learn proven dispute strategies that go beyond the basics, including procedural requests, method of verification demands, and escalation tactics when bureaus are unresponsive.',
-      duration: '22:15',
-      thumbnail: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
-      slug: 'effective-dispute-techniques'
-    },
-    {
-      id: 3,
-      title: 'How to Negotiate with Debt Collectors (Live Example)',
-      description: 'Watch a real debt settlement negotiation call, with analysis of effective tactics, settlement offer frameworks, and how to get agreements in writing before making payments.',
-      duration: '31:07',
-      thumbnail: 'https://images.unsplash.com/photo-1573164574472-797cdf4a583a?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
-      slug: 'debt-collector-negotiation'
-    },
-    {
-      id: 4,
-      title: 'Building Credit from Scratch: A Beginner\'s Guide',
-      description: 'The complete roadmap for establishing credit for the first time, including secured cards, credit builder loans, becoming an authorized user, and avoiding common beginner mistakes.',
-      duration: '15:42',
-      thumbnail: 'https://images.unsplash.com/photo-1579621970795-87facc2f976d?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
-      slug: 'build-credit-beginners'
-    },
-    {
-      id: 5,
-      title: 'DIY Credit Repair: Create Your Personal Action Plan',
-      description: 'A step-by-step workshop on creating a personalized credit improvement strategy, with downloadable templates and trackers for managing disputes, debt payoff, and score improvement.',
-      duration: '28:53',
-      thumbnail: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
-      slug: 'diy-credit-repair-plan'
-    },
-    {
-      id: 6,
       title: 'How to Deal with Debt Collectors: Expert Strategies',
       description: 'Learn effective strategies for handling debt collectors, understanding your rights, and negotiating settlements that work in your favor while protecting your financial future.',
       duration: '15:35',
       thumbnail: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
-      slug: 'deal-with-debt-collectors'
-    },
+      slug: 'deal-with-debt-collectors',
+      videoId: 'WiIe2FzRsFc'
+    }
   ];
 
   const filteredArticles = articles.filter(article => {
