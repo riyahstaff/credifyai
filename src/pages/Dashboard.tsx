@@ -10,34 +10,48 @@ import DashboardContent from '@/components/dashboard/DashboardContent';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const { profile, isLoading, user } = useAuth();
   const [authTimeout, setAuthTimeout] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Check if auth is taking too long (10 seconds)
+    // Check if auth is taking too long (8 seconds)
     const timeoutId = setTimeout(() => {
       if (isLoading) {
         setAuthTimeout(true);
+        toast({
+          title: "Authentication timeout",
+          description: "Showing dashboard in demo mode. Some features may be limited.",
+          variant: "default",
+        });
       }
-    }, 10000);
+      // Always set authChecked to true after timeout to stop the loading indicator
+      setAuthChecked(true);
+    }, 8000);
     
     return () => clearTimeout(timeoutId);
-  }, [isLoading]);
+  }, [isLoading, toast]);
 
   useEffect(() => {
     // Force re-render to ensure auth state is correctly reflected
     const timer = setTimeout(() => {
       console.log("Dashboard checking auth state:", { user, isLoading, profile });
+      // If auth has completed, set authChecked to true
+      if (!isLoading) {
+        setAuthChecked(true);
+      }
     }, 500);
     
     return () => clearTimeout(timer);
   }, [user, isLoading, profile]);
 
   // If auth is still loading and hasn't timed out, show a loading indicator
-  if (isLoading && !authTimeout) {
+  if (isLoading && !authChecked) {
     return <LoadingIndicator />;
   }
 

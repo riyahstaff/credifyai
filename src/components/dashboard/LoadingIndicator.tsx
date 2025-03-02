@@ -8,14 +8,23 @@ import { AlertTriangle } from "lucide-react";
 
 const LoadingIndicator = () => {
   const [showTimeout, setShowTimeout] = useState(false);
+  const [extendedTimeout, setExtendedTimeout] = useState(false);
 
   useEffect(() => {
-    // If loading takes more than 5 seconds, show timeout message
+    // If loading takes more than 3 seconds, show initial timeout message
     const timer = setTimeout(() => {
       setShowTimeout(true);
-    }, 5000);
+    }, 3000);
     
-    return () => clearTimeout(timer);
+    // If loading takes more than 8 seconds, show extended timeout message
+    const extendedTimer = setTimeout(() => {
+      setExtendedTimeout(true);
+    }, 8000);
+    
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(extendedTimer);
+    };
   }, []);
 
   return (
@@ -33,20 +42,26 @@ const LoadingIndicator = () => {
                   <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   <AlertTitle className="text-amber-800 dark:text-amber-300">Taking longer than expected</AlertTitle>
                   <AlertDescription className="text-amber-700 dark:text-amber-400">
-                    <p className="mb-2">We're having trouble connecting to our authentication services. This could be due to:</p>
-                    <ul className="list-disc pl-5 space-y-1 text-sm">
-                      <li>Connection issues with our authentication provider</li>
-                      <li>High server load at the moment</li>
-                      <li>Missing API credentials in the preview environment</li>
-                    </ul>
-                    <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:gap-4">
-                      <Link to="/login" className="text-amber-700 dark:text-amber-300 font-medium px-4 py-2 bg-amber-100 dark:bg-amber-900/40 rounded-md text-sm hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors">
-                        Try logging in again
-                      </Link>
-                      <Link to="/" className="text-amber-700 dark:text-amber-300 font-medium px-4 py-2 bg-amber-100 dark:bg-amber-900/40 rounded-md text-sm hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors">
-                        Return to home page
-                      </Link>
-                    </div>
+                    {extendedTimeout ? (
+                      <>
+                        <p className="mb-2">We're having trouble loading your dashboard. This could be due to:</p>
+                        <ul className="list-disc pl-5 space-y-1 text-sm">
+                          <li>Authentication session expired or invalid</li>
+                          <li>Connection issues with our services</li>
+                          <li>High server load at the moment</li>
+                        </ul>
+                        <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:gap-4">
+                          <Link to="/login" className="text-amber-700 dark:text-amber-300 font-medium px-4 py-2 bg-amber-100 dark:bg-amber-900/40 rounded-md text-sm hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors">
+                            Try logging in again
+                          </Link>
+                          <Link to="/" className="text-amber-700 dark:text-amber-300 font-medium px-4 py-2 bg-amber-100 dark:bg-amber-900/40 rounded-md text-sm hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors">
+                            Return to home page
+                          </Link>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="mb-2">We're connecting to our authentication services. This should only take a moment...</p>
+                    )}
                   </AlertDescription>
                 </Alert>
               )}
