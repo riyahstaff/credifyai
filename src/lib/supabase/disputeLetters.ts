@@ -55,6 +55,31 @@ export async function downloadSampleDisputeLetter(fileName: string): Promise<str
 }
 
 /**
+ * Download a legal template from Supabase storage
+ * @param templateName The name of the template to download
+ * @returns The text content or null if download failed
+ */
+export async function downloadLegalTemplate(templateName: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .storage
+      .from(LEGAL_TEMPLATES_BUCKET)
+      .download(`${templateName}.txt`);
+      
+    if (error || !data) {
+      console.error('Error downloading legal template:', error);
+      return null;
+    }
+    
+    // Convert blob to text
+    return await data.text();
+  } catch (error) {
+    console.error('Error in downloadLegalTemplate:', error);
+    return null;
+  }
+}
+
+/**
  * Save a dispute letter to the user's account
  * @param userId The user's ID
  * @param disputeData The dispute letter data
@@ -149,5 +174,34 @@ export async function getSuccessfulDisputeExamples(disputeType: string): Promise
   } catch (error) {
     console.error(`Error getting successful dispute examples for ${disputeType}:`, error);
     return [];
+  }
+}
+
+/**
+ * List available dispute templates by category
+ * @returns An object with template categories and their templates
+ */
+export async function listDisputeTemplates() {
+  try {
+    // In a real implementation, this would fetch from Supabase
+    return DISPUTE_TEMPLATES;
+  } catch (error) {
+    console.error('Error listing dispute templates:', error);
+    return {};
+  }
+}
+
+/**
+ * Get legal reference text for a specific law or regulation
+ * @param referenceKey The key for the legal reference (e.g., 'fcra_section_611')
+ * @returns The legal reference text or null if not found
+ */
+export async function getLegalReference(referenceKey: string): Promise<string | null> {
+  try {
+    // In a real implementation, this would fetch from Supabase
+    return LEGAL_REFERENCES[referenceKey] || null;
+  } catch (error) {
+    console.error(`Error getting legal reference for ${referenceKey}:`, error);
+    return null;
   }
 }
