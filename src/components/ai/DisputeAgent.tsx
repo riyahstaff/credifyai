@@ -1,4 +1,4 @@
-<lov-code>
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -64,7 +64,7 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
   } = useReportAnalysis();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);\
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // Focus on input when chat opens
   useEffect(() => {
@@ -313,7 +313,7 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
         };
         
         setMessages(prev => [...prev, foundIssuesMessage]);
-        setIsAgentTyping(false);\
+        setIsAgentTyping(false);
         setIsProcessingFile(false);
         return;
       }
@@ -786,67 +786,66 @@ Sincerely,
 [YOUR NAME]
 `;
 
-              // Create dispute data
-              const simplifiedDisputeData = {
-                bureau: targetDispute.bureau,
-                accountName: targetDispute.accountName,
-                accountNumber: targetDispute.accountNumber,
-                errorType: targetDispute.reason,
-                explanation: targetDispute.description,
-                timestamp: new Date(),
-                letterContent: simplifiedLetter
-              };
-              
-              // Notify parent component
-              if (onGenerateDispute) {
-                onGenerateDispute(simplifiedDisputeData);
+                // Create dispute data
+                const simplifiedDisputeData = {
+                  bureau: targetDispute.bureau,
+                  accountName: targetDispute.accountName,
+                  accountNumber: targetDispute.accountNumber,
+                  errorType: targetDispute.reason,
+                  explanation: targetDispute.description,
+                  timestamp: new Date(),
+                  letterContent: simplifiedLetter
+                };
+                
+                // Notify parent component
+                if (onGenerateDispute) {
+                  onGenerateDispute(simplifiedDisputeData);
+                }
+                
+                const recoveryMessage: MessageType = {
+                  id: Date.now().toString(),
+                  content: `I've created a simplified dispute letter for the ${targetDispute.accountName} account. You can now download it or send it to ${targetDispute.bureau}.`,
+                  sender: 'agent',
+                  timestamp: new Date(),
+                };
+                
+                setMessages(prev => [...prev, recoveryMessage]);
+                setDisputeGenerated(true);
+              } catch (fallbackError) {
+                console.error("Even fallback letter generation failed:", fallbackError);
+                
+                const finalErrorMessage: MessageType = {
+                  id: Date.now().toString(),
+                  content: `I'm sorry, but I'm having technical difficulties generating the dispute letter. You can still create a dispute letter manually using the letter generator in the Dispute Letters section of the app.`,
+                  sender: 'agent',
+                  timestamp: new Date(),
+                };
+                
+                setMessages(prev => [...prev, finalErrorMessage]);
+              } finally {
+                setIsAgentTyping(false);
               }
-              
-              const recoveryMessage: MessageType = {
-                id: Date.now().toString(),
-                content: `I've created a simplified dispute letter for the ${targetDispute.accountName} account. You can now download it or send it to ${targetDispute.bureau}.`,
-                sender: 'agent',
-                timestamp: new Date(),
-              };
-              
-              setMessages(prev => [...prev, recoveryMessage]);
-              setDisputeGenerated(true);
-            } catch (fallbackError) {
-              console.error("Even fallback letter generation failed:", fallbackError);
-              
-              const finalErrorMessage: MessageType = {
-                id: Date.now().toString(),
-                content: `I'm sorry, but I'm having technical difficulties generating the dispute letter. You can still create a dispute letter manually using the letter generator in the Dispute Letters section of the app.`,
-                sender: 'agent',
-                timestamp: new Date(),
-              };
-              
-              setMessages(prev => [...prev, finalErrorMessage]);
-            } finally {
-              setIsAgentTyping(false);
-            }
-          }, 2000);
-          return;
-        } finally {
-          setIsAgentTyping(false);
-        }
-      }, 3000);
-      
-      return;
-    } else {
-      const noDisputeMessage: MessageType = {
-        id: Date.now().toString(),
-        content: "I'd be happy to help you create a dispute letter. To get started, please tell me which account on your credit report you'd like to dispute and what issue you're having with it.",
-        sender: 'agent',
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, noDisputeMessage]);
-      setIsAgentTyping(false);
-      return;
+            }, 2000);
+          } finally {
+            setIsAgentTyping(false);
+          }
+        }, 3000);
+        
+        return;
+      } else {
+        const noDisputeMessage: MessageType = {
+          id: Date.now().toString(),
+          content: "I'd be happy to help you create a dispute letter. To get started, please tell me which account on your credit report you'd like to dispute and what issue you're having with it.",
+          sender: 'agent',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, noDisputeMessage]);
+        setIsAgentTyping(false);
+        return;
+      }
     }
-  }
-  
+    
     // Default response if no specific patterns matched
     const defaultResponse: MessageType = {
       id: Date.now().toString(),
@@ -870,4 +869,21 @@ Sincerely,
     setTimeout(() => {
       const welcomeMessage: MessageType = {
         id: Date.now().toString(),
-        content: `
+        content: `Hello${profile?.full_name ? ' ' + profile.full_name.split(' ')[0] : ''}! I'm ${AGENT_NAME}, your ${AGENT_FULL_NAME}. I can help you analyze your credit reports and automatically identify errors and discrepancies across all three bureaus. Upload your credit report to get started!`,
+        sender: 'agent',
+        timestamp: new Date(),
+      };
+      
+      setMessages([welcomeMessage]);
+    }, 100);
+  };
+  
+  // Component JSX would be here
+  return (
+    <div className="relative h-full bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
+      {/* Chat interface components would go here */}
+    </div>
+  );
+};
+
+export default DisputeAgent;
