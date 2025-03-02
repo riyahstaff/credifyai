@@ -5,8 +5,16 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder-url.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
-if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-  console.error('Supabase credentials missing. Make sure you have connected your Supabase project.');
+// Check for missing credentials with a helpful error message
+const hasMissingCredentials = !import.meta.env.VITE_SUPABASE_URL || 
+                             !import.meta.env.VITE_SUPABASE_ANON_KEY ||
+                             supabaseUrl === 'https://placeholder-url.supabase.co' ||
+                             supabaseAnonKey === 'placeholder-key';
+
+if (hasMissingCredentials) {
+  console.error('Supabase credentials missing. To connect this app to Supabase:');
+  console.error('1. Make sure you have connected your Supabase project in the Lovable interface');
+  console.error('2. Or set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables');
 }
 
 // Create and export the supabase client
