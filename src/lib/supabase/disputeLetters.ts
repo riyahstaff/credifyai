@@ -87,6 +87,31 @@ export async function saveDisputeLetter(userId: string, disputeData: any) {
 }
 
 /**
+ * Get all dispute letters for a specific user
+ * @param userId The user's ID
+ * @returns An array of dispute letters
+ */
+export async function getUserDisputeLetters(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('dispute_letters')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error('Error fetching user dispute letters:', error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error in getUserDisputeLetters:', error);
+    return [];
+  }
+}
+
+/**
  * Get successful dispute examples for specific issue types
  * @param disputeType The type of dispute
  * @returns An array of successful dispute examples

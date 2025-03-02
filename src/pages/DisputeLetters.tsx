@@ -1,77 +1,123 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import DisputeAgent from '../components/ai/DisputeAgent';
 import DisputePreview from '../components/disputes/DisputePreview';
 import DisputeGenerator from '../components/disputes/DisputeGenerator';
-import { FileText, Plus, Download, Mail, Eye, Filter, Search, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { FileText, Plus, Download, Mail, Eye, Filter, Search, CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getUserDisputeLetters, saveDisputeLetter } from '@/lib/supabase/disputeLetters';
+import { useAuth } from '@/contexts/AuthContext';
 
 const DisputeLetters = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'drafts' | 'sent' | 'resolved'>('all');
   const [showPreview, setShowPreview] = useState(false);
   const [currentLetter, setCurrentLetter] = useState<any>(null);
   const [selectedView, setSelectedView] = useState<string>("letters");
+  const [isLoading, setIsLoading] = useState(true);
   
   // Sample data for dispute letters
-  const [letters, setLetters] = useState([
-    {
-      id: 1,
-      title: 'Duplicate Account Dispute (Bank of America)',
-      recipient: 'Experian',
-      createdAt: 'May 10, 2023',
-      status: 'in-progress',
-      bureaus: ['Experian', 'TransUnion'],
-      laws: ['FCRA § 611', 'FCRA § 623'],
-      content: `Dear Experian,\n\nI am writing to dispute a duplicate account appearing on my credit report. The Bank of America account appears twice with different account numbers. This is affecting my credit utilization ratio negatively.\n\nUnder the Fair Credit Reporting Act, I request that you investigate this matter and remove the duplicate entry.\n\nSincerely,\n[YOUR NAME]`
-    },
-    {
-      id: 2,
-      title: 'Incorrect Balance Dispute (Chase Card)',
-      recipient: 'All Bureaus',
-      createdAt: 'Apr 22, 2023',
-      status: 'resolved',
-      bureaus: ['Experian', 'Equifax', 'TransUnion'],
-      laws: ['FCRA § 623'],
-      resolvedAt: 'May 12, 2023',
-      content: `Dear Credit Bureau,\n\nI am writing to dispute an incorrect balance on my Chase credit card. The current balance is reported as $8,450, but my actual balance is $4,225.\n\nPlease investigate this matter as required by the FCRA and update the information accordingly.\n\nSincerely,\n[YOUR NAME]`
-    },
-    {
-      id: 3,
-      title: 'Outdated Address Information Dispute',
-      recipient: 'Equifax',
-      createdAt: 'May 5, 2023',
-      status: 'in-progress',
-      bureaus: ['Equifax'],
-      laws: ['FCRA § 605'],
-      content: `Dear Equifax,\n\nI am writing to request that you update the address information on my credit report. My current report shows an old address that I haven't lived at for over 3 years.\n\nPlease update this information as required by the FCRA.\n\nSincerely,\n[YOUR NAME]`
-    },
-    {
-      id: 4,
-      title: 'Late Payment Dispute (Capital One)',
-      recipient: 'TransUnion',
-      createdAt: 'Mar 15, 2023',
-      status: 'resolved',
-      bureaus: ['TransUnion'],
-      laws: ['FCRA § 623'],
-      resolvedAt: 'Apr 10, 2023',
-      content: `Dear TransUnion,\n\nI am writing to dispute a late payment record on my Capital One account. I have always made payments on time, and I have included proof of my payment history.\n\nPlease investigate this matter and remove the incorrect late payment notation.\n\nSincerely,\n[YOUR NAME]`
-    },
-    {
-      id: 5,
-      title: 'Hard Inquiry Dispute (Unknown Source)',
-      recipient: 'All Bureaus',
-      createdAt: 'May 1, 2023',
-      status: 'in-progress',
-      bureaus: ['Experian', 'Equifax', 'TransUnion'],
-      laws: ['FCRA § 604', 'FCRA § 611'],
-      content: `Dear Credit Bureau,\n\nI am writing to dispute an unauthorized hard inquiry on my credit report. I did not authorize this inquiry and suspect it may be fraudulent.\n\nUnder the FCRA, I request that you investigate and remove this unauthorized inquiry.\n\nSincerely,\n[YOUR NAME]`
-    },
-  ]);
+  const [letters, setLetters] = useState<any[]>([]);
+
+  // Fetch user's dispute letters
+  useEffect(() => {
+    const fetchLetters = async () => {
+      if (user?.id) {
+        setIsLoading(true);
+        try {
+          const userLetters = await getUserDisputeLetters(user.id);
+          if (userLetters && userLetters.length > 0) {
+            // Transform the data to match our expected format
+            const formattedLetters = userLetters.map(letter => ({
+              id: letter.id,
+              title: `${letter.error_type} Dispute (${letter.account_name})`,
+              recipient: letter.bureau,
+              createdAt: new Date(letter.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              status: 'in-progress',
+              bureaus: [letter.bureau],
+              laws: ['FCRA § 611', 'FCRA § 623'],
+              content: letter.letter_content
+            }));
+            setLetters(formattedLetters);
+          } else {
+            // If no letters found, set some samples for demo purposes
+            setLetters([
+              {
+                id: 1,
+                title: 'Duplicate Account Dispute (Bank of America)',
+                recipient: 'Experian',
+                createdAt: 'May 10, 2023',
+                status: 'in-progress',
+                bureaus: ['Experian', 'TransUnion'],
+                laws: ['FCRA § 611', 'FCRA § 623'],
+                content: `Dear Experian,\n\nI am writing to dispute a duplicate account appearing on my credit report. The Bank of America account appears twice with different account numbers. This is affecting my credit utilization ratio negatively.\n\nUnder the Fair Credit Reporting Act, I request that you investigate this matter and remove the duplicate entry.\n\nSincerely,\n[YOUR NAME]`
+              },
+              {
+                id: 2,
+                title: 'Incorrect Balance Dispute (Chase Card)',
+                recipient: 'All Bureaus',
+                createdAt: 'Apr 22, 2023',
+                status: 'resolved',
+                bureaus: ['Experian', 'Equifax', 'TransUnion'],
+                laws: ['FCRA § 623'],
+                resolvedAt: 'May 12, 2023',
+                content: `Dear Credit Bureau,\n\nI am writing to dispute an incorrect balance on my Chase credit card. The current balance is reported as $8,450, but my actual balance is $4,225.\n\nPlease investigate this matter as required by the FCRA and update the information accordingly.\n\nSincerely,\n[YOUR NAME]`
+              },
+              {
+                id: 3,
+                title: 'Outdated Address Information Dispute',
+                recipient: 'Equifax',
+                createdAt: 'May 5, 2023',
+                status: 'in-progress',
+                bureaus: ['Equifax'],
+                laws: ['FCRA § 605'],
+                content: `Dear Equifax,\n\nI am writing to request that you update the address information on my credit report. My current report shows an old address that I haven't lived at for over 3 years.\n\nPlease update this information as required by the FCRA.\n\nSincerely,\n[YOUR NAME]`
+              },
+              {
+                id: 4,
+                title: 'Late Payment Dispute (Capital One)',
+                recipient: 'TransUnion',
+                createdAt: 'Mar 15, 2023',
+                status: 'resolved',
+                bureaus: ['TransUnion'],
+                laws: ['FCRA § 623'],
+                resolvedAt: 'Apr 10, 2023',
+                content: `Dear TransUnion,\n\nI am writing to dispute a late payment record on my Capital One account. I have always made payments on time, and I have included proof of my payment history.\n\nPlease investigate this matter and remove the incorrect late payment notation.\n\nSincerely,\n[YOUR NAME]`
+              },
+              {
+                id: 5,
+                title: 'Hard Inquiry Dispute (Unknown Source)',
+                recipient: 'All Bureaus',
+                createdAt: 'May 1, 2023',
+                status: 'in-progress',
+                bureaus: ['Experian', 'Equifax', 'TransUnion'],
+                laws: ['FCRA § 604', 'FCRA § 611'],
+                content: `Dear Credit Bureau,\n\nI am writing to dispute an unauthorized hard inquiry on my credit report. I did not authorize this inquiry and suspect it may be fraudulent.\n\nUnder the FCRA, I request that you investigate and remove this unauthorized inquiry.\n\nSincerely,\n[YOUR NAME]`
+              },
+            ]);
+          }
+        } catch (error) {
+          console.error('Error fetching dispute letters:', error);
+          toast({
+            title: "Error loading dispute letters",
+            description: "There was a problem loading your dispute letters. Please try again.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLetters();
+  }, [user?.id, toast]);
 
   const filteredLetters = (() => {
     switch (activeTab) {
@@ -86,7 +132,7 @@ const DisputeLetters = () => {
     }
   })();
   
-  const handleGenerateDispute = (disputeData: any) => {
+  const handleGenerateDispute = async (disputeData: any) => {
     // Create a new letter from the dispute data
     console.log('Generated dispute:', disputeData);
     
@@ -107,6 +153,27 @@ const DisputeLetters = () => {
     // Set the current letter and show the preview
     setCurrentLetter(newLetter);
     setShowPreview(true);
+    
+    // Save the letter to Supabase if user is logged in
+    if (user?.id) {
+      try {
+        const saved = await saveDisputeLetter(user.id, disputeData);
+        if (saved) {
+          toast({
+            title: "Dispute letter saved",
+            description: "Your dispute letter has been saved to your account.",
+            duration: 5000,
+          });
+        }
+      } catch (error) {
+        console.error('Error saving dispute letter:', error);
+        toast({
+          title: "Error saving letter",
+          description: "There was a problem saving your dispute letter. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
     
     toast({
       title: "Dispute letter created",
@@ -250,119 +317,130 @@ const DisputeLetters = () => {
                   </div>
                 </div>
                 
-                {/* Letters List */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-xs text-credify-navy-light dark:text-white/70 uppercase bg-gray-50 dark:bg-gray-800/30">
-                      <tr>
-                        <th scope="col" className="px-4 py-3 rounded-tl-lg">Letter Title</th>
-                        <th scope="col" className="px-4 py-3">Recipient</th>
-                        <th scope="col" className="px-4 py-3">Date Created</th>
-                        <th scope="col" className="px-4 py-3">Status</th>
-                        <th scope="col" className="px-4 py-3 rounded-tr-lg">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredLetters.map((letter, index) => (
-                        <tr 
-                          key={letter.id} 
-                          className={`border-b border-gray-200 dark:border-gray-700/30 bg-white dark:bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/10 ${
-                            index === filteredLetters.length - 1 ? 'rounded-b-lg' : ''
-                          }`}
-                        >
-                          <td className="px-4 py-4 font-medium text-credify-navy dark:text-white">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 rounded-lg bg-credify-teal/10">
-                                <FileText size={18} className="text-credify-teal" />
-                              </div>
-                              <button 
-                                onClick={() => handleViewLetter(letter)}
-                                className="hover:text-credify-teal transition-colors text-left"
-                              >
-                                {letter.title}
-                              </button>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 text-credify-navy-light dark:text-white/70">
-                            {letter.recipient}
-                          </td>
-                          <td className="px-4 py-4 text-credify-navy-light dark:text-white/70">
-                            {letter.createdAt}
-                          </td>
-                          <td className="px-4 py-4">
-                            {letter.status === 'in-progress' ? (
-                              <div className="flex items-center gap-1.5 text-yellow-700 dark:text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30 px-2.5 py-0.5 rounded-full text-xs w-fit">
-                                <Clock size={12} />
-                                <span>In Progress</span>
-                              </div>
-                            ) : letter.status === 'resolved' ? (
-                              <div className="flex items-center gap-1.5 text-green-700 dark:text-green-500 bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 rounded-full text-xs w-fit">
-                                <CheckCircle size={12} />
-                                <span>Resolved</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/50 px-2.5 py-0.5 rounded-full text-xs w-fit">
-                                <AlertCircle size={12} />
-                                <span>Draft</span>
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="flex items-center gap-2">
-                              <button 
-                                title="View"
-                                className="p-1.5 text-credify-navy-light hover:text-credify-teal dark:text-white/70 dark:hover:text-credify-teal hover:bg-gray-100 dark:hover:bg-gray-800/30 rounded-lg transition-colors"
-                                onClick={() => handleViewLetter(letter)}
-                              >
-                                <Eye size={18} />
-                              </button>
-                              <button 
-                                title="Download"
-                                className="p-1.5 text-credify-navy-light hover:text-credify-teal dark:text-white/70 dark:hover:text-credify-teal hover:bg-gray-100 dark:hover:bg-gray-800/30 rounded-lg transition-colors"
-                                onClick={() => {
-                                  setCurrentLetter(letter);
-                                  handleDownloadLetter();
-                                }}
-                              >
-                                <Download size={18} />
-                              </button>
-                              <button 
-                                title="Send"
-                                className="p-1.5 text-credify-navy-light hover:text-credify-teal dark:text-white/70 dark:hover:text-credify-teal hover:bg-gray-100 dark:hover:bg-gray-800/30 rounded-lg transition-colors"
-                                onClick={() => {
-                                  setCurrentLetter(letter);
-                                  handleSendLetter();
-                                }}
-                              >
-                                <Mail size={18} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                
-                {/* Empty State (conditionally rendered when no letters match filter) */}
-                {filteredLetters.length === 0 && (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-gray-800/50 rounded-full flex items-center justify-center mb-4">
-                      <FileText className="text-credify-navy-light dark:text-white/50" size={24} />
+                {/* Loading State */}
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="flex flex-col items-center">
+                      <Loader2 className="w-10 h-10 text-credify-teal animate-spin mb-4" />
+                      <h3 className="text-lg font-medium text-credify-navy dark:text-white">Loading your dispute letters...</h3>
                     </div>
-                    <h3 className="text-lg font-medium text-credify-navy dark:text-white mb-2">No dispute letters found</h3>
-                    <p className="text-credify-navy-light dark:text-white/70 mb-6">
-                      {activeTab === 'all' 
-                        ? "You haven't created any dispute letters yet." 
-                        : `You don't have any ${activeTab} letters.`}
-                    </p>
-                    <button
-                      onClick={() => setSelectedView("generator")}
-                      className="btn-primary"
-                    >
-                      Create Your First Letter
-                    </button>
                   </div>
+                ) : (
+                  <>
+                    {/* Letters List */}
+                    {filteredLetters.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                          <thead className="text-xs text-credify-navy-light dark:text-white/70 uppercase bg-gray-50 dark:bg-gray-800/30">
+                            <tr>
+                              <th scope="col" className="px-4 py-3 rounded-tl-lg">Letter Title</th>
+                              <th scope="col" className="px-4 py-3">Recipient</th>
+                              <th scope="col" className="px-4 py-3">Date Created</th>
+                              <th scope="col" className="px-4 py-3">Status</th>
+                              <th scope="col" className="px-4 py-3 rounded-tr-lg">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredLetters.map((letter, index) => (
+                              <tr 
+                                key={letter.id} 
+                                className={`border-b border-gray-200 dark:border-gray-700/30 bg-white dark:bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/10 ${
+                                  index === filteredLetters.length - 1 ? 'rounded-b-lg' : ''
+                                }`}
+                              >
+                                <td className="px-4 py-4 font-medium text-credify-navy dark:text-white">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-credify-teal/10">
+                                      <FileText size={18} className="text-credify-teal" />
+                                    </div>
+                                    <button 
+                                      onClick={() => handleViewLetter(letter)}
+                                      className="hover:text-credify-teal transition-colors text-left"
+                                    >
+                                      {letter.title}
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-4 text-credify-navy-light dark:text-white/70">
+                                  {letter.recipient}
+                                </td>
+                                <td className="px-4 py-4 text-credify-navy-light dark:text-white/70">
+                                  {letter.createdAt}
+                                </td>
+                                <td className="px-4 py-4">
+                                  {letter.status === 'in-progress' ? (
+                                    <div className="flex items-center gap-1.5 text-yellow-700 dark:text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30 px-2.5 py-0.5 rounded-full text-xs w-fit">
+                                      <Clock size={12} />
+                                      <span>In Progress</span>
+                                    </div>
+                                  ) : letter.status === 'resolved' ? (
+                                    <div className="flex items-center gap-1.5 text-green-700 dark:text-green-500 bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 rounded-full text-xs w-fit">
+                                      <CheckCircle size={12} />
+                                      <span>Resolved</span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/50 px-2.5 py-0.5 rounded-full text-xs w-fit">
+                                      <AlertCircle size={12} />
+                                      <span>Draft</span>
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-4 py-4">
+                                  <div className="flex items-center gap-2">
+                                    <button 
+                                      title="View"
+                                      className="p-1.5 text-credify-navy-light hover:text-credify-teal dark:text-white/70 dark:hover:text-credify-teal hover:bg-gray-100 dark:hover:bg-gray-800/30 rounded-lg transition-colors"
+                                      onClick={() => handleViewLetter(letter)}
+                                    >
+                                      <Eye size={18} />
+                                    </button>
+                                    <button 
+                                      title="Download"
+                                      className="p-1.5 text-credify-navy-light hover:text-credify-teal dark:text-white/70 dark:hover:text-credify-teal hover:bg-gray-100 dark:hover:bg-gray-800/30 rounded-lg transition-colors"
+                                      onClick={() => {
+                                        setCurrentLetter(letter);
+                                        handleDownloadLetter();
+                                      }}
+                                    >
+                                      <Download size={18} />
+                                    </button>
+                                    <button 
+                                      title="Send"
+                                      className="p-1.5 text-credify-navy-light hover:text-credify-teal dark:text-white/70 dark:hover:text-credify-teal hover:bg-gray-100 dark:hover:bg-gray-800/30 rounded-lg transition-colors"
+                                      onClick={() => {
+                                        setCurrentLetter(letter);
+                                        handleSendLetter();
+                                      }}
+                                    >
+                                      <Mail size={18} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-gray-800/50 rounded-full flex items-center justify-center mb-4">
+                          <FileText className="text-credify-navy-light dark:text-white/50" size={24} />
+                        </div>
+                        <h3 className="text-lg font-medium text-credify-navy dark:text-white mb-2">No dispute letters found</h3>
+                        <p className="text-credify-navy-light dark:text-white/70 mb-6">
+                          {activeTab === 'all' 
+                            ? "You haven't created any dispute letters yet." 
+                            : `You don't have any ${activeTab} letters.`}
+                        </p>
+                        <button
+                          onClick={() => setSelectedView("generator")}
+                          className="btn-primary"
+                        >
+                          Create Your First Letter
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </TabsContent>
