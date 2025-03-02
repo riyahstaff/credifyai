@@ -11,15 +11,15 @@ const LoadingIndicator = () => {
   const [extendedTimeout, setExtendedTimeout] = useState(false);
 
   useEffect(() => {
-    // If loading takes more than 3 seconds, show initial timeout message
+    // If loading takes more than 2 seconds, show initial timeout message
     const timer = setTimeout(() => {
       setShowTimeout(true);
-    }, 3000);
+    }, 2000);
     
-    // If loading takes more than 8 seconds, show extended timeout message
+    // If loading takes more than 5 seconds, show extended timeout message
     const extendedTimer = setTimeout(() => {
       setExtendedTimeout(true);
-    }, 8000);
+    }, 5000);
     
     return () => {
       clearTimeout(timer);

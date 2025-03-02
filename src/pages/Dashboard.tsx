@@ -20,44 +20,43 @@ const Dashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if auth is taking too long (8 seconds)
+    // Force immediate check of auth state
+    console.log("Initial auth state check:", { user, isLoading, profile });
+    
+    // If auth is loaded already, set checked to true
+    if (!isLoading) {
+      setAuthChecked(true);
+    }
+    
+    // Check if auth is taking too long (5 seconds)
     const timeoutId = setTimeout(() => {
       if (isLoading) {
+        console.log("Auth timeout occurred, showing dashboard in demo mode");
         setAuthTimeout(true);
+        setAuthChecked(true); // Force auth checked to prevent infinite loading
+        
         toast({
           title: "Authentication timeout",
           description: "Showing dashboard in demo mode. Some features may be limited.",
           variant: "default",
         });
       }
-      // Always set authChecked to true after timeout to stop the loading indicator
-      setAuthChecked(true);
-    }, 8000);
+    }, 5000);
     
     return () => clearTimeout(timeoutId);
-  }, [isLoading, toast]);
-
-  useEffect(() => {
-    // Force re-render to ensure auth state is correctly reflected
-    const timer = setTimeout(() => {
-      console.log("Dashboard checking auth state:", { user, isLoading, profile });
-      // If auth has completed, set authChecked to true
-      if (!isLoading) {
-        setAuthChecked(true);
-      }
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [user, isLoading, profile]);
+  }, [isLoading, toast, user, profile]);
 
   // If auth is still loading and hasn't timed out, show a loading indicator
   if (isLoading && !authChecked) {
+    console.log("Showing loading indicator, auth state:", { isLoading, authChecked });
     return <LoadingIndicator />;
   }
 
   // If auth has timed out or there's an issue, show dashboard with warning
   const userName = profile?.full_name || user?.email?.split('@')[0] || 'User';
   const isAuthenticated = !!user;
+
+  console.log("Rendering dashboard with auth state:", { isAuthenticated, userName, authTimeout });
 
   return (
     <div className="min-h-screen flex flex-col">
