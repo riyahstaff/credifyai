@@ -39,7 +39,6 @@ const Education = () => {
     { id: 'debt', name: 'Debt Management' },
   ];
 
-  // Only keep the articles that are actually defined in ArticleDetail.tsx
   const featuredArticles = [
     {
       id: 1,
