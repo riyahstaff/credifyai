@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -6,6 +5,8 @@ import Footer from '../components/layout/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 const Login = () => {
   const { user, signIn } = useAuth();
@@ -16,9 +17,20 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [connectionError, setConnectionError] = useState(false);
+
+  useEffect(() => {
+    const hasSupabaseCredentials = 
+      import.meta.env.VITE_SUPABASE_URL && 
+      import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder-url.supabase.co' &&
+      import.meta.env.VITE_SUPABASE_ANON_KEY && 
+      import.meta.env.VITE_SUPABASE_ANON_KEY !== 'placeholder-key';
+    
+    setConnectionError(!hasSupabaseCredentials && 
+                      !window.location.hostname.includes('localhost'));
+  }, []);
   
   useEffect(() => {
-    // If already logged in, redirect to dashboard
     if (user) {
       navigate('/dashboard');
     }
@@ -64,6 +76,26 @@ const Login = () => {
       
       <main className="flex-grow pt-24 pb-20">
         <div className="container mx-auto px-4">
+          {connectionError ? (
+            <div className="max-w-3xl mx-auto">
+              <Alert variant="destructive" className="mb-8">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Authentication Error</AlertTitle>
+                <AlertDescription>
+                  <p className="mb-2">Unable to connect to authentication services. This could be due to:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Missing Supabase API credentials</li>
+                    <li>Network connectivity issues</li>
+                    <li>Authentication server downtime</li>
+                  </ul>
+                  <p className="mt-3 font-medium">
+                    For a quick demo, you can explore the app interface without signing in. Contact support if this issue persists.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            </div>
+          ) : null}
+          
           <div className="max-w-md mx-auto bg-white dark:bg-credify-navy/60 rounded-xl shadow-soft p-6 md:p-8 border border-gray-100 dark:border-gray-700/30">
             <h1 className="text-2xl font-bold text-credify-navy dark:text-white mb-6 text-center">
               Log In to Your Account
