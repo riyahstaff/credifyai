@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -66,7 +67,7 @@ const Education = () => {
       excerpt: 'An in-depth comparison of the two major credit scoring models, their calculation differences, which lenders use each type, and how to optimize your credit profile for both scoring systems.',
       category: 'scores',
       readTime: '9 min read',
-      image: 'https://images.unsplash.com/photo-1590283603385-c1c9cfd24fd6?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
+      image: 'https://images.unsplash.com/photo-1551260627-fd1b6daa6dfa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
       icon: <FileBarChart size={18} className="text-credify-teal" />,
       slug: 'fico-vs-vantagescore'
     }
