@@ -29,7 +29,7 @@ const LoadingIndicator = () => {
               <p className="text-credify-navy-light dark:text-white/70 mb-4">Loading your dashboard...</p>
               
               {showTimeout && (
-                <Alert variant="warning" className="mt-8 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/30">
+                <Alert variant="default" className="mt-8 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/30">
                   <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   <AlertTitle className="text-amber-800 dark:text-amber-300">Taking longer than expected</AlertTitle>
                   <AlertDescription className="text-amber-700 dark:text-amber-400">
