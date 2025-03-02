@@ -11,8 +11,10 @@ import { getLegalReferencesForDispute } from '../legalReferences';
  */
 export const generateAnalysisResults = (reportData: CreditReportData) => {
   const totalAccounts = reportData.accounts.length;
+  
+  // Find accounts with issues
   const accountsWithIssues = reportData.accounts.filter(
-    account => account.remarks && account.remarks.length > 0 || 
+    account => (account.remarks && account.remarks.length > 0) || 
               (account.paymentStatus && 
               (account.paymentStatus.includes('Late') || 
                account.paymentStatus.includes('Delinquent') || 

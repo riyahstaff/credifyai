@@ -208,6 +208,14 @@ const Education = () => {
       thumbnail: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
       slug: 'diy-credit-repair-plan'
     },
+    {
+      id: 6,
+      title: 'How to Deal with Debt Collectors: Expert Strategies',
+      description: 'Learn effective strategies for handling debt collectors, understanding your rights, and negotiating settlements that work in your favor while protecting your financial future.',
+      duration: '15:35',
+      thumbnail: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+      slug: 'deal-with-debt-collectors'
+    },
   ];
 
   const filteredArticles = articles.filter(article => {
