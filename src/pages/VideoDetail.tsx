@@ -606,7 +606,7 @@ const VideoDetail = () => {
               </div>
               <div className="ml-auto flex gap-2">
                 <Button variant="outline" size="sm" className="flex items-center">
-                  <BookMark size={16} className="mr-1" />
+                  <Bookmark size={16} className="mr-1" />
                   Save
                 </Button>
               </div>
@@ -617,7 +617,7 @@ const VideoDetail = () => {
               <p className="text-gray-700">{videoData.description}</p>
             </div>
             
-            {videoData.transcript && (
+            {'transcript' in videoData && videoData.transcript && (
               <div className="mb-8">
                 <h2 className="text-xl font-semibold mb-3">Transcript</h2>
                 <div 
