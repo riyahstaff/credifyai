@@ -57,7 +57,7 @@ const Education = () => {
       excerpt: 'Discover why keeping your credit utilization below 30% is crucial for your credit score, how it\'s calculated across individual and total accounts, and actionable strategies to lower it quickly and effectively.',
       category: 'basics',
       readTime: '6 min read',
-      image: 'https://images.unsplash.com/photo-1563013544-08f34a2311dd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
+      image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
       icon: <CreditCard size={18} className="text-credify-teal" />,
       slug: 'credit-utilization-strategies'
     },
@@ -67,7 +67,7 @@ const Education = () => {
       excerpt: 'An in-depth comparison of the two major credit scoring models, their calculation differences, which lenders use each type, and how to optimize your credit profile for both scoring systems.',
       category: 'scores',
       readTime: '9 min read',
-      image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
+      image: 'https://images.unsplash.com/photo-1563013544-08f34a2311dd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
       icon: <FileBarChart size={18} className="text-credify-teal" />,
       slug: 'fico-vs-vantagescore'
     }
