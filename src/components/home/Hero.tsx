@@ -40,6 +40,14 @@ const Hero = () => {
               >
                 Free Credit Reports
               </a>
+              <a 
+                href="https://myfreescorenow.com/enroll/?AID=CredBloom&PID=75931" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="btn-outline py-3 px-6 text-base text-nowrap w-full sm:w-auto bg-credify-teal/10 hover:bg-credify-teal/20 border-credify-teal/30"
+              >
+                Scores & Monitoring $29/mo
+              </a>
             </div>
             
             <Link to="/how-it-works" className="inline-flex items-center text-credify-navy-light dark:text-white/70 hover:text-credify-teal dark:hover:text-credify-teal transition-colors mb-6 animate-fade-in delay-300">
