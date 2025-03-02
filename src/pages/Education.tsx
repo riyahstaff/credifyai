@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -40,6 +39,7 @@ const Education = () => {
     { id: 'debt', name: 'Debt Management' },
   ];
 
+  // Only keep the articles that are actually defined in ArticleDetail.tsx
   const featuredArticles = [
     {
       id: 1,
@@ -52,30 +52,6 @@ const Education = () => {
       slug: 'understanding-fico-score'
     },
     {
-      id: 2,
-      title: 'How to Dispute Errors on Your Credit Report',
-      excerpt: 'A comprehensive guide to identifying errors on your credit report and effectively disputing them with the credit bureaus using sample letters, timelines, and what to expect during the process.',
-      category: 'disputes',
-      readTime: '12 min read',
-      image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
-      icon: <FileText size={18} className="text-credify-teal" />,
-      slug: 'dispute-credit-report-errors'
-    },
-    {
-      id: 3,
-      title: 'Your Rights Under the Fair Credit Reporting Act',
-      excerpt: 'A detailed breakdown of the FCRA, how it protects consumers, and the specific rights it grants you regarding your credit information, including how to enforce these rights when they\'re violated.',
-      category: 'laws',
-      readTime: '10 min read',
-      image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
-      icon: <Award size={18} className="text-credify-teal" />,
-      slug: 'fcra-consumer-rights'
-    },
-  ];
-
-  const articles = [
-    ...featuredArticles,
-    {
       id: 4,
       title: 'Credit Utilization: Why 30% Is the Magic Number',
       excerpt: 'Discover why keeping your credit utilization below 30% is crucial for your credit score, how it\'s calculated across individual and total accounts, and actionable strategies to lower it quickly and effectively.',
@@ -85,23 +61,18 @@ const Education = () => {
       slug: 'credit-utilization-strategies'
     },
     {
-      id: 5,
-      title: 'The Statute of Limitations on Credit Reporting',
-      excerpt: 'Learn about the time limits for how long negative items can legally remain on your credit report, what happens when debts reach their statute of limitations, and how to handle time-barred debt collection attempts.',
-      category: 'laws',
-      readTime: '7 min read',
-      icon: <History size={18} className="text-credify-teal" />,
-      slug: 'credit-reporting-time-limits'
-    },
-    {
-      id: 6,
-      title: 'How to Write an Effective Goodwill Letter',
-      excerpt: 'Master the art of goodwill letters with our step-by-step guide, including real-world templates that have helped consumers remove late payments, collections, and other negative items through creditor goodwill.',
-      category: 'repair',
+      id: 11,
+      title: 'How Credit Scoring Models Differ: FICO vs. VantageScore',
+      excerpt: 'An in-depth comparison of the two major credit scoring models, their calculation differences, which lenders use each type, and how to optimize your credit profile for both scoring systems.',
+      category: 'scores',
       readTime: '9 min read',
-      icon: <FileText size={18} className="text-credify-teal" />,
-      slug: 'goodwill-letter-guide'
-    },
+      icon: <FileBarChart size={18} className="text-credify-teal" />,
+      slug: 'fico-vs-vantagescore'
+    }
+  ];
+
+  const articles = [
+    ...featuredArticles,
     {
       id: 7,
       title: 'Rebuilding Your Credit After Bankruptcy',
@@ -110,61 +81,7 @@ const Education = () => {
       readTime: '11 min read',
       icon: <DollarSign size={18} className="text-credify-teal" />,
       slug: 'rebuild-credit-after-bankruptcy'
-    },
-    {
-      id: 8,
-      title: 'Debt Validation: Your First Line of Defense',
-      excerpt: 'Everything you need to know about debt validation letters: when to send them, what to include, your legal rights under the FDCPA, and how to respond when collectors fail to validate debts properly.',
-      category: 'disputes',
-      readTime: '8 min read',
-      icon: <FileLock2 size={18} className="text-credify-teal" />,
-      slug: 'debt-validation-guide'
-    },
-    {
-      id: 9,
-      title: 'Understanding Hard vs. Soft Credit Inquiries',
-      excerpt: 'A complete explanation of how credit inquiries work, which types affect your score, how long they impact your credit, and strategic ways to minimize the effect of necessary hard inquiries.',
-      category: 'basics',
-      readTime: '5 min read',
-      icon: <Search size={18} className="text-credify-teal" />,
-      slug: 'hard-soft-credit-inquiries'
-    },
-    {
-      id: 10,
-      title: 'The Debt Snowball vs. Avalanche Method',
-      excerpt: 'Compare the two most effective debt payoff strategies: the emotionally satisfying snowball method and the mathematically optimal avalanche approach. Learn which one suits your financial situation and personality.',
-      category: 'debt',
-      readTime: '7 min read',
-      icon: <HandCoins size={18} className="text-credify-teal" />,
-      slug: 'debt-payoff-methods'
-    },
-    {
-      id: 11,
-      title: 'How Credit Scoring Models Differ: FICO vs. VantageScore',
-      excerpt: 'An in-depth comparison of the two major credit scoring models, their calculation differences, which lenders use each type, and how to optimize your credit profile for both scoring systems.',
-      category: 'scores',
-      readTime: '9 min read',
-      icon: <FileBarChart size={18} className="text-credify-teal" />,
-      slug: 'fico-vs-vantagescore'
-    },
-    {
-      id: 12,
-      title: 'Recognizing and Avoiding Credit Repair Scams',
-      excerpt: 'Learn to identify warning signs of fraudulent credit repair companies, understand what legitimate services can and cannot legally promise, and how to protect yourself while improving your credit.',
-      category: 'repair',
-      readTime: '6 min read',
-      icon: <AlertTriangle size={18} className="text-credify-teal" />,
-      slug: 'credit-repair-scams'
-    },
-    {
-      id: 13,
-      title: 'How Collection Accounts Affect Your Credit Score',
-      excerpt: 'Everything about collections: how they impact your score, the effect of paying vs. settling, strategies for removal, and newer scoring models that treat paid collections differently.',
-      category: 'basics',
-      readTime: '8 min read',
-      icon: <BriefcaseBusiness size={18} className="text-credify-teal" />,
-      slug: 'collections-impact-credit'
-    },
+    }
   ];
 
   const videos = [
