@@ -1,4 +1,4 @@
-<lov-code>
+
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -35,7 +35,7 @@ const VideoDetail = () => {
       description: "A complete breakdown of each section of your credit report, what the codes and statuses mean, and how to identify potential errors or discrepancies.",
       duration: "18:24",
       thumbnail: "https://images.unsplash.com/photo-1560520031-3a4dc4e9de0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
-      videoUrl: "https://www.youtube.com/embed/UvTyIrxPplE", // Already updated
+      videoUrl: "https://www.youtube.com/embed/UvTyIrxPplE",
       publishDate: "February 15, 2024",
       views: "15,628",
       category: "basics",
@@ -102,7 +102,7 @@ const VideoDetail = () => {
       description: "Learn proven dispute strategies that go beyond the basics, including procedural requests, method of verification demands, and escalation tactics when bureaus are unresponsive.",
       duration: "22:15",
       thumbnail: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
-      videoUrl: "https://www.youtube.com/embed/TYKGvmUQYwk", // Updated to working dispute techniques video
+      videoUrl: "https://www.youtube.com/embed/TYKGvmUQYwk",
       publishDate: "March 10, 2024",
       views: "12,843",
       category: "disputes",
@@ -221,7 +221,7 @@ const VideoDetail = () => {
       description: "Watch a real debt settlement negotiation call, with analysis of effective tactics, settlement offer frameworks, and how to get agreements in writing before making payments.",
       duration: "31:07",
       thumbnail: "https://images.unsplash.com/photo-1573164574472-797cdf4a583a?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
-      videoUrl: "https://www.youtube.com/embed/YE_CLXT7H5w", // Updated to working debt negotiation video
+      videoUrl: "https://www.youtube.com/embed/YE_CLXT7H5w",
       publishDate: "January 22, 2024",
       views: "9,754",
       category: "debt",
@@ -341,7 +341,7 @@ const VideoDetail = () => {
       description: "The complete roadmap for establishing credit for the first time, including secured cards, credit builder loans, becoming an authorized user, and avoiding common beginner mistakes.",
       duration: "15:42",
       thumbnail: "https://images.unsplash.com/photo-1579621970795-87facc2f976d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
-      videoUrl: "https://www.youtube.com/embed/BihboHgr6Jk", // Updated to working credit building video
+      videoUrl: "https://www.youtube.com/embed/BihboHgr6Jk",
       publishDate: "April 5, 2024",
       views: "18,349",
       category: "basics",
@@ -443,3 +443,241 @@ const VideoDetail = () => {
         <h3>Monitoring Your Progress</h3>
         <p>Check your credit regularly using free services like Credit Karma, Credit Sesame, or the free reports from AnnualCreditReport.com. Many banks and credit cards also offer free FICO score access.</p>
         <p>Look for:</p>
+        <ul>
+          <li>New accounts appearing on your report</li>
+          <li>Payment history being recorded correctly</li>
+          <li>Credit score changes over time</li>
+          <li>Any unexpected items that could indicate errors or fraud</li>
+        </ul>
+      `
+    },
+    'diy-credit-repair-plan': {
+      id: 5,
+      title: "DIY Credit Repair: Create Your Personal Action Plan",
+      description: "A step-by-step framework for developing your own credit repair strategy, prioritizing which items to dispute first, and creating a timeline for score improvement.",
+      duration: "28:53",
+      thumbnail: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+      videoUrl: "https://www.youtube.com/embed/QQXmSVKCULo",
+      publishDate: "May 12, 2024",
+      views: "7,291",
+      category: "repair",
+      author: {
+        name: "David Ortiz",
+        title: "Credit Repair Coach",
+        image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80"
+      },
+      relatedVideos: [
+        {
+          id: 1,
+          title: "Credit Report Walkthrough: How to Read & Understand Your Report",
+          slug: "credit-report-walkthrough",
+          thumbnail: "https://images.unsplash.com/photo-1560520031-3a4dc4e9de0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "18:24"
+        },
+        {
+          id: 2,
+          title: "The 5 Most Effective Dispute Techniques That Actually Work",
+          slug: "effective-dispute-techniques",
+          thumbnail: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "22:15"
+        },
+        {
+          id: 4,
+          title: "Building Credit from Scratch: A Beginner's Guide",
+          slug: "build-credit-beginners",
+          thumbnail: "https://images.unsplash.com/photo-1579621970795-87facc2f976d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "15:42"
+        }
+      ]
+    }
+  };
+
+  // Find the video data based on the slug
+  const videoData = videoDatabase[slug as keyof typeof videoDatabase];
+
+  if (!videoData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <h1 className="text-2xl font-bold mb-4">Video not found</h1>
+        <p className="mb-4">We couldn't find the video you're looking for.</p>
+        <Link to="/education" className="flex items-center text-blue-600 hover:underline">
+          <ChevronLeft className="mr-1" size={16} />
+          Back to Education
+        </Link>
+      </div>
+    );
+  }
+
+  // Handle sharing functionality
+  const handleShare = (platform: string) => {
+    const shareUrl = window.location.href;
+    const shareTitle = videoData.title;
+    
+    let shareLink = '';
+    
+    switch (platform) {
+      case 'facebook':
+        shareLink = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+        break;
+      case 'twitter':
+        shareLink = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`;
+        break;
+      case 'linkedin':
+        shareLink = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          toast({
+            title: "Link Copied!",
+            description: "The video link has been copied to your clipboard.",
+            duration: 3000,
+          });
+        });
+        return;
+      default:
+        return;
+    }
+    
+    if (shareLink) {
+      window.open(shareLink, '_blank', 'width=600,height=400');
+    }
+  };
+
+  return (
+    <>
+      <Navbar />
+      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        {/* Back to education link */}
+        <div className="mb-6">
+          <Link to="/education" className="flex items-center text-sm text-gray-600 hover:text-gray-900">
+            <ChevronLeft className="mr-1" size={16} />
+            Back to Education
+          </Link>
+        </div>
+        
+        {/* Video player and info */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100 mb-6">
+              <iframe 
+                src={videoData.videoUrl} 
+                title={videoData.title}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            </div>
+            
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">{videoData.title}</h1>
+            
+            <div className="flex flex-wrap items-center text-sm text-gray-600 mb-4 gap-y-2">
+              <div className="flex items-center mr-4">
+                <CalendarDays size={16} className="mr-1" />
+                <span>{videoData.publishDate}</span>
+              </div>
+              <div className="flex items-center mr-4">
+                <Clock size={16} className="mr-1" />
+                <span>{videoData.duration}</span>
+              </div>
+              <div className="flex items-center mr-4">
+                <ThumbsUp size={16} className="mr-1" />
+                <span>{videoData.views} views</span>
+              </div>
+              <div className="flex items-center">
+                <Tag size={16} className="mr-1" />
+                <span className="capitalize">{videoData.category}</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center mb-6">
+              <div className="flex gap-1">
+                <Button variant="outline" size="sm" onClick={() => handleShare('facebook')}>
+                  <Facebook size={16} />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleShare('twitter')}>
+                  <Twitter size={16} />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleShare('linkedin')}>
+                  <Linkedin size={16} />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleShare('copy')}>
+                  <Copy size={16} />
+                </Button>
+              </div>
+              <div className="ml-auto flex gap-2">
+                <Button variant="outline" size="sm" className="flex items-center">
+                  <BookMark size={16} className="mr-1" />
+                  Save
+                </Button>
+              </div>
+            </div>
+            
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-3">Description</h2>
+              <p className="text-gray-700">{videoData.description}</p>
+            </div>
+            
+            {videoData.transcript && (
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold mb-3">Transcript</h2>
+                <div 
+                  className="prose prose-sm max-w-none" 
+                  dangerouslySetInnerHTML={{ __html: videoData.transcript }}
+                />
+              </div>
+            )}
+          </div>
+          
+          <div className="lg:col-span-1">
+            {/* Author info */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h2 className="text-lg font-semibold mb-3">About the Author</h2>
+              <div className="flex items-center">
+                <img 
+                  src={videoData.author.image} 
+                  alt={videoData.author.name} 
+                  className="w-12 h-12 rounded-full mr-3 object-cover"
+                />
+                <div>
+                  <h3 className="font-medium">{videoData.author.name}</h3>
+                  <p className="text-sm text-gray-600">{videoData.author.title}</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Related videos */}
+            <div>
+              <h2 className="text-lg font-semibold mb-3">Related Videos</h2>
+              <div className="space-y-4">
+                {videoData.relatedVideos.map((video) => (
+                  <Link key={video.id} to={`/education/videos/${video.slug}`} className="block group">
+                    <div className="flex">
+                      <div className="relative w-24 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                        <img 
+                          src={video.thumbnail} 
+                          alt={video.title} 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-1 right-1 bg-black bg-opacity-70 text-white text-xs px-1 rounded">
+                          {video.duration}
+                        </div>
+                      </div>
+                      <div className="ml-3 flex-1">
+                        <h3 className="text-sm font-medium text-gray-900 group-hover:text-blue-600 line-clamp-2">
+                          {video.title}
+                        </h3>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
+};
+
+export default VideoDetail;
