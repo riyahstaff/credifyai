@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -445,4 +446,486 @@ const VideoDetail = () => {
         <h3>Common Beginner Mistakes</h3>
         <p>Avoid these common pitfalls:</p>
         <ul>
-          <li>Applying for too many products
+          <li>Applying for too many products at once (each application creates a hard inquiry)</li>
+          <li>Maxing out your credit limit</li>
+          <li>Missing payments or paying late</li>
+          <li>Closing your first account once you get better offers</li>
+          <li>Not checking your credit reports for errors</li>
+        </ul>
+        
+        <h3>Timeline Expectations</h3>
+        <p>Building credit takes time, so set realistic expectations:</p>
+        <ul>
+          <li>1-3 months: You may start to see your first account reported</li>
+          <li>6 months: You'll likely have your first FICO score if you've had an active account</li>
+          <li>12 months: With responsible use, you may qualify for better credit products</li>
+          <li>24+ months: Your credit should be well-established if you've maintained good habits</li>
+        </ul>
+        
+        <h3>Conclusion</h3>
+        <p>Building credit from scratch may seem challenging, but with the right approach, it's entirely achievable. Start small, be patient, and focus on developing good financial habits. Your future self will thank you for the lower interest rates and financial opportunities that good credit provides.</p>
+        <p>If you found this video helpful, please hit the like button and subscribe for more content on building and maintaining good credit. In the comments, let me know which method you're planning to use to start your credit journey.</p>
+        <p>Thanks for watching!</p>
+      `
+    },
+    'diy-credit-repair-plan': {
+      id: 5,
+      title: "DIY Credit Repair: Create Your Personal Action Plan",
+      description: "Step-by-step guidance for creating a customized credit repair plan, from credit report analysis to dispute prioritization, with timeline expectations and progress tracking methods.",
+      duration: "28:53",
+      thumbnail: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+      videoUrl: "https://www.youtube.com/embed/3e5Pbsi4ZfA",
+      publishDate: "March 28, 2024",
+      views: "7,219",
+      category: "repair",
+      author: {
+        name: "David Johnson",
+        title: "Credit Restoration Specialist",
+        image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80"
+      },
+      relatedVideos: [
+        {
+          id: 1,
+          title: "Credit Report Walkthrough: How to Read & Understand Your Report",
+          slug: "credit-report-walkthrough",
+          thumbnail: "https://images.unsplash.com/photo-1560520031-3a4dc4e9de0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "18:24"
+        },
+        {
+          id: 2,
+          title: "The 5 Most Effective Dispute Techniques That Actually Work",
+          slug: "effective-dispute-techniques",
+          thumbnail: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "22:15"
+        },
+        {
+          id: 4,
+          title: "Building Credit from Scratch: A Beginner's Guide",
+          slug: "build-credit-beginners",
+          thumbnail: "https://images.unsplash.com/photo-1579621970795-87facc2f976d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+          duration: "15:42"
+        }
+      ],
+      transcript: `
+        <h3>Introduction</h3>
+        <p>Welcome to DIY Credit Repair. I'm David Johnson, and today I'm going to walk you through creating your personalized credit repair action plan. While every credit situation is unique, the process for addressing credit issues follows a systematic approach that anyone can implement with the right guidance.</p>
+        
+        <h3>Why DIY Credit Repair?</h3>
+        <p>Before we dive in, let's talk about why DIY credit repair can be more effective than hiring a company:</p>
+        <ul>
+          <li>Cost savings - professional credit repair can cost $50-100 per month for 6-12 months</li>
+          <li>Knowledge acquisition - you'll learn skills to maintain good credit for life</li>
+          <li>Personalized approach - you know your situation better than anyone</li>
+          <li>Legal empowerment - understanding your rights under credit laws</li>
+        </ul>
+        <p>That said, complex situations or those involving legal issues may benefit from professional help. But for most people, DIY is not only possible but preferable.</p>
+        
+        <h3>Step 1: Gather Your Credit Reports</h3>
+        <p>Your action plan begins with comprehensive information. Get your full credit reports from all three major bureaus: Equifax, Experian, and TransUnion. The official source is AnnualCreditReport.com, which provides free weekly reports through the end of 2024.</p>
+        <p>Don't rely solely on free monitoring services like Credit Karma, as they don't show your full reports and may miss important details.</p>
+        
+        <h3>Step 2: Create a Credit Inventory</h3>
+        <p>Now, let's organize what you're working with. Create a spreadsheet with the following information for each account on your reports:</p>
+        <ul>
+          <li>Creditor name</li>
+          <li>Account number (last 4 digits)</li>
+          <li>Account type (credit card, loan, collection, etc.)</li>
+          <li>Balance</li>
+          <li>Status (open/closed, current/delinquent)</li>
+          <li>Payment history (note any late payments)</li>
+          <li>Date opened</li>
+          <li>Date of last activity</li>
+          <li>Which bureaus report it (Equifax, Experian, TransUnion)</li>
+          <li>Inaccuracies or issues to dispute</li>
+        </ul>
+        <p>This inventory becomes your master document for tracking progress.</p>
+        
+        <h3>Step 3: Identify and Categorize Issues</h3>
+        <p>Review your inventory and categorize each issue by type and potential impact:</p>
+        <p>High-impact issues:</p>
+        <ul>
+          <li>Accounts that aren't yours (identity theft/mixed file)</li>
+          <li>Accounts showing incorrect late payments</li>
+          <li>Accounts with incorrect balances or limits</li>
+          <li>Collections or charge-offs that are outdated</li>
+          <li>Duplicate accounts</li>
+        </ul>
+        <p>Medium-impact issues:</p>
+        <ul>
+          <li>Hard inquiries you don't recognize</li>
+          <li>Name/address errors</li>
+          <li>Employment inaccuracies</li>
+        </ul>
+        <p>Low-impact issues:</p>
+        <ul>
+          <li>Minor discrepancies in account opening dates</li>
+          <li>Outdated personal information</li>
+        </ul>
+        
+        <h3>Step 4: Research Statute of Limitations and Time Limits</h3>
+        <p>Understanding time frames is crucial for your plan:</p>
+        <ul>
+          <li>Most negative items remain on your credit report for 7 years</li>
+          <li>Chapter 7 bankruptcies remain for 10 years</li>
+          <li>Unpaid tax liens may remain indefinitely (until paid)</li>
+          <li>The statute of limitations for debt collection varies by state (typically 3-6 years)</li>
+        </ul>
+        <p>For each negative item, determine how much longer it will remain on your report. Sometimes waiting for items to age off is more efficient than disputing them.</p>
+        
+        <h3>Step 5: Prioritize Your Disputes</h3>
+        <p>Not all issues should be addressed simultaneously. Prioritize in this order:</p>
+        <ol>
+          <li>Inaccurate personal information (name, address, SSN)</li>
+          <li>Accounts that aren't yours</li>
+          <li>Current accounts with incorrect status or payment history</li>
+          <li>Collections and charge-offs</li>
+          <li>Hard inquiries</li>
+        </ol>
+        <p>I recommend addressing no more than 3-5 items per bureau in each dispute round. This allows you to keep track of responses and ensures bureaus give each item proper attention.</p>
+        
+        <h3>Step 6: Create Your Dispute Letters</h3>
+        <p>For each dispute, create a clear, concise letter that:</p>
+        <ul>
+          <li>Identifies you (name, address, DOB, SSN)</li>
+          <li>Specifies which items you're disputing</li>
+          <li>Explains precisely what is inaccurate about each item</li>
+          <li>Requests the specific correction or deletion</li>
+          <li>Includes supporting documentation when available</li>
+        </ul>
+        <p>Avoid using generic dispute letters or disputing everything as "not mine." Bureaus may flag these as frivolous. Instead, be specific about what's wrong with each item.</p>
+        
+        <h3>Step 7: Submit Disputes and Track Responses</h3>
+        <p>You can dispute online, but I recommend sending letters via certified mail with return receipt for better documentation. In your tracking spreadsheet, note:</p>
+        <ul>
+          <li>Date dispute was sent</li>
+          <li>Method of delivery</li>
+          <li>Confirmation number</li>
+          <li>Due date for response (30 days from receipt)</li>
+          <li>Actual response date</li>
+          <li>Outcome (deleted, updated, verified)</li>
+          <li>Follow-up actions needed</li>
+        </ul>
+        
+        <h3>Step 8: Address Current Debt and Payment Behaviors</h3>
+        <p>While working on past issues, don't neglect current accounts:</p>
+        <ul>
+          <li>Make at least minimum payments on time for all accounts</li>
+          <li>Reduce credit utilization below 30% (ideally below 10%)</li>
+          <li>Consider debt consolidation for high-interest debts</li>
+          <li>For collection accounts, research "pay for delete" or settlement options</li>
+        </ul>
+        <p>Remember that 35% of your FICO score is payment history and 30% is amounts owed, so addressing these factors creates immediate positive impact.</p>
+        
+        <h3>Step 9: Develop a Credit Building Strategy</h3>
+        <p>Simultaneously work on building positive credit:</p>
+        <ul>
+          <li>If you have limited credit, consider a secured card or credit builder loan</li>
+          <li>If you have established credit, focus on perfect payment history</li>
+          <li>Keep old accounts open, even if unused (length of history matters)</li>
+          <li>Apply for new credit sparingly and strategically</li>
+          <li>Diversify your credit mix when appropriate (revolving and installment)</li>
+        </ul>
+        
+        <h3>Step 10: Set Timeline Expectations and Milestones</h3>
+        <p>Credit repair is a marathon, not a sprint. Set realistic timeframes:</p>
+        <ul>
+          <li>30-45 days: First round of dispute responses</li>
+          <li>90 days: Noticeable improvements for simple issues</li>
+          <li>6 months: Significant progress on most issues</li>
+          <li>12+ months: Resolution of complex issues and score rebuilding</li>
+        </ul>
+        <p>Create monthly review dates to check your progress and adjust your plan.</p>
+        
+        <h3>Step 11: Follow Up and Escalate When Necessary</h3>
+        <p>If initial disputes are unsuccessful:</p>
+        <ol>
+          <li>Submit a more detailed dispute with additional evidence</li>
+          <li>Contact the original creditor directly (often more effective for certain issues)</li>
+          <li>File complaints with the CFPB or your state attorney general</li>
+          <li>Consider consulting an FCRA attorney for serious violations</li>
+        </ol>
+        <p>Be persistent but strategic with follow-ups. Document all communications.</p>
+        
+        <h3>Case Study Example</h3>
+        <p>Let me share a real example from one of my clients, James (name changed). His starting situation:</p>
+        <ul>
+          <li>Credit score: 580</li>
+          <li>Issues: 2 collection accounts, 1 account with incorrect late payments, 3 high-balance credit cards, 2 unauthorized inquiries</li>
+        </ul>
+        <p>His 6-month plan:</p>
+        <ol>
+          <li>Month 1: Disputed incorrect late payments and unauthorized inquiries</li>
+          <li>Month 2: Negotiated pay-for-delete with one collection agency</li>
+          <li>Month 3: Consolidated credit card debt with a personal loan</li>
+          <li>Month 4: Disputed second collection (outdated information)</li>
+          <li>Month 5: Followed up on unresolved disputes</li>
+          <li>Month 6: Added as authorized user on family member's card</li>
+        </ol>
+        <p>Result after 6 months: Score improved to 680. After 12 months: 720.</p>
+        
+        <h3>Conclusion</h3>
+        <p>Creating and following a personalized credit repair plan takes discipline and patience, but the financial benefits are substantial. A 100-point score improvement can save you thousands on mortgages, auto loans, and insurance.</p>
+        <p>I've created a downloadable Credit Repair Action Plan template that accompanies this video - find the link in the description below. It includes sample dispute letters, tracking spreadsheets, and a month-by-month planner.</p>
+        <p>If you found this helpful, please like and subscribe for more credit improvement strategies. Let me know in the comments what specific credit challenges you're facing.</p>
+        <p>Thanks for watching, and remember: taking control of your credit is taking control of your financial future.</p>
+      `
+    }
+  };
+
+  // Find current video by slug
+  const video = videoDatabase[slug || ''] || null;
+
+  // If no video found, return not found message
+  if (!video) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+              Video Not Found
+            </h2>
+            <p className="mt-4 text-lg text-gray-500">
+              The video you're looking for doesn't exist or has been removed.
+            </p>
+            <div className="mt-6">
+              <Link to="/education" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Back to Education Center
+              </Link>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  const handleCopyLink = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copied!",
+      description: "Video link has been copied to clipboard.",
+      duration: 3000,
+    });
+  };
+
+  // Render video detail page
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      
+      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        {/* Breadcrumb */}
+        <div className="mb-6">
+          <Link 
+            to="/education" 
+            className="inline-flex items-center text-sm text-gray-600 hover:text-primary"
+          >
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            Back to Education Center
+          </Link>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Video and details - 2/3 width on desktop */}
+          <div className="lg:col-span-2">
+            {/* Video embed */}
+            <div className="aspect-w-16 aspect-h-9 mb-6 bg-gray-100 rounded-xl overflow-hidden">
+              <iframe
+                src={video.videoUrl}
+                title={video.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              ></iframe>
+            </div>
+            
+            {/* Video info */}
+            <div className="mb-8">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+                {video.title}
+              </h1>
+              
+              <div className="flex flex-wrap items-center text-sm text-gray-600 gap-4 mb-4">
+                <div className="flex items-center">
+                  <CalendarDays className="mr-1.5 h-4 w-4" />
+                  {video.publishDate}
+                </div>
+                <div className="flex items-center">
+                  <Clock className="mr-1.5 h-4 w-4" />
+                  {video.duration}
+                </div>
+                <div className="flex items-center">
+                  <PlaySquare className="mr-1.5 h-4 w-4" />
+                  {video.views} views
+                </div>
+                <div className="flex items-center">
+                  <Tag className="mr-1.5 h-4 w-4" />
+                  <span className="capitalize">{video.category}</span>
+                </div>
+              </div>
+              
+              <p className="text-gray-600 mb-6">
+                {video.description}
+              </p>
+              
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <ThumbsUp className="h-4 w-4" />
+                  <span>Helpful</span>
+                </Button>
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <Bookmark className="h-4 w-4" />
+                  <span>Save</span>
+                </Button>
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Comment</span>
+                </Button>
+                
+                <div className="relative ml-auto">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-2"
+                    onClick={() => setShowCopiedToast(!showCopiedToast)}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    <span>Share</span>
+                  </Button>
+                  
+                  {showCopiedToast && (
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-white shadow-lg rounded-md p-2 z-10">
+                      <div className="flex flex-col space-y-1">
+                        <Button variant="ghost" size="sm" className="justify-start" onClick={handleCopyLink}>
+                          <Copy className="mr-2 h-4 w-4" />
+                          <span>Copy link</span>
+                        </Button>
+                        <Button variant="ghost" size="sm" className="justify-start">
+                          <Facebook className="mr-2 h-4 w-4" />
+                          <span>Facebook</span>
+                        </Button>
+                        <Button variant="ghost" size="sm" className="justify-start">
+                          <Twitter className="mr-2 h-4 w-4" />
+                          <span>Twitter</span>
+                        </Button>
+                        <Button variant="ghost" size="sm" className="justify-start">
+                          <Linkedin className="mr-2 h-4 w-4" />
+                          <span>LinkedIn</span>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Author info */}
+            <div className="flex items-center p-4 bg-gray-100 rounded-lg mb-8">
+              <img 
+                src={video.author.image} 
+                alt={video.author.name} 
+                className="w-12 h-12 rounded-full mr-4 object-cover"
+              />
+              <div>
+                <h3 className="font-medium text-gray-900">{video.author.name}</h3>
+                <p className="text-sm text-gray-600">{video.author.title}</p>
+              </div>
+            </div>
+            
+            {/* Transcript */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Video Transcript</h2>
+              <div 
+                className="prose prose-sm max-w-none text-gray-600"
+                dangerouslySetInnerHTML={{ __html: video.transcript }}
+              />
+            </div>
+          </div>
+          
+          {/* Sidebar - 1/3 width on desktop */}
+          <div className="space-y-8">
+            {/* Related videos */}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Related Videos</h2>
+              <div className="space-y-4">
+                {video.relatedVideos.map((relatedVideo) => (
+                  <Link 
+                    key={relatedVideo.id}
+                    to={`/education/videos/${relatedVideo.slug}`}
+                    className="group flex gap-3"
+                  >
+                    <div className="relative flex-shrink-0 w-24 h-16 rounded-md overflow-hidden">
+                      <img
+                        src={relatedVideo.thumbnail}
+                        alt={relatedVideo.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-1 right-1 bg-black/75 text-white text-xs px-1 rounded">
+                        {relatedVideo.duration}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-gray-900 group-hover:text-primary line-clamp-2">
+                        {relatedVideo.title}
+                      </h3>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+            
+            {/* Recommended resources */}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Recommended Resources</h2>
+              <div className="space-y-3">
+                <a 
+                  href="#" 
+                  className="flex items-center p-3 bg-white border border-gray-200 rounded-lg hover:border-primary"
+                >
+                  <div className="mr-3 flex-shrink-0">
+                    <ArrowUpRight className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Sample Dispute Letters</h3>
+                    <p className="text-xs text-gray-600">Templates for effective dispute communications</p>
+                  </div>
+                </a>
+                <a 
+                  href="#" 
+                  className="flex items-center p-3 bg-white border border-gray-200 rounded-lg hover:border-primary"
+                >
+                  <div className="mr-3 flex-shrink-0">
+                    <ArrowUpRight className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Credit Score Simulator</h3>
+                    <p className="text-xs text-gray-600">See how different actions impact your score</p>
+                  </div>
+                </a>
+                <a 
+                  href="#" 
+                  className="flex items-center p-3 bg-white border border-gray-200 rounded-lg hover:border-primary"
+                >
+                  <div className="mr-3 flex-shrink-0">
+                    <ArrowUpRight className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Consumer Rights Guide</h3>
+                    <p className="text-xs text-gray-600">Understanding the FCRA and your legal rights</p>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
+
+export default VideoDetail;
