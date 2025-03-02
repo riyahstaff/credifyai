@@ -78,3 +78,28 @@ export const getSampleDisputeLanguage = async (
   
   return customizedLanguage;
 };
+
+/**
+ * Get successful dispute phrases for different dispute types
+ */
+export const getSuccessfulDisputePhrases = async (): Promise<Record<string, string[]>> => {
+  // These would ideally come from a database of successful disputes
+  return {
+    balanceDisputes: [
+      "I have reviewed my records and found that the balance reported is incorrect. My records indicate the correct balance is $X as of [date].",
+      "The balance shown is from a previously resolved account and should be updated to reflect the current zero balance."
+    ],
+    latePaymentDisputes: [
+      "I have always made payments on time for this account, and I have enclosed copies of my bank statements as evidence.",
+      "The reported late payment occurred during a period when I had arranged a payment deferral with the creditor as documented in the attached correspondence."
+    ],
+    accountOwnershipDisputes: [
+      "I have never applied for or opened an account with this creditor. I request full verification including my original application and signature.",
+      "This account was fraudulently opened using my personal information. I have filed a police report (see attached) and request immediate removal."
+    ],
+    negativeRemarkDisputes: [
+      "The negative remark was the result of a verified bank error which has been acknowledged in writing by the creditor (see attached letter).",
+      "This negative remark was supposed to be removed as part of a settlement agreement reached on [date] (copy enclosed)."
+    ]
+  };
+};

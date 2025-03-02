@@ -15,6 +15,7 @@ export interface CreditReportAccount {
   dateReported?: string;
   bureau?: string;
   remarks?: string[];
+  creditLimit?: string;  // Added this property to fix TypeScript errors
   // Cross-bureau analysis
   bureauSpecificData?: {
     experian?: AccountBureauData;
