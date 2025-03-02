@@ -64,7 +64,7 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
   } = useReportAnalysis();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);\
   
   // Focus on input when chat opens
   useEffect(() => {
@@ -313,7 +313,7 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
         };
         
         setMessages(prev => [...prev, foundIssuesMessage]);
-        setIsAgentTyping(false);
+        setIsAgentTyping(false);\
         setIsProcessingFile(false);
         return;
       }
