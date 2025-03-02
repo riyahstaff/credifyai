@@ -10,6 +10,8 @@ import Dashboard from "./pages/Dashboard";
 import UploadReport from "./pages/UploadReport";
 import DisputeLetters from "./pages/DisputeLetters";
 import Education from "./pages/Education";
+import ArticleDetail from "./pages/ArticleDetail";
+import VideoDetail from "./pages/VideoDetail";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -59,6 +61,8 @@ function App() {
               
               {/* Public Routes */}
               <Route path="/education" element={<Education />} />
+              <Route path="/education/articles/:slug" element={<ArticleDetail />} />
+              <Route path="/education/videos/:slug" element={<VideoDetail />} />
               
               {/* Not Found Route */}
               <Route path="*" element={<NotFound />} />
