@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Logo from '../ui/Logo';
-import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, Mail, MapPin } from 'lucide-react';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -101,10 +101,6 @@ const Footer = () => {
               <li className="flex items-center gap-2 text-credify-navy-light dark:text-white/70">
                 <Mail size={18} className="text-credify-teal" />
                 <span>support@credifyai.com</span>
-              </li>
-              <li className="flex items-center gap-2 text-credify-navy-light dark:text-white/70">
-                <Phone size={18} className="text-credify-teal" />
-                <span>(800) 555-1234</span>
               </li>
               <li className="flex items-start gap-2 text-credify-navy-light dark:text-white/70">
                 <MapPin size={18} className="text-credify-teal mt-0.5" />
