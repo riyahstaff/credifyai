@@ -4,6 +4,7 @@
  */
 import { RecommendedDispute, UserInfo, LegalReference } from '../types';
 import { getLegalReferencesForDispute } from '../legalReferences';
+import { getSampleDisputeLanguage } from './sampleLanguage';
 
 /**
  * Generate a dispute letter for a specific discrepancy
@@ -39,8 +40,20 @@ export const generateDisputeLetterForDiscrepancy = async (
   const legalReferences = discrepancy.legalBasis || 
     getLegalReferencesForDispute(discrepancy.reason, discrepancy.description);
   
-  // Use the sample dispute language or the description
-  const disputeExplanation = discrepancy.sampleDisputeLanguage || discrepancy.description;
+  // If no sample dispute language is available, try to get one
+  let disputeExplanation = discrepancy.sampleDisputeLanguage || discrepancy.description;
+  
+  if (!discrepancy.sampleDisputeLanguage) {
+    try {
+      const sampleLanguage = await getSampleDisputeLanguage(discrepancy.reason, discrepancy.bureau);
+      if (sampleLanguage && sampleLanguage.length > 10) {
+        disputeExplanation = `${discrepancy.description}\n\n${sampleLanguage}`;
+      }
+    } catch (error) {
+      console.error("Error getting sample dispute language:", error);
+      // Continue with original explanation if there's an error
+    }
+  }
   
   // Generate citations text
   const citationsText = legalReferences && legalReferences.length > 0 

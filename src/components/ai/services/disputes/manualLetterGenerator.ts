@@ -1,10 +1,11 @@
 
 import { DisputeType } from './types';
+import { getSampleDisputeLanguage } from '@/utils/creditReport/disputeLetters';
 
-export const generateManualDisputeLetter = (
+export const generateManualDisputeLetter = async (
   dispute: DisputeType,
   samplePhrases: Record<string, string[]> = {}
-): string => {
+): Promise<string> => {
   // Enhanced letter template with FCRA citations and legal language
   const bureauAddresses = {
     'experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
@@ -23,6 +24,8 @@ export const generateManualDisputeLetter = (
   
   // Try to find appropriate sample language based on dispute type
   let additionalLanguage = "";
+  
+  // First check sample phrases passed to the function
   if (samplePhrases) {
     if (dispute.errorType.toLowerCase().includes('balance')) {
       additionalLanguage = samplePhrases.balanceDisputes?.[0] || "";
@@ -39,6 +42,15 @@ export const generateManualDisputeLetter = (
     } else if (dispute.errorType.toLowerCase().includes('student')) {
       // Add student loan specific language
       additionalLanguage = "In light of recent Department of Education changes affecting student loan servicing and reporting, this information should be reviewed for compliance with current federal guidelines.";
+    }
+  }
+  
+  // If no language found from sample phrases, try to get from sample dispute letters
+  if (!additionalLanguage) {
+    try {
+      additionalLanguage = await getSampleDisputeLanguage(dispute.errorType, dispute.bureau);
+    } catch (error) {
+      console.error("Error getting sample dispute language:", error);
     }
   }
   

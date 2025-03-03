@@ -1,7 +1,10 @@
 
 import { Profile } from '@/lib/supabase';
 import { RecommendedDispute } from '../../types';
-import { generateDisputeLetterForDiscrepancy } from '@/utils/creditReport/disputeLetters';
+import { 
+  generateDisputeLetterForDiscrepancy, 
+  getSampleDisputeLanguage 
+} from '@/utils/creditReport/disputeLetters';
 
 export const generateAutomaticDisputeLetter = async (
   targetDispute: RecommendedDispute,
@@ -19,6 +22,24 @@ export const generateAutomaticDisputeLetter = async (
       state: "[STATE]",
       zip: "[ZIP]"
     };
+    
+    // If there's no sample dispute language in the dispute object, try to fetch one
+    if (!targetDispute.sampleDisputeLanguage) {
+      try {
+        const sampleLanguage = await getSampleDisputeLanguage(
+          targetDispute.reason, 
+          targetDispute.bureau
+        );
+        
+        if (sampleLanguage) {
+          console.log("Found sample dispute language:", sampleLanguage.substring(0, 50) + "...");
+          targetDispute.sampleDisputeLanguage = sampleLanguage;
+        }
+      } catch (error) {
+        console.error("Error fetching sample dispute language:", error);
+        // Continue without sample language if there's an error
+      }
+    }
     
     // Actually generate the letter
     const letterContent = await generateDisputeLetterForDiscrepancy(targetDispute, userInfo);
