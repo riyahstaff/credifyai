@@ -14,7 +14,7 @@ import AnalysisError from '@/components/disputes/uploader/AnalysisError';
 import { handleAnalysisComplete } from '@/components/disputes/uploader/AnalysisProcessor';
 
 const UploadReport = () => {
-  const { toast } = useToast();
+  const toast = useToast();
   const navigate = useNavigate();
   const [fileUploaded, setFileUploaded] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -85,7 +85,7 @@ const UploadReport = () => {
 
   const startAnalysis = async () => {
     if (!fileUploaded || !uploadedFile) {
-      toast({
+      toast.toast({
         title: "No file found",
         description: "Please upload a credit report file first.",
         variant: "destructive",

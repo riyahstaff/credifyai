@@ -118,7 +118,7 @@ export const handleAnalysisComplete = async ({
     }
     
     // Show success toast
-    toast({
+    toast.toast({
       title: "Analysis complete",
       description: `Found ${detectedIssues.length} potential issues in your credit report.`,
     });
@@ -127,7 +127,7 @@ export const handleAnalysisComplete = async ({
     setAnalyzed(true);
   } catch (error) {
     console.error("Error analyzing report:", error);
-    toast({
+    toast.toast({
       title: "Analysis failed",
       description: error instanceof Error ? error.message : "Failed to process your credit report.",
       variant: "destructive",
