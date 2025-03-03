@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -18,6 +18,24 @@ import Signup from "./pages/Signup";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import Subscription from "./pages/Subscription";
 import Pricing from "./pages/Pricing";
+import DisputeAgent from "./components/ai/DisputeAgent";
+import { useEffect } from "react";
+
+// Debug component to help understand routing issues
+const RouteLogger = () => {
+  const location = useLocation();
+  
+  useEffect(() => {
+    console.log("Current route:", {
+      pathname: location.pathname,
+      search: location.search,
+      fullPath: location.pathname + location.search,
+      testMode: new URLSearchParams(location.search).get('testMode')
+    });
+  }, [location]);
+  
+  return null;
+};
 
 const queryClient = new QueryClient();
 
@@ -29,6 +47,7 @@ function App() {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <RouteLogger />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
@@ -67,6 +86,9 @@ function App() {
               {/* Not Found Route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            
+            {/* Global DisputeAgent component that's always available */}
+            <DisputeAgent onGenerateDispute={() => {}} />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
