@@ -1,6 +1,6 @@
 
 import { Profile } from '@/lib/supabase';
-import { RecommendedDispute } from '../../types';
+import { RecommendedDispute } from '@/utils/creditReport/types';
 
 export type DisputeType = {
   bureau: string;

@@ -1,3 +1,4 @@
+
 /**
  * Credit Report Data Types
  */
@@ -72,4 +73,51 @@ export interface CreditReportData {
     creditUtilization?: number;
     accountTypeSummary: Record<string, number>;
   };
+}
+
+/**
+ * Legal reference for dispute letters
+ */
+export interface LegalReference {
+  law: string;
+  section: string;
+  description: string;
+  relevance: string;
+}
+
+/**
+ * User information for dispute letters
+ */
+export interface UserInfo {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+}
+
+/**
+ * Recommended dispute from credit report analysis
+ */
+export interface RecommendedDispute {
+  accountName: string;
+  accountNumber?: string;
+  bureau: string;
+  reason: string;
+  description: string;
+  severity: string;
+  legalBasis?: LegalReference[];
+  sampleDisputeLanguage?: string;
+}
+
+/**
+ * Sample dispute letter for reference
+ */
+export interface SampleDisputeLetter {
+  content: string;
+  disputeType: string;
+  bureau?: string;
+  successfulOutcome: boolean;
+  effectiveLanguage?: string[];
+  legalCitations?: string[];
 }

@@ -118,6 +118,16 @@ describe('handleAnalysisComplete', () => {
         experian: true,
         equifax: false,
         transunion: false
+      },
+      inquiries: [], // Add missing required property
+      analysisResults: {
+        totalAccounts: 0,
+        openAccounts: 0,
+        closedAccounts: 0,
+        negativeItems: 0,
+        inquiryCount: 0,
+        publicRecordCount: 0,
+        accountTypeSummary: {}
       }
     };
     
@@ -128,6 +138,16 @@ describe('handleAnalysisComplete', () => {
         experian: true,
         equifax: false,
         transunion: false
+      },
+      inquiries: [], // Add missing required property
+      analysisResults: {
+        totalAccounts: 0,
+        openAccounts: 0,
+        closedAccounts: 0,
+        negativeItems: 0,
+        inquiryCount: 0,
+        publicRecordCount: 0,
+        accountTypeSummary: {}
       }
     };
     

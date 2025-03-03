@@ -1,5 +1,5 @@
 
-import { RecommendedDispute } from '@/utils/creditReportParser';
+import { RecommendedDispute } from '@/utils/creditReport/types';
 
 // Re-export RecommendedDispute type so components can import it from here
 export type { RecommendedDispute };

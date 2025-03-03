@@ -13,6 +13,11 @@ export const generateAnalysisResults = (reportData: CreditReportData) => {
   console.log("Generating analysis results from credit report data");
   
   const totalAccounts = reportData.accounts.length;
+  const openAccounts = reportData.accounts.filter(account => 
+    account.status?.toLowerCase() !== 'closed' && 
+    account.status?.toLowerCase() !== 'transferred'
+  ).length;
+  const closedAccounts = totalAccounts - openAccounts;
   
   // Find accounts with issues - expanded to catch more negative items
   const accountsWithIssues = reportData.accounts.filter(
@@ -58,11 +63,44 @@ export const generateAnalysisResults = (reportData: CreditReportData) => {
     }
   ).length;
   
+  // Calculate credit utilization
+  let totalBalance = 0;
+  let totalLimit = 0;
+  
+  reportData.accounts.forEach(account => {
+    if (account.currentBalance && account.creditLimit) {
+      const balance = parseFloat(account.currentBalance.replace(/[^0-9.]/g, ''));
+      const limit = parseFloat(account.creditLimit.replace(/[^0-9.]/g, ''));
+      if (!isNaN(balance) && !isNaN(limit) && limit > 0) {
+        totalBalance += balance;
+        totalLimit += limit;
+      }
+    }
+  });
+  
+  const creditUtilization = totalLimit > 0 ? (totalBalance / totalLimit) * 100 : undefined;
+  
+  // Count account types
+  const accountTypeSummary: Record<string, number> = {};
+  reportData.accounts.forEach(account => {
+    if (account.accountType) {
+      const type = account.accountType.toLowerCase();
+      accountTypeSummary[type] = (accountTypeSummary[type] || 0) + 1;
+    } else {
+      accountTypeSummary['unknown'] = (accountTypeSummary['unknown'] || 0) + 1;
+    }
+  });
+  
   const analysisResults = {
-    totalDiscrepancies: accountsWithIssues,
-    highSeverityIssues: Math.floor(accountsWithIssues / 2), // Just an estimate
-    accountsWithIssues,
-    recommendedDisputes: []
+    totalAccounts,
+    openAccounts,
+    closedAccounts,
+    negativeItems: accountsWithIssues,
+    inquiryCount: reportData.inquiries.length,
+    publicRecordCount: reportData.publicRecords?.length || 0,
+    creditUtilization,
+    accountTypeSummary,
+    recommendedDisputes: [] as any[]
   };
   
   // Generate recommended disputes for accounts with issues
