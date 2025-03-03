@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -20,14 +21,15 @@ const Login = () => {
   const [connectionError, setConnectionError] = useState(false);
 
   useEffect(() => {
-    const hasSupabaseCredentials = 
-      import.meta.env.VITE_SUPABASE_URL && 
-      import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder-url.supabase.co' &&
-      import.meta.env.VITE_SUPABASE_ANON_KEY && 
-      import.meta.env.VITE_SUPABASE_ANON_KEY !== 'placeholder-key';
+    // Updated check to use the hardcoded fallback values from supabase client
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://frfeyttlztydgwahjjsw.supabase.co';
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZyZmV5dHRsenR5ZGd3YWhqanN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA3MTM5NTIsImV4cCI6MjA1NjI4OTk1Mn0.oQ60NfU_HD9wyqDoGrx763wfIvFWg5CpMixKYvOW1QY';
     
-    setConnectionError(!hasSupabaseCredentials && 
-                      !window.location.hostname.includes('localhost'));
+    const hasSupabaseCredentials = 
+      supabaseUrl !== 'https://placeholder-url.supabase.co' &&
+      supabaseAnonKey !== 'placeholder-key';
+    
+    setConnectionError(!hasSupabaseCredentials);
   }, []);
   
   useEffect(() => {
