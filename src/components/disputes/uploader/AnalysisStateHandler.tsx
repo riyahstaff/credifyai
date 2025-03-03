@@ -1,10 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
-import ReportAnalysisProgress from './ReportAnalysisProgress';
-import ReportUploadInfo from './ReportUploadInfo';
+import AnalyzingReport from './AnalyzingReport';
 import ReportAnalysisResults from './ReportAnalysisResults';
-import UploadedFileInfo from './UploadedFileInfo';
+import UploadConfirmation from './UploadConfirmation';
 
 interface AnalysisStateHandlerProps {
   fileUploaded: boolean;
@@ -70,9 +69,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
   
   // Check the state and render appropriate component
   if (analyzing) {
-    return <ReportAnalysisProgress 
-      fileName={fileName} 
-      fileSize={fileSize} 
+    return <AnalyzingReport 
       onAnalysisComplete={onAnalysisComplete} 
     />;
   }
@@ -88,11 +85,11 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
   
   return (
     <div>
-      <UploadedFileInfo 
+      <UploadConfirmation 
         fileName={fileName} 
         fileSize={fileSize} 
-        onAnalyze={onStartAnalysis} 
-        onCancel={onResetUpload} 
+        onStartAnalysis={onStartAnalysis} 
+        onRemoveFile={onResetUpload} 
       />
     </div>
   );
