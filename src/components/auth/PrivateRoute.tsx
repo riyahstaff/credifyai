@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -11,10 +12,18 @@ interface PrivateRouteProps {
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscription = false }) => {
   const { user, isLoading, profile } = useAuth();
   const location = useLocation();
+  const { toast } = useToast();
   
   // Check if we're in testing mode via URL parameter
   const searchParams = new URLSearchParams(location.search);
   const testMode = searchParams.get('testMode') === 'true';
+  
+  // Log test mode status
+  useEffect(() => {
+    if (testMode) {
+      console.log(`Test mode active for route: ${location.pathname}${location.search}`);
+    }
+  }, [testMode, location]);
   
   // Store the current path for potential redirect after subscription
   useEffect(() => {
@@ -33,8 +42,20 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
   }
   
   if (!user) {
+    // Preserve test mode when redirecting to login
+    const redirectTo = testMode ? `/login?testMode=true&redirect=${encodeURIComponent(location.pathname)}` : '/login';
+    
+    // Notify about redirect
+    if (testMode) {
+      toast({
+        title: "Authentication Required",
+        description: "Redirecting to login with test mode active",
+        duration: 3000,
+      });
+    }
+    
     // Redirect to login if not authenticated
-    return <Navigate to="/login" replace />;
+    return <Navigate to={redirectTo} replace />;
   }
 
   // Check if this route requires subscription (bypass if in test mode)
@@ -47,6 +68,17 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
       return <Navigate to="/subscription" replace />;
     }
   }
+  
+  // If test mode is active and this is a premium route, notify
+  useEffect(() => {
+    if (testMode && requiresSubscription) {
+      toast({
+        title: "Test Mode Active",
+        description: "Premium features unlocked for testing",
+        duration: 3000,
+      });
+    }
+  }, [testMode, requiresSubscription, toast]);
   
   // Render children if authenticated and subscription requirements are met (or bypassed in test mode)
   return <>{children}</>;

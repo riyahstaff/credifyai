@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Logo from '../ui/Logo';
-import { Menu, X, ChevronDown, LogOut, User, CreditCard, Shield, LogIn } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, CreditCard, Shield, LogIn, Beaker } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const Navbar = () => {
   const location = useLocation();
@@ -11,6 +11,7 @@ const Navbar = () => {
   const { user, profile, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { toast } = useToast();
   
   // Check if we're in test mode
   const searchParams = new URLSearchParams(location.search);
@@ -29,24 +30,54 @@ const Navbar = () => {
     setIsOpen(false);
   }, [location]);
 
+  // Log test mode status on component mount
+  useEffect(() => {
+    if (testMode) {
+      console.log(`Navbar detected test mode: ${testMode}`);
+    }
+  }, [testMode]);
+
   // Add testMode parameter to nav links if in test mode
   const navLinks = [
     { name: 'Home', path: '/' },
-    { name: 'Dashboard', path: testMode ? '/dashboard?testMode=true' : '/dashboard' },
-    { name: 'Upload Report', path: testMode ? '/upload-report?testMode=true' : '/upload-report' },
-    { name: 'Dispute Letters', path: testMode ? '/dispute-letters?testMode=true' : '/dispute-letters' },
+    { name: 'Dashboard', path: '/dashboard' + (testMode ? '?testMode=true' : '') },
+    { name: 'Upload Report', path: '/upload-report' + (testMode ? '?testMode=true' : '') },
+    { name: 'Dispute Letters', path: '/dispute-letters' + (testMode ? '?testMode=true' : '') },
     { name: 'Education', path: '/education' },
   ];
 
   // Modified to check if the current path matches the link path, ignoring query parameters
   const isActive = (path: string) => {
-    const pathWithoutQuery = path.split('?')[0];
-    return location.pathname === pathWithoutQuery;
+    const linkPathWithoutQuery = path.split('?')[0];
+    const currentPathWithoutQuery = location.pathname;
+    return currentPathWithoutQuery === linkPathWithoutQuery;
   };
   
   const handleLogout = async () => {
     await signOut();
     navigate('/');
+  };
+
+  // Toggle test mode function
+  const toggleTestMode = () => {
+    const currentPath = location.pathname;
+    if (testMode) {
+      // Turn off test mode
+      navigate(currentPath);
+      toast({
+        title: "Test Mode Disabled",
+        description: "Returning to standard mode",
+        duration: 3000,
+      });
+    } else {
+      // Turn on test mode
+      navigate(`${currentPath}?testMode=true`);
+      toast({
+        title: "Test Mode Enabled",
+        description: "Premium features unlocked for testing",
+        duration: 3000,
+      });
+    }
   };
 
   // Check if current route requires subscription
@@ -75,6 +106,19 @@ const Navbar = () => {
                     {link.name}
                   </Link>
                 ))}
+                
+                {/* Test Mode Toggle Button */}
+                <button
+                  onClick={toggleTestMode}
+                  className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm font-medium ${
+                    testMode 
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' 
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                  }`}
+                >
+                  <Beaker size={14} />
+                  <span>{testMode ? "Disable Test Mode" : "Enable Test Mode"}</span>
+                </button>
               </div>
 
               <div className="hidden md:flex items-center space-x-3">
@@ -126,6 +170,19 @@ const Navbar = () => {
               >
                 Get Started
               </Link>
+              
+              {/* Test Mode Toggle Button */}
+              <button
+                onClick={toggleTestMode}
+                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm font-medium ${
+                  testMode 
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' 
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                }`}
+              >
+                <Beaker size={14} />
+                <span>{testMode ? "Disable Test Mode" : "Enable Test Mode"}</span>
+              </button>
             </div>
           )}
 
@@ -159,6 +216,21 @@ const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
+              
+              {/* Test Mode Toggle Button for Mobile */}
+              <button
+                onClick={toggleTestMode}
+                className={`w-full py-2 mt-2 rounded-lg text-left ${
+                  testMode 
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' 
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 px-2">
+                  <Beaker size={16} />
+                  <span className="font-medium">{testMode ? "Disable Test Mode" : "Enable Test Mode"}</span>
+                </div>
+              </button>
               
               {!hasSubscription && !testMode && (
                 <Link
@@ -198,6 +270,22 @@ const Navbar = () => {
             <>
               <Link to="/" className="block py-2 font-medium text-credify-navy dark:text-white/80">Home</Link>
               <Link to="/education" className="block py-2 font-medium text-credify-navy dark:text-white/80">Education</Link>
+              
+              {/* Test Mode Toggle Button for Mobile */}
+              <button
+                onClick={toggleTestMode}
+                className={`w-full py-2 rounded-lg text-left ${
+                  testMode 
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' 
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 px-2">
+                  <Beaker size={16} />
+                  <span className="font-medium">{testMode ? "Disable Test Mode" : "Enable Test Mode"}</span>
+                </div>
+              </button>
+              
               <div className="pt-4 pb-2 space-y-3 border-t border-gray-200 dark:border-gray-700/30 mt-2">
                 <Link to="/login" className="block py-2 font-medium text-credify-navy dark:text-white/90 flex items-center gap-2">
                   <LogIn size={18} className="text-credify-teal" />

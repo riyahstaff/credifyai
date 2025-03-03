@@ -1,17 +1,29 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import ActiveDisputes from './ActiveDisputes';
 import AiInsights from './AiInsights';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, Bug } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const DashboardContent = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const testMode = searchParams.get('testMode') === 'true';
+  const { toast } = useToast();
   
-  console.log("DashboardContent rendered with testMode:", testMode);
+  useEffect(() => {
+    console.log("DashboardContent rendered with testMode:", testMode);
+    
+    if (testMode) {
+      toast({
+        title: "Test Mode Active",
+        description: "You are viewing the dashboard in test mode with premium features unlocked.",
+        duration: 5000,
+      });
+    }
+  }, [testMode, toast]);
   
   return (
     <div className="lg:col-span-2 space-y-8">
