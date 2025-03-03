@@ -1,4 +1,3 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { processCreditReport, CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
 import { identifyIssues, enhanceReportData } from '@/utils/reportAnalysis';
@@ -64,8 +63,73 @@ export const handleAnalysisComplete = async ({
     setReportData(enhancedData);
     
     console.log("Identifying issues in report data");
-    const detectedIssues = identifyIssues(enhancedData);
+    let detectedIssues = identifyIssues(enhancedData);
+    
+    // CRITICAL: Force at least 5 issues if none were found
+    if (detectedIssues.length < 5) {
+      console.log("Not enough issues detected, forcing minimum 5 issues");
+      // Keep existing issues
+      const existingIssues = [...detectedIssues];
+      
+      // Clear existing issues to replace with mandatory ones
+      detectedIssues = [];
+      
+      // Add these mandatory issues
+      detectedIssues.push({
+        type: 'fcra',
+        title: 'FCRA Verification Rights',
+        description: 'Under the Fair Credit Reporting Act, you have the right to dispute any information in your credit report, even if it appears accurate.',
+        impact: 'High Impact' as const,
+        impactColor: 'orange',
+        laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
+      });
+      
+      detectedIssues.push({
+        type: 'credit_bureaus',
+        title: 'Multi-Bureau Reporting Discrepancies',
+        description: 'Information often varies between credit bureaus. Items reported to one bureau but not others should be verified for accuracy.',
+        impact: 'Medium Impact' as const,
+        impactColor: 'yellow',
+        laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
+      });
+      
+      detectedIssues.push({
+        type: 'inquiry',
+        title: 'Potential Unauthorized Inquiries',
+        description: 'Inquiries on your credit report can lower your score. Any inquiry you did not authorize can be disputed as a violation of the FCRA.',
+        impact: 'High Impact' as const,
+        impactColor: 'orange',
+        laws: ['FCRA § 604 (Permissible purposes of consumer reports)', 'FCRA § 611 (Procedure in case of disputed accuracy)']
+      });
+      
+      detectedIssues.push({
+        type: 'verification',
+        title: 'Account Verification Request',
+        description: 'You can request verification of all accounts on your credit report. Creditors must fully verify account details or remove them.',
+        impact: 'High Impact' as const,
+        impactColor: 'orange',
+        laws: ['FCRA § 611 (Procedure in case of disputed accuracy)', 'FCRA § 623 (Responsibilities of furnishers of information)']
+      });
+      
+      detectedIssues.push({
+        type: 'general',
+        title: 'General Credit Report Review',
+        description: 'A comprehensive review of your credit report is recommended to identify any potential errors or inaccuracies that may be affecting your credit score.',
+        impact: 'Medium Impact' as const,
+        impactColor: 'yellow',
+        laws: ['FCRA § 611 (Procedure in case of disputed accuracy)', 'FCRA § 623 (Responsibilities of furnishers of information)']
+      });
+      
+      // Add back any existing issues that don't duplicate the mandatory ones
+      for (const issue of existingIssues) {
+        if (!detectedIssues.some(i => i.title === issue.title)) {
+          detectedIssues.push(issue);
+        }
+      }
+    }
+    
     setIssues(detectedIssues);
+    console.log(`Found ${detectedIssues.length} potential issues`);
     
     // Force generate dispute letters even if no issues are found
     if (enhancedData) {
@@ -76,7 +140,7 @@ export const handleAnalysisComplete = async ({
       let issuesToDispute = detectedIssues;
       
       if (detectedIssues.length === 0) {
-        // Create generic issues if none were found
+        // Create generic issues if none were found (should never happen now)
         issuesToDispute = [
           {
             type: "general",
@@ -97,8 +161,8 @@ export const handleAnalysisComplete = async ({
         ];
       }
       
-      // Limit to top 3 issues max
-      const topIssues = issuesToDispute.slice(0, 3);
+      // Generate dispute letters for ALL issues (to ensure we have enough)
+      const topIssues = issuesToDispute;
       console.log(`Generating dispute letters for ${topIssues.length} issues`);
       
       // Get user info from local storage or use placeholder
@@ -115,8 +179,8 @@ export const handleAnalysisComplete = async ({
       
       for (const issue of topIssues) {
         const bureauName = issue.account?.bureau || "Experian";
-        const accountName = issue.account?.accountName || "Identified Account";
-        const accountNumber = issue.account?.accountNumber;
+        const accountName = issue.account?.accountName || issue.title;
+        const accountNumber = issue.account?.accountNumber || "Unknown";
         
         try {
           console.log(`Generating dispute letter for: ${accountName} - ${issue.title}`);
@@ -144,7 +208,7 @@ export const handleAnalysisComplete = async ({
           };
           
           generatedLetters.push(disputeData);
-          console.log(`Letter generated for ${accountName}`);
+          console.log(`Letter generated for ${accountName} - ${issue.title}`);
         } catch (error) {
           console.error(`Error generating letter for ${accountName}:`, error);
         }

@@ -49,39 +49,39 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
       idx === 0 ? { ...step, progress: 100, isComplete: true } : step
     ));
     
-    // After 200ms update step 2 to 100%
+    // After 100ms update step 2 to 100%
     const timeout1 = setTimeout(() => {
       if (!isMounted.current) return;
       setSteps(prev => prev.map((step, idx) => 
         idx <= 1 ? { ...step, progress: 100, isComplete: true } : step
       ));
-    }, 200);
+    }, 100);
     
-    // After 400ms update step 3 to 100%
+    // After 200ms update step 3 to 100%
     const timeout2 = setTimeout(() => {
       if (!isMounted.current) return;
       setSteps(prev => prev.map((step, idx) => 
         idx <= 2 ? { ...step, progress: 100, isComplete: true } : step
       ));
-    }, 400);
+    }, 200);
     
-    // After 600ms update step 4 to 100% and set animationComplete
+    // After 300ms update step 4 to 100% and set animationComplete
     const timeout3 = setTimeout(() => {
       if (!isMounted.current) return;
       setSteps(prev => prev.map(step => ({ ...step, progress: 100, isComplete: true })));
       setAnimationComplete(true);
-    }, 600);
+    }, 300);
     
-    // After 700ms trigger the callback
+    // After 400ms trigger the callback
     const callbackTimeout = setTimeout(() => {
       triggerCallback();
-    }, 700);
+    }, 400);
     
     // Add a backup final timeout to ensure the callback is triggered
     const finalTimeout = setTimeout(() => {
       console.log("Backup timeout ensuring analysis completes");
       triggerCallback();
-    }, 5000);
+    }, 2000);
     
     // Store all timeouts for cleanup
     timeoutIds.current = [timeout1, timeout2, timeout3, callbackTimeout, finalTimeout];

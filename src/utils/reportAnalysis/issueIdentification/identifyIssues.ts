@@ -34,8 +34,51 @@ export const identifyIssues = (data: CreditReportData): Array<{
   console.log("Starting issue identification with data:", {
     hasRawText: !!data.rawText,
     accountsLength: data.accounts?.length || 0,
-    hasPersonalInfo: !!data.personalInfo
+    hasPersonalInfo: !!data.personalInfo,
+    rawTextSample: data.rawText ? data.rawText.substring(0, 100) + '...' : 'none'
   });
+  
+  // Check for common credit report patterns regardless of structure
+  if (data.rawText) {
+    const lowerText = data.rawText.toLowerCase();
+    
+    // Force identification of common issues based on raw text patterns
+    if (lowerText.includes('late') || lowerText.includes('past due') || lowerText.includes('delinquent')) {
+      console.log("Found late payment indicators in raw text");
+      issues.push({
+        type: 'late_payment',
+        title: 'Late Payment Reporting',
+        description: 'Your credit report shows late payment history. Under the FCRA, late payments can be disputed if they are inaccurately reported or the creditor cannot verify the exact delinquency.',
+        impact: 'Critical Impact',
+        impactColor: 'red',
+        laws: ['FCRA § 611', 'FCRA § 623']
+      });
+    }
+    
+    if (lowerText.includes('collection') || lowerText.includes('charged off')) {
+      console.log("Found collection or charge-off indicators in raw text");
+      issues.push({
+        type: 'collection',
+        title: 'Collection Account',
+        description: 'Your credit report contains collection accounts. Collection agencies must validate debts under the FDCPA, and these accounts can be disputed if they cannot provide proper documentation.',
+        impact: 'Critical Impact',
+        impactColor: 'red',
+        laws: ['FCRA § 611', 'FDCPA § 809']
+      });
+    }
+    
+    if (lowerText.includes('inquir')) {
+      console.log("Found inquiries in raw text");
+      issues.push({
+        type: 'inquiry',
+        title: 'Unauthorized Hard Inquiries',
+        description: 'Hard inquiries on your credit report can negatively impact your score. If you did not authorize these inquiries, they can be disputed under the FCRA.',
+        impact: 'High Impact',
+        impactColor: 'orange',
+        laws: ['FCRA § 604', 'FCRA § 611']
+      });
+    }
+  }
   
   // Always identify issues based on raw text analysis first
   if (data.rawText) {
@@ -48,7 +91,9 @@ export const identifyIssues = (data: CreditReportData): Array<{
   } else {
     console.log("No raw text available for analysis");
     // If no raw text, add generic issues
-    issues.push(...addFallbackGenericIssues());
+    const fallbackIssues = addFallbackGenericIssues();
+    issues.push(...fallbackIssues);
+    console.log(`Added ${fallbackIssues.length} fallback generic issues due to no raw text`);
   }
   
   // Identify issues based on account analysis if accounts are available
@@ -71,7 +116,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
   } else {
     console.log("No accounts available for analysis, adding fallback issues");
     // If we couldn't find any accounts, ensure we have fallback issues
-    if (issues.length < 3) {
+    if (issues.length < 5) {
       const fallbackIssues = addFallbackGenericIssues();
       issues.push(...fallbackIssues);
       console.log(`Added ${fallbackIssues.length} fallback issues due to no accounts`);
@@ -79,8 +124,11 @@ export const identifyIssues = (data: CreditReportData): Array<{
   }
   
   // CRITICAL: Always ensure we have at least some issues to present
-  if (issues.length === 0) {
-    console.log("No issues identified through regular methods, adding mandatory fallback issues");
+  // This ensures we never have 0 issues returned
+  if (issues.length === 0 || issues.length < 3) {
+    console.log("Insufficient issues identified, adding mandatory fallback issues");
+    
+    // Always add FCRA verification rights
     issues.push({
       type: 'fcra',
       title: 'FCRA Verification Rights',
@@ -90,6 +138,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
       laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
     });
     
+    // Always add Multi-Bureau Reporting Discrepancies
     issues.push({
       type: 'credit_bureaus',
       title: 'Multi-Bureau Reporting Discrepancies',
@@ -99,6 +148,27 @@ export const identifyIssues = (data: CreditReportData): Array<{
       laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
     });
     
+    // Always add Inquiry Disputes
+    issues.push({
+      type: 'inquiry',
+      title: 'Potential Unauthorized Inquiries',
+      description: 'Inquiries on your credit report can lower your score. Any inquiry you did not authorize can be disputed as a violation of the FCRA.',
+      impact: 'Medium Impact',
+      impactColor: 'yellow',
+      laws: ['FCRA § 604 (Permissible purposes of consumer reports)', 'FCRA § 611 (Procedure in case of disputed accuracy)']
+    });
+    
+    // Always add Account Verification
+    issues.push({
+      type: 'verification',
+      title: 'Account Verification Request',
+      description: 'You can request verification of all accounts on your credit report. Creditors must fully verify account details or remove them.',
+      impact: 'High Impact',
+      impactColor: 'orange',
+      laws: ['FCRA § 611 (Procedure in case of disputed accuracy)', 'FCRA § 623 (Responsibilities of furnishers of information)']
+    });
+    
+    // Always add General Credit Report Review
     issues.push({
       type: 'general',
       title: 'General Credit Report Review',
