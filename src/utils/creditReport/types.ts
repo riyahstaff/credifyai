@@ -43,7 +43,7 @@ export interface CreditReportAccount {
   isCollection?: boolean;
   chargeOffAmount?: string;
   
-  // Adding missing properties referenced in the code
+  // Adding explicitly the properties referenced in the code
   balance?: string;
   dateOpened?: string;
   dateReported?: string;
@@ -141,7 +141,7 @@ export interface RecommendedDispute {
   sampleDisputeLanguage?: string;
   successRate?: number;
   
-  // Adding missing property referenced in the code
+  // Adding the severity property that's referenced in code
   severity?: 'high' | 'medium' | 'low';
 }
 
