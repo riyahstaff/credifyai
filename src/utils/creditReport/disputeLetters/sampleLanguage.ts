@@ -32,6 +32,58 @@ export const getSampleDisputeLanguage = async (
 };
 
 /**
+ * Get successful dispute phrases by category
+ * This provides template phrases that have worked well in successful disputes
+ */
+export const getSuccessfulDisputePhrases = async (): Promise<Record<string, string[]>> => {
+  try {
+    console.log("Getting successful dispute phrases");
+    // In a production environment, these would be fetched from a database or API
+    // For now, return a static set of phrases
+    return {
+      'late_payment': [
+        "I have never been late on this account as evidenced by my payment records.",
+        "This reported late payment is inaccurate and should be removed under FCRA guidelines.",
+        "My records show on-time payments for all periods in question."
+      ],
+      'not_mine': [
+        "This account does not belong to me and I have no connection to it.",
+        "I have never opened an account with this creditor.",
+        "This appears to be a case of identity theft or mixed credit file."
+      ],
+      'balance': [
+        "The balance shown is incorrect and does not reflect actual account status.",
+        "This balance has been paid in full as of [DATE].",
+        "The reported balance exceeds the actual amount owed by [AMOUNT]."
+      ],
+      'inquiry': [
+        "I did not authorize this inquiry and it should be removed.",
+        "This inquiry was made without my knowledge or consent.",
+        "This appears to be an unauthorized access to my credit file."
+      ],
+      'collection': [
+        "This debt has been paid in full and should not be reported as a collection.",
+        "This collection account is being reported multiple times.",
+        "This collection account is beyond the 7-year reporting period allowed by law."
+      ],
+      'personal_information': [
+        "This is not my correct address and should be updated.",
+        "The Social Security Number associated with this account is incorrect.",
+        "My name is misspelled and needs to be corrected in your records."
+      ],
+      'general': [
+        "Under the Fair Credit Reporting Act, you are required to verify this information.",
+        "This error is negatively impacting my credit score and must be corrected.",
+        "I request a thorough investigation of this matter as required by federal law."
+      ]
+    };
+  } catch (error) {
+    console.error("Error getting successful dispute phrases:", error);
+    return {};
+  }
+};
+
+/**
  * Get fallback dispute language based on dispute type
  */
 const getFallbackDisputeLanguage = (disputeType: string): string => {
