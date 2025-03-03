@@ -43,7 +43,7 @@ export type UserSession = {
 export const APP_ROUTES = {
   DASHBOARD: '/dashboard',
   DISPUTE_LETTERS: '/dispute-letters',
-  CREATE_DISPUTE: '/dispute-letters/new',
+  CREATE_DISPUTE: '/dispute-letters?view=generator', // Updated to use query parameter instead of a new route
   UPLOAD_REPORT: '/upload-report',
   EDUCATION: '/education',
   LOGIN: '/login',

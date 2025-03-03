@@ -1,4 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import DisputeAgent from '../components/ai/DisputeAgent';
@@ -13,10 +15,28 @@ import FCRAComplianceSection from '@/components/disputes/letters/FCRAComplianceS
 const DisputeLetters = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [showPreview, setShowPreview] = useState(false);
   const [currentLetter, setCurrentLetter] = useState<any>(null);
-  const [selectedView, setSelectedView] = useState<string>("letters");
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Get the view from URL query parameter
+  const queryParams = new URLSearchParams(location.search);
+  const viewFromQuery = queryParams.get('view');
+  
+  // Set the default view based on the query parameter or default to "letters"
+  const [selectedView, setSelectedView] = useState<string>(viewFromQuery || "letters");
+  
+  // Update URL when view changes
+  const handleViewChange = (view: string) => {
+    setSelectedView(view);
+    if (view !== "letters") {
+      navigate(`/dispute-letters?view=${view}`, { replace: true });
+    } else {
+      navigate('/dispute-letters', { replace: true });
+    }
+  };
   
   // Sample data for dispute letters
   const [letters, setLetters] = useState<any[]>([]);
@@ -221,13 +241,13 @@ const DisputeLetters = () => {
         <div className="container mx-auto px-4 md:px-6">
           {/* Page Header */}
           <DisputeLettersHeader 
-            onCreateNewLetter={() => setSelectedView("generator")}
+            onCreateNewLetter={() => handleViewChange("generator")}
           />
           
           {/* Letter Tabs */}
           <DisputeLettersTabs
             selectedView={selectedView}
-            onViewChange={setSelectedView}
+            onViewChange={handleViewChange}
             letters={letters}
             isLoading={isLoading}
             onViewLetter={handleViewLetter}
@@ -244,7 +264,7 @@ const DisputeLetters = () => {
           
           {/* FCRA Compliance Section */}
           <FCRAComplianceSection 
-            onCreateLetter={() => setSelectedView("generator")}
+            onCreateLetter={() => handleViewChange("generator")}
           />
         </div>
       </main>
