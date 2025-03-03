@@ -43,6 +43,10 @@ export async function generateEnhancedDisputeLetter(
       templateType = 'INCORRECT_STATUS';
     } else if (normalizedDispute.includes('closed')) {
       templateType = 'ACCOUNT_CLOSED';
+    } else if (normalizedDispute.includes('inquiry')) {
+      templateType = 'UNAUTHORIZED_INQUIRY';
+    } else if (normalizedDispute.includes('collection')) {
+      templateType = 'COLLECTION_DISPUTE';
     }
     
     // Fetch the appropriate template
@@ -102,39 +106,47 @@ ${currentDate}
 ${accountDetails.bureau}
 ${bureauAddress}
 
-Re: Dispute of Inaccurate Information in Credit Report
-
-Account Name: ${accountDetails.accountName}
-Account Number: ${accountDetails.accountNumber || '[ACCOUNT NUMBER]'}
-Reason for Dispute: ${disputeType}
+RE: FORMAL DISPUTE OF INACCURATE CREDIT INFORMATION
+ACCOUNT NAME: ${accountDetails.accountName}
+ACCOUNT NUMBER: ${accountDetails.accountNumber || '[ACCOUNT NUMBER]'}
+DISPUTE REASON: ${disputeType}
 
 To Whom It May Concern:
 
-This letter is to formally dispute inaccurate information appearing on my credit report. I am writing in accordance with my rights under the Fair Credit Reporting Act (FCRA), specifically Section 611(a).
+This letter is to formally dispute inaccurate information appearing on my credit report. I am writing in accordance with my rights under the Fair Credit Reporting Act (FCRA), Section 611(a) and Section 623(a)(8).
 
-Information being disputed:
-The ${disputeType.toLowerCase()} for the account listed above is being reported inaccurately. ${accountDetails.errorDescription}
+ACCOUNT DETAILS BEING DISPUTED:
+- Account Holder: ${userInfo.name || '[YOUR NAME]'}
+- Account Name: ${accountDetails.accountName}
+- Account Number: ${accountDetails.accountNumber || '[ACCOUNT NUMBER]'}
+- Reason for Dispute: ${disputeType}
 
-${additionalLanguage ? `Detailed explanation:\n${additionalLanguage}\n\n` : ''}
+EXPLANATION OF INACCURACY:
+${accountDetails.errorDescription}
 
-Legal basis for dispute:
+${additionalLanguage ? `ADDITIONAL INFORMATION:\n${additionalLanguage}\n\n` : ''}
+
+LEGAL BASIS FOR DISPUTE:
 ${fcraSections}
 
-Under the FCRA, you are required to conduct a reasonable investigation into this matter and correct or delete any information that cannot be verified. Please note that according to the FCRA:
+Under the FCRA, you are required to conduct a reasonable investigation into this matter and correct or delete any information that cannot be verified. According to the FCRA:
 
 1. You must complete your investigation within 30 days (or 45 days if I provide additional information during the 30-day period).
 2. You must forward all relevant information to the furnisher of this information for verification.
 3. You must provide me with the results of your investigation and a free copy of my credit report if changes are made.
 4. If information is changed or deleted, you cannot reinsert it without notifying me.
+5. If your investigation does not resolve the dispute, I have the right to add a brief statement to my file.
 
-I request that you:
+I REQUEST THAT YOU:
 - Conduct a thorough investigation of this disputed information
 - Remove the inaccurate information from my credit report
+- Send updated information to all credit bureaus and third parties who have received my credit report in the last six months
 - Provide me with written confirmation of the results of your investigation
 
 If you have any questions or need additional information, please contact me at the address listed above.
 
 Sincerely,
+
 
 ${userInfo.name || '[YOUR SIGNATURE]'}
 
@@ -177,7 +189,9 @@ ${new Date().toLocaleDateString()}
 ${accountDetails.bureau}
 [BUREAU ADDRESS]
 
-Re: Dispute of Inaccurate Information
+RE: DISPUTE OF INACCURATE INFORMATION
+ACCOUNT NAME: ${accountDetails.accountName}
+ACCOUNT NUMBER: ${accountDetails.accountNumber || '[ACCOUNT NUMBER]'}
 
 To Whom It May Concern:
 

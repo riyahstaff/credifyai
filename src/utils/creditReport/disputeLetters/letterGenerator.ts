@@ -120,7 +120,10 @@ ${currentDate}
 ${discrepancy.bureau}
 ${bureauAddress}
 
-Re: Dispute of Inaccurate Information - ${discrepancy.accountName}${discrepancy.accountNumber ? ` - Account #${discrepancy.accountNumber}` : ''}
+RE: FORMAL DISPUTE OF INACCURATE CREDIT INFORMATION
+ACCOUNT NAME: ${discrepancy.accountName}
+ACCOUNT NUMBER: ${discrepancy.accountNumber || '[ACCOUNT NUMBER]'}
+DISPUTE REASON: ${discrepancy.reason}
 
 To Whom It May Concern:
 
@@ -128,12 +131,16 @@ I am writing in accordance with my rights under the Fair Credit Reporting Act (F
 
 After reviewing my credit report from ${discrepancy.bureau}, I have identified the following item that is inaccurate and requires investigation and correction:
 
-Account Name: ${discrepancy.accountName}
-${discrepancy.accountNumber ? `Account Number: ${discrepancy.accountNumber}` : ''}
-Reason for Dispute: ${discrepancy.reason}
+ACCOUNT DETAILS BEING DISPUTED:
+- Account Name: ${discrepancy.accountName}
+- Account Number: ${discrepancy.accountNumber || '[ACCOUNT NUMBER]'}
+- Reason for Dispute: ${discrepancy.reason}
+- Impact Level: ${discrepancy.impact || 'High'}
 
-This information is inaccurate because: ${disputeExplanation}
+EXPLANATION OF INACCURACY:
+${disputeExplanation}
 
+LEGAL BASIS FOR DISPUTE:
 ${citationsText}you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified. Additionally, Section 623 of the FCRA places responsibilities on furnishers of information to provide accurate data to consumer reporting agencies.
 
 Under Section 611 of the FCRA, you must:
@@ -145,15 +152,22 @@ Under Section 611 of the FCRA, you must:
 
 If you continue to report this information without proper verification, you may be in violation of the FCRA, which provides for actual and punitive damages, as well as attorneys' fees for failure to comply with these provisions.
 
+I REQUEST THAT YOU:
+- Conduct a thorough investigation of this disputed information
+- Remove the inaccurate information from my credit report
+- Send updated information to all credit bureaus and third parties who have received my credit report
+- Provide me with written confirmation of the results of your investigation
+
 Please direct all correspondence regarding this matter to the address listed above. I expect a response within the timeframe specified by the FCRA.
 
 Sincerely,
+
 
 ${userInfo.name}
 
 Enclosures:
 - Copy of credit report with disputed item highlighted
-- [LIST ANY SUPPORTING DOCUMENTATION]
+- [SUPPORTING DOCUMENTATION]
 `;
 
   return letterContent;

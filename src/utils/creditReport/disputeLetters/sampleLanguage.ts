@@ -44,37 +44,59 @@ export const getSuccessfulDisputePhrases = async (): Promise<Record<string, stri
       'late_payment': [
         "I have never been late on this account as evidenced by my payment records.",
         "This reported late payment is inaccurate and should be removed under FCRA guidelines.",
-        "My records show on-time payments for all periods in question."
+        "My records show on-time payments for all periods in question.",
+        "The reported late payment on {date} is incorrect, as I have documentation showing the payment was made on time."
       ],
       'not_mine': [
         "This account does not belong to me and I have no connection to it.",
         "I have never opened an account with this creditor.",
-        "This appears to be a case of identity theft or mixed credit file."
+        "This appears to be a case of identity theft or mixed credit file.",
+        "I have no record of ever applying for or opening this account with {creditor}."
       ],
       'balance': [
         "The balance shown is incorrect and does not reflect actual account status.",
-        "This balance has been paid in full as of [DATE].",
-        "The reported balance exceeds the actual amount owed by [AMOUNT]."
+        "This balance has been paid in full as of {date}.",
+        "The reported balance of {amount} exceeds the actual amount owed by {difference}.",
+        "The balance reported is incorrect as I have documentation showing a different amount."
       ],
       'inquiry': [
         "I did not authorize this inquiry and it should be removed.",
         "This inquiry was made without my knowledge or consent.",
-        "This appears to be an unauthorized access to my credit file."
+        "This appears to be an unauthorized access to my credit file.",
+        "I have no record of applying for credit with {creditor} on {date}, making this inquiry unauthorized."
       ],
       'collection': [
         "This debt has been paid in full and should not be reported as a collection.",
         "This collection account is being reported multiple times.",
-        "This collection account is beyond the 7-year reporting period allowed by law."
+        "This collection account is beyond the 7-year reporting period allowed by law.",
+        "The collection reported by {collector} for {amount} was satisfied on {date} and should be removed."
       ],
       'personal_information': [
         "This is not my correct address and should be updated.",
         "The Social Security Number associated with this account is incorrect.",
-        "My name is misspelled and needs to be corrected in your records."
+        "My name is misspelled and needs to be corrected in your records.",
+        "The employment information listed is outdated and should be updated to reflect my current position."
+      ],
+      'account_status': [
+        "This account is incorrectly reported as open when it was closed on {date}.",
+        "The account status is incorrectly shown as {status} when it should be {correct_status}.",
+        "This account was paid as agreed but is being reported with a negative status."
+      ],
+      'bankruptcy': [
+        "This bankruptcy was discharged on {date} and certain accounts included in it are still showing as outstanding.",
+        "Accounts included in my bankruptcy should be reported as discharged, not as charged-off or in collections.",
+        "This bankruptcy filing is reported with incorrect dates and information."
+      ],
+      'public_records': [
+        "This judgment was satisfied on {date} but is still being reported as outstanding.",
+        "This tax lien was released on {date} and should be removed from my report.",
+        "This public record contains incorrect information about the amount and status."
       ],
       'general': [
-        "Under the Fair Credit Reporting Act, you are required to verify this information.",
-        "This error is negatively impacting my credit score and must be corrected.",
-        "I request a thorough investigation of this matter as required by federal law."
+        "Under the Fair Credit Reporting Act, you are required to verify this information with the original creditor.",
+        "This error is negatively impacting my credit score and must be corrected according to FCRA guidelines.",
+        "I request a thorough investigation of this matter as required by federal law.",
+        "According to FCRA Section 611, you must investigate and remove inaccurate information from my credit report."
       ]
     };
   } catch (error) {

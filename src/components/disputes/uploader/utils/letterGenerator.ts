@@ -28,6 +28,12 @@ export const getUserInfo = (): UserInfo => {
  * Create a fallback dispute letter when no issues can be processed
  */
 export const createFallbackLetter = (): any => {
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
   return {
     bureau: "Experian",
     accountName: "All Accounts",
@@ -38,27 +44,41 @@ export const createFallbackLetter = (): any => {
 [YOUR NAME]
 [YOUR ADDRESS]
 [CITY, STATE ZIP]
-[DATE]
+${currentDate}
 
 Experian
 P.O. Box 4500
 Allen, TX 75013
 
-RE: Dispute of Inaccurate Credit Information
+RE: FORMAL DISPUTE OF INACCURATE CREDIT INFORMATION
+REFERENCE: COMPREHENSIVE REPORT REVIEW
 
 To Whom It May Concern:
 
 I am writing to dispute inaccurate information in my credit report. I have the right under the Fair Credit Reporting Act (FCRA), Section 611, to dispute incomplete or inaccurate information.
 
-After reviewing my credit report, I have identified multiple items that I believe are inaccurate and request that they be verified and corrected.
+After reviewing my credit report from Experian, I have identified multiple items that I believe are inaccurate or incomplete and request that they be verified and corrected according to the provisions of the FCRA.
 
-I request that all items in my credit report be verified for accuracy. If any information cannot be fully verified, it must be removed from my credit report as required by the FCRA.
+LEGAL BASIS FOR DISPUTE:
+Under FCRA Section 611(a), you are required to conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate. If the information cannot be verified, you must promptly delete it. Additionally, FCRA Section 623(a)(8) requires information furnishers to conduct investigations of disputed information.
 
-Please investigate these matters and correct my credit report accordingly.
+I request that all items in my credit report be verified for accuracy, including but not limited to:
+- Personal information (name, address, employment history)
+- Account details (balances, payment history, account status)
+- Public records (judgments, liens, bankruptcies)
+- Inquiries (both hard and soft inquiries)
+
+If any information cannot be fully verified, it must be removed from my credit report as required by the FCRA.
+
+Please investigate these matters and correct my credit report accordingly. I expect a response within the timeframe specified by the FCRA (30 days, or 45 days if additional information is provided).
 
 Sincerely,
 
 [YOUR NAME]
+
+Enclosures:
+- Copy of credit report with highlighted items
+- [SUPPORTING DOCUMENTATION]
     `,
     timestamp: new Date().toISOString()
   };
@@ -83,10 +103,33 @@ export const generateDisputeLetters = async (
   for (const issue of issues.slice(0, maxLetters)) { 
     const bureauName = issue.account?.bureau || "Experian";
     const accountName = issue.account?.accountName || issue.title;
-    const accountNumber = issue.account?.accountNumber || "Unknown";
+    const accountNumber = issue.account?.accountNumber || "";
     
     try {
       console.log(`Generating dispute letter for: ${accountName} - ${issue.title}`);
+      
+      // Build a detailed description that includes specific details from the account
+      let detailedDescription = issue.description;
+      
+      // Add account details to the description if available
+      if (issue.account) {
+        detailedDescription += `\n\nAccount details:\n`;
+        if (issue.account.dateOpened) detailedDescription += `- Date Opened: ${issue.account.dateOpened}\n`;
+        if (issue.account.lastReportedDate) detailedDescription += `- Last Reported: ${issue.account.lastReportedDate}\n`;
+        if (issue.account.currentBalance) detailedDescription += `- Current Balance: ${issue.account.currentBalance}\n`;
+        if (issue.account.paymentStatus) detailedDescription += `- Payment Status: ${issue.account.paymentStatus}\n`;
+        if (issue.account.accountType) detailedDescription += `- Account Type: ${issue.account.accountType}\n`;
+        
+        // Include any remarks
+        if (issue.account.remarks && issue.account.remarks.length > 0) {
+          detailedDescription += `- Remarks: ${issue.account.remarks.join(', ')}\n`;
+        }
+      }
+      
+      // Add reference to applicable laws
+      if (issue.laws && issue.laws.length > 0) {
+        detailedDescription += `\nThis dispute is based on the following legal provisions: ${issue.laws.join(', ')}`;
+      }
       
       // Use a try-catch with timeout to prevent hanging
       const letterContentPromise = Promise.race([
@@ -95,44 +138,70 @@ export const generateDisputeLetters = async (
           {
             accountName: accountName,
             accountNumber: accountNumber,
-            errorDescription: issue.description,
+            errorDescription: detailedDescription,
             bureau: bureauName
           },
           userInfo
         ),
-        // Timeout after 5 seconds to prevent hanging
+        // Timeout after 10 seconds to prevent hanging
         new Promise<string>((resolve) => {
           setTimeout(() => {
+            const currentDate = new Date().toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            });
+            
             resolve(`
 ${userInfo.name}
 ${userInfo.address}
 ${userInfo.city}, ${userInfo.state} ${userInfo.zip}
 
-${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+${currentDate}
 
 ${bureauName}
 P.O. Box 4500
 Allen, TX 75013
 
-Re: Dispute of Inaccurate Information - ${accountName}
+RE: FORMAL DISPUTE OF INACCURATE CREDIT INFORMATION
+ACCOUNT NAME: ${accountName}
+ACCOUNT NUMBER: ${accountNumber || "[ACCOUNT NUMBER]"}
+DISPUTE REASON: ${issue.title}
 
 To Whom It May Concern:
 
-I am writing to dispute the following information in my credit report:
+I am writing in accordance with my rights under the Fair Credit Reporting Act (FCRA), Section 611, to dispute the following inaccurate information that appears on my credit report:
 
-Account Name: ${accountName}
-Account Number: ${accountNumber || "[ACCOUNT NUMBER]"}
-Reason for Dispute: ${issue.title}
+ACCOUNT DETAILS BEING DISPUTED:
+- Account Name: ${accountName}
+- Account Number: ${accountNumber || "[ACCOUNT NUMBER]"}
+- Reason for Dispute: ${issue.title}
+- Impact Level: ${issue.impact}
 
-This information is inaccurate because: ${issue.description}
+EXPLANATION OF INACCURACY:
+${detailedDescription}
 
-Under Section 611 of the Fair Credit Reporting Act, you are required to investigate this dispute and remove information that cannot be verified.
+LEGAL BASIS FOR DISPUTE:
+${issue.laws ? issue.laws.join(', ') : 'FCRA Section 611(a) - Procedure in case of disputed accuracy'}
+
+Under the FCRA, you are required to conduct a reasonable investigation into this matter and correct or delete any information that cannot be verified. If your investigation does not resolve the dispute, I have the right to add a brief statement to my file.
+
+I REQUEST THAT YOU:
+- Conduct a thorough investigation of this disputed information
+- Remove the inaccurate information from my credit report
+- Provide me with written confirmation of the results of your investigation
+
+Please respond within the 30-day timeframe required by the FCRA.
 
 Sincerely,
 
 ${userInfo.name}
+
+Enclosures:
+- Copy of credit report with disputed item highlighted
+- [SUPPORTING DOCUMENTATION]
             `);
-          }, 5000);
+          }, 10000);
         })
       ]);
       
@@ -143,8 +212,10 @@ ${userInfo.name}
         accountName: accountName,
         accountNumber: accountNumber || "",
         errorType: issue.title,
-        explanation: issue.description,
+        explanation: detailedDescription,
         letterContent: letterContent,
+        impact: issue.impact,
+        laws: issue.laws || ['FCRA § 611'],
         timestamp: new Date().toISOString()
       };
       
