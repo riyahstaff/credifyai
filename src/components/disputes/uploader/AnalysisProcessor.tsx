@@ -9,7 +9,8 @@ import { ensureMinimumIssues } from './utils/issueGenerator';
 import { generateDisputeLetters, storeGeneratedLetters } from './utils/letterGenerator';
 import { storeReportData } from './utils/reportStorage';
 
-export { AnalysisProcessorProps } from './types/analysisTypes';
+// Use 'export type' instead of just 'export' for re-exporting types
+export type { AnalysisProcessorProps } from './types/analysisTypes';
 
 export const handleAnalysisComplete = async ({
   uploadedFile,
