@@ -1,106 +1,118 @@
 
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import '@testing-library/jest-dom';
 import AnalyzingReport from '../AnalyzingReport';
+import '@testing-library/jest-dom';
 
-describe('AnalyzingReport', () => {
-  // Setup mocks
+// Mock the onAnalysisComplete callback
+const mockOnAnalysisComplete = vi.fn();
+
+describe('AnalyzingReport Component', () => {
   beforeEach(() => {
+    mockOnAnalysisComplete.mockClear();
     vi.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.clearAllTimers();
-    vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  it('renders the component with initial state', () => {
-    render(<AnalyzingReport />);
-    
+  it('renders with initial state correctly', () => {
+    render(<AnalyzingReport onAnalysisComplete={mockOnAnalysisComplete} />);
     expect(screen.getByText('Analyzing Your Credit Report')).toBeInTheDocument();
-    expect(screen.getByText('Our AI is carefully scanning your report for errors, inaccuracies, and potential FCRA violations.')).toBeInTheDocument();
-    
-    // Check that all 4 steps are displayed
-    expect(screen.getByText('Scanning personal information')).toBeInTheDocument();
-    expect(screen.getByText('Analyzing account information')).toBeInTheDocument();
-    expect(screen.getByText('Checking for FCRA violations')).toBeInTheDocument();
-    expect(screen.getByText('Preparing recommendations')).toBeInTheDocument();
+    expect(screen.getByText('Scanning document')).toBeInTheDocument();
+    expect(screen.getByText('0% complete')).toBeInTheDocument();
   });
 
-  it('calls onAnalysisComplete immediately', async () => {
-    const mockOnAnalysisComplete = vi.fn();
+  it('updates progress and stages as time passes', () => {
     render(<AnalyzingReport onAnalysisComplete={mockOnAnalysisComplete} />);
     
-    // The callback should be called immediately
-    expect(mockOnAnalysisComplete).toHaveBeenCalledTimes(1);
+    // Initial state
+    expect(screen.getByText('Scanning document')).toBeInTheDocument();
     
-    // Advancing timers shouldn't call it again
+    // After some progress - stage 1
     act(() => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(3000); // Advance by 3 seconds (30 progress increments)
     });
     
-    // The callback should not be called again
+    expect(screen.getByText('Extracting account information')).toBeInTheDocument();
+    
+    // After more progress - stage 2
+    act(() => {
+      vi.advanceTimersByTime(3000); // Advance by 3 more seconds
+    });
+    
+    expect(screen.getByText('Analyzing for discrepancies')).toBeInTheDocument();
+    
+    // After more progress - stage 3
+    act(() => {
+      vi.advanceTimersByTime(2500); // Advance to reach the next stage
+    });
+    
+    expect(screen.getByText('Preparing dispute recommendations')).toBeInTheDocument();
+    
+    // Complete the process
+    act(() => {
+      vi.advanceTimersByTime(2000); // Finish the analysis
+    });
+    
+    expect(screen.getByText('Analysis Complete')).toBeInTheDocument();
+    expect(screen.getByText('Ready to view results')).toBeInTheDocument();
+    expect(screen.getByText('100% complete')).toBeInTheDocument();
+  });
+
+  it('calls onAnalysisComplete when analysis finishes', () => {
+    render(<AnalyzingReport onAnalysisComplete={mockOnAnalysisComplete} />);
+    
+    // Fast-forward to 100% completion
+    act(() => {
+      vi.advanceTimersByTime(10000); // This should be enough to complete the analysis
+    });
+    
+    // Small delay for the callback
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    
     expect(mockOnAnalysisComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('cleans up timeouts when unmounted', () => {
-    // Create a spy on clearTimeout
-    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
+  it('handles multiple stages correctly', () => {
+    render(<AnalyzingReport onAnalysisComplete={mockOnAnalysisComplete} />);
     
-    const { unmount } = render(<AnalyzingReport />);
+    // Start: Scanning document
+    expect(screen.getByText('Scanning document')).toBeInTheDocument();
     
-    // Unmount component
-    unmount();
+    // Stage 1: Extracting account information
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(screen.getByText('Extracting account information')).toBeInTheDocument();
     
-    // Check if clearTimeout was called
-    expect(clearTimeoutSpy).toHaveBeenCalled();
+    // Stage 2: Analyzing for discrepancies
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(screen.getByText('Analyzing for discrepancies')).toBeInTheDocument();
     
-    // Restore original implementation
-    clearTimeoutSpy.mockRestore();
+    // Stage 3: Preparing dispute recommendations
+    act(() => {
+      vi.advanceTimersByTime(2500);
+    });
+    expect(screen.getByText('Preparing dispute recommendations')).toBeInTheDocument();
   });
 
-  it('triggers onAnalysisComplete when unmounted if not yet triggered', () => {
-    // Mock the callback but modify it to prevent it from being called during mount
-    const mockOnAnalysisComplete = vi.fn();
+  // This test needs to be adjusted as we no longer use steps prop
+  it('renders the final completed state correctly', () => {
+    render(<AnalyzingReport onAnalysisComplete={mockOnAnalysisComplete} />);
     
-    // Override the triggerCallback function to prevent immediate execution
-    const originalTriggerCallback = Function.prototype.call;
-    const mockTriggerCallback = vi.fn();
-    Function.prototype.call = vi.fn().mockImplementation((thisArg, ...args) => {
-      if (args[0] === 'triggerCallback') {
-        return mockTriggerCallback();
-      }
-      return originalTriggerCallback.apply(thisArg, args);
+    // Fast-forward to 100% completion
+    act(() => {
+      vi.advanceTimersByTime(10000);
     });
     
-    const { unmount } = render(<AnalyzingReport onAnalysisComplete={mockOnAnalysisComplete} />);
-    
-    // Reset the mock to check calls during unmount
-    mockOnAnalysisComplete.mockReset();
-    
-    // Unmount component
-    unmount();
-    
-    // The callback might be called during unmount if not called before
-    // But in our new implementation it's always called immediately, so this is less relevant
-    
-    // Restore original implementation
-    Function.prototype.call = originalTriggerCallback;
-  });
-
-  it('handles custom steps if provided', () => {
-    const customSteps = [
-      { name: 'Custom step 1', progress: 50, isComplete: false },
-      { name: 'Custom step 2', progress: 0, isComplete: false },
-    ];
-    
-    render(<AnalyzingReport steps={customSteps} />);
-    
-    expect(screen.getByText('Custom step 1')).toBeInTheDocument();
-    expect(screen.getByText('Custom step 2')).toBeInTheDocument();
-    expect(screen.queryByText('Scanning personal information')).not.toBeInTheDocument();
+    expect(screen.getByText('Analysis Complete')).toBeInTheDocument();
+    expect(screen.getByText('Ready to view results')).toBeInTheDocument();
+    expect(screen.getByText('100% complete')).toBeInTheDocument();
   });
 });
