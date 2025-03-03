@@ -1,5 +1,8 @@
+
+import { describe, it, vi, expect, beforeEach } from 'vitest';
 import { handleAnalysisComplete } from '../AnalysisProcessor';
 import { toast } from '@/hooks/use-toast';
+import { AnalysisHandlerProps } from '../types/analysisTypes';
 
 // Mock toast
 vi.mock('@/hooks/use-toast', () => ({
@@ -37,7 +40,7 @@ describe('handleAnalysisComplete', () => {
 
   it('should handle successful analysis and set reportData', async () => {
     // Mock dependencies
-    const mockParams = {
+    const mockParams: Partial<AnalysisHandlerProps> = {
       uploadedFile: new File(['test content'], 'test.pdf', { type: 'application/pdf' }),
       setReportData: vi.fn(),
       setIssues: vi.fn(),
@@ -45,17 +48,21 @@ describe('handleAnalysisComplete', () => {
       setAnalysisError: vi.fn(),
       setAnalyzing: vi.fn(),
       setAnalyzed: vi.fn(),
-      toast
+      toast: {
+        toast,
+        dismiss: vi.fn(),
+        toasts: []
+      }
     };
 
     // Test with a mock file and no sample data
     mockSessionStorage.setItem('sampleReportsLoaded', 'false');
 
     try {
-      await handleAnalysisComplete(mockParams);
+      await handleAnalysisComplete(mockParams as AnalysisHandlerProps);
       // This is a simplistic test just to make sure the function runs without errors
       // We'd expect it to throw in a real scenario without actual file processing
-      fail('Should have thrown an error without actual file processing');
+      expect.fail('Should have thrown an error without actual file processing');
     } catch (error) {
       // Expected to throw since we're not really processing a file
       expect(mockParams.setAnalysisError).toHaveBeenCalled();

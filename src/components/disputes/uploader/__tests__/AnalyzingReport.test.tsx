@@ -1,4 +1,5 @@
 
+import { describe, it, vi, expect, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import AnalyzingReport from '../AnalyzingReport';
