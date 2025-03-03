@@ -41,11 +41,12 @@ export const generateDisputeLetterForDiscrepancy = async (
   const legalReferences = discrepancy.legalBasis || 
     getLegalReferencesForDispute(discrepancy.reason, discrepancy.description);
   
-  // Format disputed account information
+  // Format disputed account information - ensure actual account details are used
+  const accountNumber = discrepancy.accountNumber || "Unknown";
   const disputedAccountInfo = `
 DISPUTED ITEM(S):
 - Account Name: ${discrepancy.accountName}
-- Account Number: ${discrepancy.accountNumber || '[ACCOUNT NUMBER]'}
+- Account Number: ${accountNumber}
 - Reason for Dispute: ${discrepancy.reason}
 - Details: ${discrepancy.description}
 `;
@@ -66,7 +67,7 @@ DISPUTED ITEM(S):
         .replace(/\[BUREAU\]/g, discrepancy.bureau)
         .replace(/\[BUREAU_ADDRESS\]/g, bureauAddress)
         .replace(/\[ACCOUNT_NAME\]/g, discrepancy.accountName)
-        .replace(/\[ACCOUNT_NUMBER\]/g, discrepancy.accountNumber || '[ACCOUNT NUMBER]')
+        .replace(/\[ACCOUNT_NUMBER\]/g, accountNumber)
         .replace(/\[DISPUTE_REASON\]|\[ERROR_TYPE\]/g, discrepancy.reason)
         .replace(/\[ERROR_DESCRIPTION\]|\[EXPLANATION\]/g, discrepancy.description)
         .replace(/your credit report/gi, "my credit report")
@@ -143,7 +144,7 @@ ${bureauAddress}
 
 RE: FORMAL DISPUTE OF INACCURATE CREDIT INFORMATION
 ACCOUNT NAME: ${discrepancy.accountName}
-ACCOUNT NUMBER: ${discrepancy.accountNumber || '[ACCOUNT NUMBER]'}
+ACCOUNT NUMBER: ${accountNumber}
 DISPUTE REASON: ${discrepancy.reason}
 
 To Whom It May Concern:

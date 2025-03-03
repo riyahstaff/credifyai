@@ -39,12 +39,29 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
       downloadLetter(
         generatedLetter, 
         selectedBureau, 
-        selectedAccount.accountName
+        selectedAccount.accountName,
+        selectedAccount.accountNumber
       );
     }
   };
   
   const handleFormSubmit = (disputeData: any) => {
+    // Ensure the letter contains the actual account information
+    if (selectedAccount) {
+      disputeData.accountName = selectedAccount.accountName;
+      disputeData.accountNumber = selectedAccount.accountNumber || "Unknown";
+      
+      // Add actual account details to ensure they're included in the letter
+      disputeData.actualAccountInfo = {
+        name: selectedAccount.accountName,
+        number: selectedAccount.accountNumber,
+        balance: selectedAccount.currentBalance || selectedAccount.balance,
+        openDate: selectedAccount.dateOpened || selectedAccount.openDate,
+        reportedDate: selectedAccount.dateReported || selectedAccount.lastReportedDate,
+        status: selectedAccount.paymentStatus
+      };
+    }
+    
     handleDisputeGenerated(disputeData);
     onGenerateDispute(disputeData);
   };

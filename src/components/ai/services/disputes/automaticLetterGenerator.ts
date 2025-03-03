@@ -1,4 +1,3 @@
-
 import { Profile } from '@/lib/supabase';
 import { RecommendedDispute } from '../../types';
 import { 
@@ -51,9 +50,24 @@ export const generateAutomaticDisputeLetter = async (
           }))
           .replace(/\[BUREAU\]/g, targetDispute.bureau)
           .replace(/\[ACCOUNT_NAME\]/g, targetDispute.accountName)
-          .replace(/\[ACCOUNT_NUMBER\]/g, targetDispute.accountNumber || "[ACCOUNT NUMBER]")
+          .replace(/\[ACCOUNT_NUMBER\]/g, targetDispute.accountNumber || "Unknown")
           .replace(/\[DISPUTE_REASON\]|\[ERROR_TYPE\]/g, targetDispute.reason)
-          .replace(/\[ERROR_DESCRIPTION\]|\[EXPLANATION\]/g, targetDispute.description);
+          .replace(/\[ERROR_DESCRIPTION\]|\[EXPLANATION\]/g, targetDispute.description)
+          .replace(/your credit report/gi, "my credit report")
+          .replace(/Your credit report/gi, "My credit report");
+          
+        // Ensure the disputed items section is present
+        if (!letterContent.includes("DISPUTED ITEM(S):")) {
+          letterContent += `\n\nDISPUTED ITEM(S):\n- Account Name: ${targetDispute.accountName}\n- Account Number: ${targetDispute.accountNumber || "Unknown"}\n- Reason for Dispute: ${targetDispute.reason}\n`;
+        }
+        
+        // Update enclosures section to only include ID and SSN card
+        if (letterContent.includes("Enclosures:")) {
+          const enclosurePattern = /Enclosures:[\s\S]*?(?=\n\n|\Z)/;
+          letterContent = letterContent.replace(enclosurePattern, 
+            `Enclosures:\n- Copy of Driver's License\n- Copy of Social Security Card`
+          );
+        }
       }
     } catch (error) {
       console.error("Error finding sample dispute letter:", error);
@@ -92,6 +106,12 @@ export const generateAutomaticDisputeLetter = async (
       // Actually generate the letter
       console.log("Calling letterGenerator with dispute and user info");
       letterContent = await generateDisputeLetterForDiscrepancy(targetDispute, userInfo);
+      
+      // Ensure all placeholders are replaced
+      letterContent = letterContent
+        .replace(/your credit report/gi, "my credit report")
+        .replace(/Your credit report/gi, "My credit report")
+        .replace(/\[ACCOUNT NUMBER\]/g, targetDispute.accountNumber || "Unknown");
     }
     
     if (!letterContent || letterContent.trim().length < 50) {
@@ -112,7 +132,7 @@ export const generateAutomaticDisputeLetter = async (
       bureau: targetDispute.bureau,
       recipient: targetDispute.bureau,
       accountName: targetDispute.accountName,
-      accountNumber: targetDispute.accountNumber,
+      accountNumber: targetDispute.accountNumber || "Unknown",
       errorType: targetDispute.reason,
       explanation: targetDispute.description,
       status: 'draft',
