@@ -19,10 +19,13 @@ interface DisputeLetterGeneratorProps {
   saveLetter: (disputeData: any) => Promise<boolean>;
 }
 
-const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({ 
+/**
+ * Custom hook for dispute letter generation
+ */
+export const useDisputeLetterGenerator = ({ 
   onAddNewLetter,
   saveLetter
-}) => {
+}: DisputeLetterGeneratorProps) => {
   const { toast } = useToast();
 
   const handleGenerateDispute = async (disputeData: any) => {
@@ -67,4 +70,4 @@ const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
   return { handleGenerateDispute };
 };
 
-export default DisputeLetterGenerator;
+export default useDisputeLetterGenerator;

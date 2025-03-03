@@ -18,9 +18,10 @@ interface DisputeLetterActionsProps {
   onUpdateLetters: (updatedLetters: Letter[]) => void;
 }
 
-const DisputeLetterActions: React.FC<DisputeLetterActionsProps> = ({ 
-  onUpdateLetters 
-}) => {
+/**
+ * Custom hook for dispute letter actions
+ */
+export const useDisputeLetterActions = ({ onUpdateLetters }: DisputeLetterActionsProps) => {
   const { toast } = useToast();
 
   const handleDownloadLetter = (letter: Letter) => {
@@ -63,4 +64,4 @@ const DisputeLetterActions: React.FC<DisputeLetterActionsProps> = ({
   return { handleDownloadLetter, handleSendLetter };
 };
 
-export default DisputeLetterActions;
+export default useDisputeLetterActions;
