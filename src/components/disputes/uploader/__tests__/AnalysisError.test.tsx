@@ -1,13 +1,14 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import AnalysisError from '../AnalysisError';
 
 describe('AnalysisError', () => {
-  const mockOnReset = jest.fn();
+  const mockOnReset = vi.fn();
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders nothing when error is null', () => {

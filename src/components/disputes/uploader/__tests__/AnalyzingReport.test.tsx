@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
-import { vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import AnalyzingReport from '../AnalyzingReport';
 
 describe('AnalyzingReport', () => {

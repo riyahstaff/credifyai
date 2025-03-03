@@ -21,7 +21,6 @@ vi.mock('@/lib/supabase/letterGenerator', () => ({
 
 describe('handleAnalysisComplete', () => {
   // Setup mock functions and props
-  const mockToast = { toast: vi.fn() };
   const mockSetReportData = vi.fn();
   const mockSetIssues = vi.fn();
   const mockSetLetterGenerated = vi.fn();
@@ -31,6 +30,13 @@ describe('handleAnalysisComplete', () => {
   
   const mockFile = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
   
+  // Create properly structured toast mock
+  const mockToast = {
+    toast: vi.fn(),
+    dismiss: vi.fn(),
+    toasts: []
+  };
+
   const mockProps = {
     uploadedFile: mockFile,
     setReportData: mockSetReportData,
@@ -107,9 +113,9 @@ describe('handleAnalysisComplete', () => {
     }];
     
     // Setup mock implementations
-    processCreditReport.mockResolvedValue(mockReportData);
-    enhanceReportData.mockReturnValue(mockEnhancedData);
-    identifyIssues.mockReturnValue(mockIssues);
+    vi.mocked(processCreditReport).mockResolvedValue(mockReportData);
+    vi.mocked(enhanceReportData).mockReturnValue(mockEnhancedData);
+    vi.mocked(identifyIssues).mockReturnValue(mockIssues);
     
     await handleAnalysisComplete(mockProps);
     
@@ -133,7 +139,7 @@ describe('handleAnalysisComplete', () => {
 
   it('handles errors during report processing', async () => {
     const testError = new Error('Test error message');
-    processCreditReport.mockRejectedValue(testError);
+    vi.mocked(processCreditReport).mockRejectedValue(testError);
     
     await handleAnalysisComplete(mockProps);
     

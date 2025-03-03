@@ -2,10 +2,11 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import AnalysisStateHandler from '../AnalysisStateHandler';
 
 // Mock the required components
-jest.mock('../AnalyzingReport', () => ({
+vi.mock('../AnalyzingReport', () => ({
   __esModule: true,
   default: ({ onAnalysisComplete }) => (
     <div data-testid="analyzing-report">
@@ -14,7 +15,7 @@ jest.mock('../AnalyzingReport', () => ({
   ),
 }));
 
-jest.mock('../ReportAnalysisResults', () => ({
+vi.mock('../ReportAnalysisResults', () => ({
   __esModule: true,
   default: ({ onResetUpload, onGenerateDispute }) => (
     <div data-testid="report-analysis-results">
@@ -24,7 +25,7 @@ jest.mock('../ReportAnalysisResults', () => ({
   ),
 }));
 
-jest.mock('../UploadConfirmation', () => ({
+vi.mock('../UploadConfirmation', () => ({
   __esModule: true,
   default: ({ onRemoveFile, onStartAnalysis }) => (
     <div data-testid="upload-confirmation">
@@ -46,14 +47,14 @@ describe('AnalysisStateHandler', () => {
     issues: [],
     letterGenerated: false,
     analysisError: null,
-    onResetUpload: jest.fn(),
-    onStartAnalysis: jest.fn(),
-    onGenerateDispute: jest.fn(),
-    onAnalysisComplete: jest.fn(),
+    onResetUpload: vi.fn(),
+    onStartAnalysis: vi.fn(),
+    onGenerateDispute: vi.fn(),
+    onAnalysisComplete: vi.fn(),
   };
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('returns null when fileUploaded is false', () => {
