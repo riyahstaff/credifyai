@@ -8,6 +8,7 @@ import { generateDisputeLetters, storeGeneratedLetters } from '../utils/letterGe
 import { loadSampleDisputeLetters } from '@/utils/creditReport/disputeLetters/sampleLettersLoader';
 import { loadSampleReports } from '@/utils/creditReport/sampleReports';
 import { createMinimalReportData } from '@/utils/creditReport/helpers';
+import { type ToasterToast } from '@/components/ui/use-toast';
 
 // Mock all dependencies
 vi.mock('@/utils/creditReportParser', () => ({
@@ -63,7 +64,9 @@ const createHandlerProps = () => {
     setAnalyzing: vi.fn(),
     setAnalyzed: vi.fn(),
     toast: {
-      toast: vi.fn()
+      toast: vi.fn(),
+      dismiss: vi.fn(),
+      toasts: [] as ToasterToast[]
     }
   };
 };

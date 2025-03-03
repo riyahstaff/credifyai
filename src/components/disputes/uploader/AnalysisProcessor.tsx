@@ -181,19 +181,28 @@ const preloadSampleData = async () => {
     // Load sample dispute letters with a timeout to prevent hanging
     const letterPromise = Promise.race([
       loadSampleDisputeLetters(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout loading sample letters")), 3000))
+      new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error("Timeout loading sample letters")), 3000))
     ]);
     
     // Load sample reports with a timeout to prevent hanging
     const reportsPromise = Promise.race([
       loadSampleReports(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout loading sample reports")), 3000))
+      new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error("Timeout loading sample reports")), 3000))
     ]);
     
     const [sampleDisputeLetters, sampleReports] = await Promise.allSettled([letterPromise, reportsPromise]);
     
-    console.log(`Loaded ${sampleDisputeLetters.status === 'fulfilled' ? sampleDisputeLetters.value.length : 0} sample dispute letters`);
-    console.log(`Loaded ${sampleReports.status === 'fulfilled' ? sampleReports.value.length : 0} sample credit reports`);
+    // Safely check the length with type guards
+    const lettersLength = sampleDisputeLetters.status === 'fulfilled' && Array.isArray(sampleDisputeLetters.value) 
+      ? sampleDisputeLetters.value.length 
+      : 0;
+      
+    const reportsLength = sampleReports.status === 'fulfilled' && Array.isArray(sampleReports.value) 
+      ? sampleReports.value.length 
+      : 0;
+    
+    console.log(`Loaded ${lettersLength} sample dispute letters`);
+    console.log(`Loaded ${reportsLength} sample credit reports`);
   } catch (error) {
     console.warn("Error in preloadSampleData, continuing anyway:", error);
   }

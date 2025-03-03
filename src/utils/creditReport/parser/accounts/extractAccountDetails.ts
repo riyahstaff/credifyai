@@ -102,6 +102,7 @@ export const extractAccountDetails = (
     const match = block.match(pattern);
     if (match && match[1]?.trim()) {
       account.dateOpened = match[1].trim();
+      account.openDate = match[1].trim(); // Set both for compatibility
       break;
     }
   }
@@ -117,6 +118,7 @@ export const extractAccountDetails = (
     const match = block.match(pattern);
     if (match && match[1]?.trim()) {
       account.dateReported = match[1].trim();
+      account.lastReportedDate = match[1].trim(); // Set both for compatibility
       break;
     }
   }

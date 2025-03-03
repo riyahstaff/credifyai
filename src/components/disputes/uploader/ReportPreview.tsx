@@ -132,7 +132,7 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
                       {reportData.inquiries.slice(0, 5).map((inquiry, index) => (
                         <TableRow key={index}>
                           <TableCell>{inquiry.inquiryDate}</TableCell>
-                          <TableCell>{inquiry.creditor}</TableCell>
+                          <TableCell>{inquiry.creditor || inquiry.inquiryBy}</TableCell>
                           <TableCell>{inquiry.bureau}</TableCell>
                         </TableRow>
                       ))}
@@ -154,4 +154,3 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
 };
 
 export default ReportPreview;
-

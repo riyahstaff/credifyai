@@ -1,153 +1,108 @@
 
 /**
- * Credit Report Parser - Legal References
- * This module provides legal references for dispute letters
+ * Legal references for credit report disputes
  */
 import { LegalReference } from './types';
 
 /**
- * Get legal references for a specific dispute type and context
+ * Get legal references relevant to a specific dispute type
  */
 export const getLegalReferencesForDispute = (
   disputeType: string,
-  context?: string
+  details?: string
 ): LegalReference[] => {
   const references: LegalReference[] = [];
   
-  // Add base FCRA references
+  // FCRA Section 611 - Always include this for all disputes
   references.push({
-    law: "FCRA",
-    section: "611(a)",
-    description: "Requires CRAs to conduct a reasonable investigation of disputed information",
-    relevance: "Core legal basis for dispute investigation"
+    law: 'FCRA',
+    section: '611',
+    title: 'Procedure in case of disputed accuracy',
+    text: 'If the completeness or accuracy of any item of information contained in a consumer's file at a consumer reporting agency is disputed by the consumer and the consumer notifies the agency directly, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate.',
+    applicability: ['All Disputes']
   });
   
   // Add references based on dispute type
-  switch (disputeType.toLowerCase()) {
+  switch (disputeType) {
     case 'payment':
-    case 'late_payment':
-    case 'late payment':
       references.push({
-        law: "FCRA",
-        section: "623(a)(3)",
-        description: "Prohibits furnishers from reporting information known to be inaccurate",
-        relevance: "Applies to incorrect payment status reporting"
+        law: 'FCRA',
+        section: '623',
+        title: 'Responsibilities of furnishers of information to consumer reporting agencies',
+        text: 'A person shall not furnish information relating to a consumer to any consumer reporting agency if the person knows or has reasonable cause to believe that the information is inaccurate.',
+        applicability: ['Late Payments', 'Payment History']
+      });
+      break;
+      
+    case 'account_ownership':
+      references.push({
+        law: 'FCRA',
+        section: '605',
+        title: 'Requirements relating to information contained in consumer reports',
+        text: 'Consumer reporting agencies must ensure that information in a consumer's credit report is accurate and belongs to the consumer.',
+        applicability: ['Account Ownership']
       });
       break;
       
     case 'balance':
-    case 'account_balance':
-    case 'incorrect_balance':
       references.push({
-        law: "FCRA",
-        section: "623(a)(2)",
-        description: "Requires furnishers to correct and update incomplete or inaccurate information",
-        relevance: "Applies to incorrect balance reporting"
-      });
-      break;
-      
-    case 'remarks':
-    case 'negative_remarks':
-      references.push({
-        law: "FCRA",
-        section: "605(a)",
-        description: "Sets time limits for reporting negative information",
-        relevance: "May apply if remarks are obsolete"
-      });
-      break;
-      
-    case 'account_type':
-    case 'account type':
-      references.push({
-        law: "FCRA",
-        section: "623(a)(1)(B)",
-        description: "Requires furnishers to report complete and accurate information",
-        relevance: "Applies to incorrect account type classification"
-      });
-      break;
-      
-    case 'account_information':
-    case 'account information':
-      references.push({
-        law: "FCRA",
-        section: "611(a)(1)(A)",
-        description: "Requires CRAs to forward all relevant information to the furnisher",
-        relevance: "Ensures full investigation of account details"
+        law: 'FCRA',
+        section: '623',
+        title: 'Responsibilities of furnishers of information to consumer reporting agencies',
+        text: 'Furnishers must provide accurate information about account balances and limits.',
+        applicability: ['Account Balances']
       });
       break;
       
     case 'inquiries':
-    case 'inquiry':
       references.push({
-        law: "FCRA",
-        section: "604(f)",
-        description: "Prohibits unauthorized access to consumer reports",
-        relevance: "Applies to unauthorized credit inquiries"
-      });
-      references.push({
-        law: "FCRA",
-        section: "604(a)",
-        description: "Lists permissible purposes for consumer reports",
-        relevance: "Inquiries must have a permissible purpose"
+        law: 'FCRA',
+        section: '604',
+        title: 'Permissible purposes of consumer reports',
+        text: 'A consumer reporting agency may furnish a consumer report only under specific permissible purposes, including with the consumer's written consent.',
+        applicability: ['Unauthorized Inquiries']
       });
       break;
       
-    case 'identity_theft':
-    case 'identity theft':
-    case 'not_my_account':
-    case 'not mine':
+    case 'account_information':
       references.push({
-        law: "FCRA",
-        section: "605B",
-        description: "Allows blocking of information resulting from identity theft",
-        relevance: "Critical for identity theft disputes"
+        law: 'FCRA',
+        section: '623',
+        title: 'Furnisher responsibilities',
+        text: 'Information furnishers must provide complete and accurate information to consumer reporting agencies.',
+        applicability: ['Account Information']
       });
+      break;
+      
+    case 'remarks':
       references.push({
-        law: "FCRA",
-        section: "609(e)",
-        description: "Requires furnishers to provide records of fraudulent transactions",
-        relevance: "Helps verify identity theft claims"
+        law: 'FCRA',
+        section: '605',
+        title: 'Requirements relating to information contained in consumer reports',
+        text: 'Negative information should be reported accurately and should not exceed reporting time limits.',
+        applicability: ['Account Remarks']
+      });
+      break;
+      
+    case 'account_type':
+      references.push({
+        law: 'FCRA',
+        section: '623',
+        title: 'Furnisher responsibilities',
+        text: 'Account type must be accurately reported.',
+        applicability: ['Account Information']
       });
       break;
       
     case 'general_dispute':
-    default:
       references.push({
-        law: "FCRA",
-        section: "623(b)",
-        description: "Requires furnishers to investigate disputes received from CRAs",
-        relevance: "General dispute investigation requirement"
+        law: 'FCRA',
+        section: '609',
+        title: 'Disclosures to consumers',
+        text: 'Consumer reporting agencies must disclose all information in a consumer's file upon request.',
+        applicability: ['All Disputes']
       });
       break;
-  }
-  
-  // Add context-specific references if context is provided
-  if (context) {
-    const contextLower = context.toLowerCase();
-    
-    // Check for statute of limitations context
-    if (contextLower.includes('old') || 
-        contextLower.includes('years ago') || 
-        contextLower.includes('statute of limitations')) {
-      references.push({
-        law: "FCRA",
-        section: "605(a)",
-        description: "Most negative information can only be reported for 7 years",
-        relevance: "Applies to potentially time-barred information"
-      });
-    }
-    
-    // Check for verification context
-    if (contextLower.includes('verify') || 
-        contextLower.includes('verification') || 
-        contextLower.includes('prove')) {
-      references.push({
-        law: "FCRA",
-        section: "611(a)(1)(A)",
-        description: "CRAs must provide furnisher with all relevant information",
-        relevance: "Requires thorough verification of disputed information"
-      });
-    }
   }
   
   return references;

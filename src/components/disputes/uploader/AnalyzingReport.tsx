@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ProgressBar } from '@/components/ui/progress';
+import { Progress } from '@/components/ui/progress';
 
 interface AnalysisStep {
   name: string;
@@ -128,7 +128,7 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
                 {step.progress}%
               </span>
             </div>
-            <ProgressBar value={step.progress} className={step.isComplete ? 'bg-green-500' : undefined} />
+            <Progress value={step.progress} className={step.isComplete ? 'bg-green-500' : undefined} />
           </div>
         ))}
       </div>

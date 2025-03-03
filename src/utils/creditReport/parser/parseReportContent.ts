@@ -3,7 +3,7 @@
  * Credit Report Parser - Main Parser
  * This module handles parsing text content from credit reports into structured data
  */
-import { CreditReportData } from '../types';
+import { CreditReportData, CreditReportInquiry } from '../types';
 import { extractPersonalInfo } from './extractPersonalInfo';
 import { extractAccounts } from './accounts';
 import { extractInquiries } from './extractInquiries';
@@ -48,7 +48,23 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
   reportData.accounts = extractAccounts(content, reportData.bureaus);
   
   // Extract inquiry information
-  reportData.inquiries = extractInquiries(content, reportData.bureaus);
+  const extractedInquiries = extractInquiries(content, reportData.bureaus);
+  
+  // Ensure inquiries conform to the CreditReportInquiry interface
+  reportData.inquiries = extractedInquiries.map(inquiry => {
+    const completeInquiry: CreditReportInquiry = {
+      inquiryDate: inquiry.inquiryDate,
+      inquiryBy: inquiry.creditor || "Unknown",
+      type: "Regular Inquiry",
+      bureau: inquiry.bureau
+    };
+    
+    if (inquiry.creditor) {
+      completeInquiry.creditor = inquiry.creditor;
+    }
+    
+    return completeInquiry;
+  });
   
   // Extract public records information
   reportData.publicRecords = extractPublicRecords(content, reportData.bureaus);

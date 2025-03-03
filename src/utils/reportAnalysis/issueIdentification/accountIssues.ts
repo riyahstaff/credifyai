@@ -71,7 +71,7 @@ export const identifyAccountIssues = (
             account: {
               accountName: account.name,
               accountNumber: account.number || '',
-              balance: '',
+              currentBalance: '',
               dateOpened: '',
               dateReported: '',
               paymentStatus: '',

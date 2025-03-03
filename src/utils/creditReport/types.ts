@@ -42,6 +42,11 @@ export interface CreditReportAccount {
   creditorContactInfo?: string;
   isCollection?: boolean;
   chargeOffAmount?: string;
+  
+  // Adding missing properties referenced in the code
+  balance?: string;
+  dateOpened?: string;
+  dateReported?: string;
 }
 
 // Inquiry information from credit report
@@ -50,6 +55,9 @@ export interface CreditReportInquiry {
   bureau: string;
   inquiryBy: string;
   type: string;
+  
+  // Adding missing property referenced in the code
+  creditor?: string;
 }
 
 // Public record information from credit report
@@ -104,6 +112,7 @@ export interface LegalReference {
   title: string;
   text: string;
   applicability?: string[];
+  // Remove 'description' as it seems to be causing issues
 }
 
 // User information for generating dispute letters
@@ -132,6 +141,9 @@ export interface RecommendedDispute {
   disputeStrategy?: string;
   sampleDisputeLanguage?: string;
   successRate?: number;
+  
+  // Adding missing property referenced in the code
+  severity?: 'high' | 'medium' | 'low';
 }
 
 // Sample dispute letter structure
