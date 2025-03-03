@@ -4,8 +4,14 @@ import { getSampleDisputeLanguage } from '@/utils/creditReport/disputeLetters';
 
 export const generateManualDisputeLetter = async (
   dispute: DisputeType,
-  samplePhrases: Record<string, string[]> = {}
+  samplePhrases: Record<string, string[]> = {},
+  options?: { testMode?: boolean }
 ): Promise<string> => {
+  // Log if we're generating in test mode
+  if (options?.testMode) {
+    console.log("Generating manual dispute letter in test mode");
+  }
+  
   // Enhanced letter template with FCRA citations and legal language
   const bureauAddresses = {
     'experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
@@ -59,7 +65,12 @@ export const generateManualDisputeLetter = async (
     `${dispute.explanation}\n\n${additionalLanguage}` : 
     dispute.explanation;
   
-  return `
+  // Add a test mode indicator if enabled
+  const testModeHeader = options?.testMode ? 
+    "[TEST MODE - NOT FOR ACTUAL SUBMISSION]\n\n" : 
+    "";
+  
+  return `${testModeHeader}
 [YOUR NAME]
 [YOUR ADDRESS]
 [CITY, STATE ZIP]

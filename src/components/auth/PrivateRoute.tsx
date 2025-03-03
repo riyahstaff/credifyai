@@ -28,7 +28,9 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
   // Store the current path for potential redirect after subscription
   useEffect(() => {
     if (requiresSubscription && user && profile && !profile.has_subscription && !testMode) {
-      sessionStorage.setItem('returnToAfterSubscription', location.pathname);
+      // Include testMode in the stored path if it was present
+      const returnPath = testMode ? `${location.pathname}?testMode=true` : location.pathname;
+      sessionStorage.setItem('returnToAfterSubscription', returnPath);
     }
   }, [requiresSubscription, user, profile, location.pathname, testMode]);
   
@@ -80,8 +82,17 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
     }
   }, [testMode, requiresSubscription, toast]);
   
+  // Propagate testMode to children if needed
+  const childrenWithTestMode = React.Children.map(children, child => {
+    // Skip null children or non-React elements
+    if (!React.isValidElement(child)) return child;
+    
+    // Only pass testMode prop to elements that can accept it
+    return React.cloneElement(child, { testMode: testMode || undefined });
+  });
+  
   // Render children if authenticated and subscription requirements are met (or bypassed in test mode)
-  return <>{children}</>;
+  return <>{childrenWithTestMode}</>;
 };
 
 export default PrivateRoute;

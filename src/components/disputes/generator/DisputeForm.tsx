@@ -13,19 +13,28 @@ interface DisputeFormProps {
   selectedAccount: any;
   selectedTemplate: any;
   onGenerate: (disputeData: any) => void;
+  testMode?: boolean;
 }
 
 const DisputeForm: React.FC<DisputeFormProps> = ({
   reportData,
   selectedAccount,
   selectedTemplate,
-  onGenerate
+  onGenerate,
+  testMode = false
 }) => {
   const { toast } = useToast();
   const [selectedBureau, setSelectedBureau] = useState<string | null>(null);
   const [disputeReason, setDisputeReason] = useState('');
   const [explanation, setExplanation] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Log test mode status
+  useEffect(() => {
+    if (testMode) {
+      console.log("DisputeForm: Test mode is active");
+    }
+  }, [testMode]);
   
   const bureaus = ['Experian', 'Equifax', 'TransUnion'];
   
@@ -113,14 +122,15 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
           creditReport: reportData,
           letterContent: letterContent,
           template: selectedTemplate.name,
-          timestamp: new Date()
+          timestamp: new Date(),
+          generatedInTestMode: testMode
         };
         
         onGenerate(disputeData);
         
         toast({
-          title: "Dispute letter created",
-          description: "Your personalized dispute letter has been generated.",
+          title: testMode ? "Test letter created" : "Dispute letter created",
+          description: `Your personalized dispute letter has been generated${testMode ? ' in test mode' : ''}.`,
         });
       } catch (error) {
         toast({
@@ -147,8 +157,17 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
         </div>
         <h4 className="font-medium text-credify-navy dark:text-white">
           Dispute Details
+          {testMode && <span className="text-amber-500 text-sm ml-2">(Test Mode)</span>}
         </h4>
       </div>
+      
+      {testMode && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-lg p-3 mb-4">
+          <p className="text-amber-800 dark:text-amber-300 text-sm">
+            You are creating a dispute letter in test mode. The letter will be generated but not saved to your account.
+          </p>
+        </div>
+      )}
       
       <div className="space-y-4">
         <div>

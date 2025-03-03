@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { generateEnhancedDisputeLetter } from '@/lib/supabase/letterGenerator';
 
@@ -29,10 +30,22 @@ export const useDisputeLetterGenerator = ({
 }: DisputeLetterGeneratorProps) => {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
+  const location = useLocation();
+  
+  // Check if we're in test mode
+  const searchParams = new URLSearchParams(location.search);
+  const testMode = searchParams.get('testMode') === 'true';
+
+  // Log test mode status
+  useEffect(() => {
+    if (testMode) {
+      console.log("DisputeLetterGenerator: Test mode active");
+    }
+  }, [testMode]);
 
   const handleGenerateDispute = async (disputeData: any) => {
     setIsGenerating(true);
-    console.log('Generating dispute:', disputeData);
+    console.log('Generating dispute:', disputeData, 'Test mode:', testMode);
     
     try {
       // If letterContent is not provided, generate it
@@ -74,12 +87,27 @@ export const useDisputeLetterGenerator = ({
       // Add the new letter 
       onAddNewLetter(newLetter);
       
-      // Save the letter to Supabase if user is logged in
-      const saved = await saveLetter(disputeData);
-      if (saved) {
+      // Only try to save the letter if not in test mode or if user is authenticated
+      if (!testMode) {
+        try {
+          // Save the letter to Supabase if user is logged in
+          const saved = await saveLetter(disputeData);
+          if (saved) {
+            toast({
+              title: "Dispute letter saved",
+              description: "Your dispute letter has been saved to your account.",
+              duration: 5000,
+            });
+          }
+        } catch (error) {
+          console.error("Error saving letter to account:", error);
+          // We still continue even if saving fails
+        }
+      } else {
+        // In test mode, we just notify the user that we're in test mode
         toast({
-          title: "Dispute letter saved",
-          description: "Your dispute letter has been saved to your account.",
+          title: "Test Mode Active",
+          description: "Letter generated but not saved to account in test mode.",
           duration: 5000,
         });
       }

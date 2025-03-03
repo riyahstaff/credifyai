@@ -9,10 +9,11 @@ import {
 export const generateAutomaticDisputeLetter = async (
   targetDispute: RecommendedDispute,
   profile: Profile | null,
-  sampleReportsLoaded: boolean
+  sampleReportsLoaded: boolean,
+  options?: { testMode?: boolean }
 ): Promise<{ disputeData: any, letterContent: string }> => {
   try {
-    console.log("Generating automatic dispute letter for:", targetDispute);
+    console.log("Generating automatic dispute letter for:", targetDispute, "Test mode:", options?.testMode);
     
     // Create user info with defaults if profile properties are missing
     const userInfo = {
@@ -51,6 +52,11 @@ export const generateAutomaticDisputeLetter = async (
     // Actually generate the letter
     const letterContent = await generateDisputeLetterForDiscrepancy(targetDispute, userInfo);
     
+    // Add test mode header if applicable
+    const finalLetterContent = options?.testMode ? 
+      `[TEST MODE - NOT FOR ACTUAL SUBMISSION]\n\n${letterContent}` : 
+      letterContent;
+    
     console.log("Letter generated successfully");
     
     const disputeData = {
@@ -60,10 +66,11 @@ export const generateAutomaticDisputeLetter = async (
       errorType: targetDispute.reason,
       explanation: targetDispute.description,
       timestamp: new Date(),
-      letterContent: letterContent
+      letterContent: finalLetterContent,
+      generatedInTestMode: options?.testMode
     };
 
-    return { disputeData, letterContent };
+    return { disputeData, letterContent: finalLetterContent };
   } catch (error) {
     console.error("Error generating dispute letter:", error);
     throw new Error(`Failed to generate dispute letter: ${error instanceof Error ? error.message : 'Unknown error'}`);
