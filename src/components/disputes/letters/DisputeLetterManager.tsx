@@ -16,15 +16,18 @@ interface Letter {
   resolvedAt?: string;
 }
 
-interface DisputeLetterManagerProps {
+interface UseDisputeLetterManagerProps {
   onLetterUpdate: (letters: Letter[]) => void;
   onPreviewLetter: (letter: Letter) => void;
 }
 
-const DisputeLetterManager: React.FC<DisputeLetterManagerProps> = ({
+/**
+ * Custom hook for managing dispute letters
+ */
+export const useDisputeLetterManager = ({
   onLetterUpdate,
   onPreviewLetter
-}) => {
+}: UseDisputeLetterManagerProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
@@ -164,4 +167,4 @@ const DisputeLetterManager: React.FC<DisputeLetterManagerProps> = ({
   return { letters, isLoading, saveLetter };
 };
 
-export default DisputeLetterManager;
+export default useDisputeLetterManager;
