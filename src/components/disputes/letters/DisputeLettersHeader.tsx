@@ -1,28 +1,37 @@
 
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { FileUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface DisputeLettersHeaderProps {
-  onCreateNewLetter: () => void;
+  hideCreateButton?: boolean;
 }
 
-const DisputeLettersHeader: React.FC<DisputeLettersHeaderProps> = ({ onCreateNewLetter }) => {
+const DisputeLettersHeader: React.FC<DisputeLettersHeaderProps> = ({ 
+  hideCreateButton = false 
+}) => {
+  const navigate = useNavigate();
+
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-10">
-      <div>
-        <h1 className="text-3xl font-bold text-credify-navy dark:text-white mb-1">Dispute Letters</h1>
-        <p className="text-credify-navy-light dark:text-white/70">Create and manage your credit dispute letters</p>
+    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8">
+      <div className="mb-4 lg:mb-0">
+        <h1 className="text-2xl lg:text-3xl font-bold text-credify-navy dark:text-white">
+          CLEO AI-Generated Dispute Letters
+        </h1>
+        <p className="mt-2 text-credify-navy-light dark:text-white/70 max-w-2xl">
+          Our advanced AI engine analyzes your credit reports, identifies potential violations, and generates tailored dispute letters based on the latest legal precedents and FCRA regulations.
+        </p>
       </div>
       
-      <div className="flex flex-col sm:flex-row gap-3">
+      {!hideCreateButton && (
         <button
-          onClick={onCreateNewLetter}
-          className="btn-primary flex items-center justify-center gap-2"
+          onClick={() => navigate('/upload-report')}
+          className="btn-primary flex items-center space-x-2"
         >
-          <Plus size={18} />
-          <span>Create New Letter</span>
+          <FileUp size={18} />
+          <span>Upload Credit Report</span>
         </button>
-      </div>
+      )}
     </div>
   );
 };

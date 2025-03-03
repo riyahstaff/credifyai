@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
@@ -11,7 +10,7 @@ import DisputeLettersHeader from '@/components/disputes/letters/DisputeLettersHe
 import DisputeLettersTabs from '@/components/disputes/letters/DisputeLettersTabs';
 import FCRAComplianceSection from '@/components/disputes/letters/FCRAComplianceSection';
 import { getUserDisputeLetters, saveDisputeLetter } from '@/lib/supabase/disputeLetters';
-import useDisputeLetterActions from '@/components/disputes/letters/DisputeLetterActions';
+import { useDisputeLetterActions } from '@/components/disputes/letters/DisputeLetterActions';
 import { useDisputeLetterGenerator } from '@/components/disputes/letters/DisputeLetterGenerator';
 
 interface Letter {
@@ -36,22 +35,8 @@ const DisputeLetters = () => {
   const [letters, setLetters] = useState<Letter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Get the view from URL query parameter
-  const queryParams = new URLSearchParams(location.search);
-  const viewFromQuery = queryParams.get('view');
-  
-  // Set the default view based on the query parameter or default to "letters"
-  const [selectedView, setSelectedView] = useState<string>(viewFromQuery || "letters");
-  
-  // Update URL when view changes
-  const handleViewChange = (view: string) => {
-    setSelectedView(view);
-    if (view !== "letters") {
-      navigate(`/dispute-letters?view=${view}`, { replace: true });
-    } else {
-      navigate('/dispute-letters', { replace: true });
-    }
-  };
+  // Get the view from URL query parameter - now we only support letters view
+  const [selectedView, setSelectedView] = useState<string>("letters");
   
   // Fetch user's dispute letters
   useEffect(() => {
@@ -221,29 +206,32 @@ const DisputeLetters = () => {
         <div className="container mx-auto px-4 md:px-6">
           {/* Page Header */}
           <DisputeLettersHeader 
-            onCreateNewLetter={() => handleViewChange("generator")}
+            hideCreateButton={true} // Hide manual letter creation
           />
           
           {/* Letter Tabs */}
           <DisputeLettersTabs
             selectedView={selectedView}
-            onViewChange={handleViewChange}
+            onViewChange={(view) => {/* Now only letters view is allowed */}}
             letters={letters}
             isLoading={isLoading}
             onViewLetter={onViewLetter}
             onDownloadLetter={onDownloadLetter}
             onSendLetter={onSendLetter}
             onGenerateDispute={handleGenerateDispute}
+            hideGeneratorTab={true} // Hide manual generator tab
           />
           
           {/* FCRA Compliance Section */}
           <FCRAComplianceSection 
-            onCreateLetter={() => handleViewChange("generator")}
+            showUploadReportButton={true}
+            hideCreateButton={true}
+            onUploadReport={() => navigate('/upload-report')}
           />
         </div>
       </main>
       
-      {/* AI Agent Component */}
+      {/* AI Agent Component - Enhanced to indicate deep thinking capabilities */}
       <DisputeAgent onGenerateDispute={handleGenerateDispute} />
       
       {/* Dispute Preview Modal */}
