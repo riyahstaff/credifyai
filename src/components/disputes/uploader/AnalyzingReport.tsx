@@ -44,41 +44,47 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
     isMounted.current = true;
     callbackTriggered.current = false;
     
-    // First update step 1 to 100%
+    // First update step 1 to 100% immediately
     setSteps(prev => prev.map((step, idx) => 
       idx === 0 ? { ...step, progress: 100, isComplete: true } : step
     ));
     
-    // After 300ms update step 2 to 100%
+    // After 200ms update step 2 to 100%
     const timeout1 = setTimeout(() => {
       if (!isMounted.current) return;
       setSteps(prev => prev.map((step, idx) => 
         idx <= 1 ? { ...step, progress: 100, isComplete: true } : step
       ));
-    }, 300);
+    }, 200);
     
-    // After 600ms update step 3 to 100%
+    // After 400ms update step 3 to 100%
     const timeout2 = setTimeout(() => {
       if (!isMounted.current) return;
       setSteps(prev => prev.map((step, idx) => 
         idx <= 2 ? { ...step, progress: 100, isComplete: true } : step
       ));
-    }, 600);
+    }, 400);
     
-    // After 900ms update step 4 to 100% and set animationComplete
+    // After 600ms update step 4 to 100% and set animationComplete
     const timeout3 = setTimeout(() => {
       if (!isMounted.current) return;
       setSteps(prev => prev.map(step => ({ ...step, progress: 100, isComplete: true })));
       setAnimationComplete(true);
-    }, 900);
+    }, 600);
     
-    // After 1000ms trigger the callback
+    // After 700ms trigger the callback
     const callbackTimeout = setTimeout(() => {
       triggerCallback();
-    }, 1000);
+    }, 700);
+    
+    // Add a backup final timeout to ensure the callback is triggered
+    const finalTimeout = setTimeout(() => {
+      console.log("Backup timeout ensuring analysis completes");
+      triggerCallback();
+    }, 5000);
     
     // Store all timeouts for cleanup
-    timeoutIds.current = [timeout1, timeout2, timeout3, callbackTimeout];
+    timeoutIds.current = [timeout1, timeout2, timeout3, callbackTimeout, finalTimeout];
     
     // Cleanup function
     return () => {

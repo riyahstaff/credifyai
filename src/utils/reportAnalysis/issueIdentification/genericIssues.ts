@@ -24,6 +24,22 @@ export const addPersonalInfoIssues = (): Array<{
     impact: 'Medium Impact',
     impactColor: 'yellow',
     laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
+  },
+  {
+    type: 'personal_info_addresses',
+    title: 'Address History Verification',
+    description: 'Credit reports often contain outdated or incorrect address information. Ensure all addresses listed are accurate and belong to you.',
+    impact: 'Medium Impact',
+    impactColor: 'yellow',
+    laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
+  },
+  {
+    type: 'personal_info_employers',
+    title: 'Employment Information Review',
+    description: 'Employment information on credit reports is frequently outdated or incorrect. Verify all listed employers are accurate.',
+    impact: 'Medium Impact',
+    impactColor: 'yellow',
+    laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
   }];
 };
 
@@ -51,7 +67,7 @@ export const addGenericIssues = (
     laws: string[];
   }> = [];
   
-  // Add a few generic issues that are likely to apply to any credit report
+  // Always add these generic issues that apply to any credit report
   issues.push({
     type: 'inquiry',
     title: 'Credit Inquiries Review',
@@ -70,17 +86,40 @@ export const addGenericIssues = (
     laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
   });
   
+  issues.push({
+    type: 'public_records',
+    title: 'Public Records Verification',
+    description: 'Any public records on your credit report should be verified for accuracy, completeness, and timeliness. Many public records contain errors or are reported beyond the legal time limit.',
+    impact: 'Critical Impact',
+    impactColor: 'red',
+    laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
+  });
+  
+  issues.push({
+    type: 'reporting_timeframes',
+    title: 'Reporting Timeframe Compliance',
+    description: 'Negative information can only be reported for specific timeframes under the FCRA. Verify that all negative items are within legal reporting periods.',
+    impact: 'High Impact',
+    impactColor: 'orange',
+    laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
+  });
+  
+  // Add account-specific issues if we have accounts
   if (cleanedAccounts.length > 0) {
-    const randomAccount = cleanedAccounts[Math.floor(Math.random() * cleanedAccounts.length)];
-    issues.push({
-      type: 'general',
-      title: `Review Account Information (${randomAccount.accountName})`,
-      description: `No obvious errors were detected, but you should carefully review your ${randomAccount.accountName} account details for accuracy.`,
-      impact: 'Medium Impact',
-      impactColor: 'yellow',
-      account: randomAccount,
-      laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
-    });
+    // Add issues for multiple accounts if available
+    const accountCount = Math.min(cleanedAccounts.length, 3);
+    for (let i = 0; i < accountCount; i++) {
+      const account = cleanedAccounts[i];
+      issues.push({
+        type: 'account_verification',
+        title: `Verify Account Information (${account.accountName})`,
+        description: `Request verification of all information related to your ${account.accountName} account, including payment history, balances, and account status.`,
+        impact: 'High Impact',
+        impactColor: 'orange',
+        account: account,
+        laws: ['FCRA § 611 (Procedure in case of disputed accuracy)', 'FCRA § 623 (Responsibilities of furnishers of information)']
+      });
+    }
   }
   
   return issues;
@@ -97,12 +136,46 @@ export const addFallbackGenericIssues = (): Array<{
   impactColor: string;
   laws: string[];
 }> => {
-  return [{
-    type: 'generic',
-    title: 'Generic Credit Report Review',
-    description: 'Even though we could not identify specific accounts in your report, we can create dispute letters addressing common credit reporting issues. We can help with inquiries, personal information, and more.',
-    impact: 'Medium Impact',
-    impactColor: 'yellow',
-    laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
-  }];
+  return [
+    {
+      type: 'generic',
+      title: 'Credit Report Accuracy Review',
+      description: 'Under FCRA §611, you have the right to dispute any information in your credit report. This letter requests verification of all credit data for accuracy and completeness.',
+      impact: 'High Impact',
+      impactColor: 'orange',
+      laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
+    },
+    {
+      type: 'inquiry_verification',
+      title: 'Hard Inquiry Verification',
+      description: 'All hard inquiries on your credit report must be authorized by you. This letter disputes any inquiries that may have been made without proper authorization.',
+      impact: 'Medium Impact',
+      impactColor: 'yellow',
+      laws: ['FCRA § 604 (Permissible purposes of consumer reports)']
+    },
+    {
+      type: 'account_verification',
+      title: 'Account Information Verification',
+      description: 'This letter disputes potential inaccuracies in account information, including balances, payment history, and account status across all reported accounts.',
+      impact: 'Critical Impact',
+      impactColor: 'red',
+      laws: ['FCRA § 623 (Responsibilities of furnishers of information)']
+    },
+    {
+      type: 'personal_info',
+      title: 'Personal Information Verification',
+      description: 'Personal information on your credit report must be accurate. This letter disputes any potential errors in your reported name, addresses, employment, or other personal details.',
+      impact: 'Medium Impact',
+      impactColor: 'yellow',
+      laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
+    },
+    {
+      type: 'credit_age',
+      title: 'Account Age Verification',
+      description: 'The age of your credit accounts significantly impacts your score. This letter disputes any inaccuracies in account opening dates that may be affecting your credit history length.',
+      impact: 'High Impact',
+      impactColor: 'orange',
+      laws: ['FCRA § 623 (Responsibilities of furnishers of information)']
+    }
+  ];
 };

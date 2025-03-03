@@ -28,8 +28,32 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
   
   if (!data.rawText) return issues;
   
-  // Look for inquiries in raw text
-  if (data.rawText.toLowerCase().includes('inquiry') || data.rawText.toLowerCase().includes('inquiries')) {
+  // ALWAYS add a general FCRA dispute option regardless of content
+  issues.push({
+    type: 'general',
+    title: 'General FCRA Verification Request',
+    description: 'Under FCRA §611, you have the right to request verification of all information in your credit report, regardless of whether errors are immediately visible.',
+    impact: 'Medium Impact',
+    impactColor: 'yellow',
+    laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
+  });
+  
+  // ALWAYS add an account verification dispute option
+  issues.push({
+    type: 'account_verification',
+    title: 'Account Information Verification',
+    description: 'Credit reporting agencies must verify all account information is accurate and complete. Request verification of payment history, balances, and account status.',
+    impact: 'High Impact',
+    impactColor: 'orange',
+    laws: ['FCRA § 623 (Responsibilities of furnishers of information)']
+  });
+  
+  // Look for inquiries in raw text - more aggressively now
+  if (data.rawText.toLowerCase().includes('inquiry') || 
+      data.rawText.toLowerCase().includes('inquiries') ||
+      data.rawText.toLowerCase().includes('credit check') ||
+      data.rawText.toLowerCase().includes('pull') ||
+      data.rawText.toLowerCase().includes('request')) {
     issues.push({
       type: 'inquiry',
       title: 'Credit Inquiries Detected',
@@ -45,7 +69,9 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
       data.rawText.toLowerCase().includes('30 day') || 
       data.rawText.toLowerCase().includes('60 day') || 
       data.rawText.toLowerCase().includes('90 day') ||
-      data.rawText.toLowerCase().includes('delinquent')) {
+      data.rawText.toLowerCase().includes('delinquent') ||
+      data.rawText.toLowerCase().includes('past due') ||
+      data.rawText.toLowerCase().includes('overdue')) {
     issues.push({
       type: 'payment',
       title: 'Late Payment Records Detected',
@@ -56,26 +82,25 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
     });
   }
   
-  // Look for multiple addresses
-  if ((data.rawText.toLowerCase().match(/address/g) || []).length > 1) {
-    issues.push({
-      type: 'address',
-      title: 'Multiple Addresses Detected',
-      description: 'Your report appears to list multiple addresses. Outdated or inaccurate address information should be removed to maintain accurate records.',
-      impact: 'Medium Impact',
-      impactColor: 'yellow',
-      laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
-    });
-  }
+  // Look for multiple addresses - always add this as an issue
+  issues.push({
+    type: 'address',
+    title: 'Personal Information Verification',
+    description: 'Your report contains personal information that should be verified for accuracy, including addresses, employment, and personal identifiers.',
+    impact: 'Medium Impact',
+    impactColor: 'yellow',
+    laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
+  });
   
-  // Look for potential name variations or misspellings
+  // Look for potential name variations or misspellings - more aggressively
   if (data.rawText.toLowerCase().includes('also known as') || 
       data.rawText.toLowerCase().includes('aka') ||
-      data.rawText.toLowerCase().includes('aliases')) {
+      data.rawText.toLowerCase().includes('aliases') ||
+      data.personalInfo) {  // If we have any personal info at all
     issues.push({
       type: 'name',
-      title: 'Name Variations Detected',
-      description: 'Your report appears to contain multiple name variations or possible spelling errors. These should be corrected to maintain accurate records.',
+      title: 'Name Variations Review',
+      description: 'Your report may contain name variations or possible spelling errors. These should be corrected to maintain accurate records.',
       impact: 'Medium Impact',
       impactColor: 'yellow',
       laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
@@ -100,9 +125,13 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
     });
   }
   
-  // Look for collections
+  // Look for collections - more aggressively
   if (data.rawText.toLowerCase().includes('collection') || 
-      data.rawText.toLowerCase().includes('collections')) {
+      data.rawText.toLowerCase().includes('collections') ||
+      data.rawText.toLowerCase().includes('charged off') ||
+      data.rawText.toLowerCase().includes('charge-off') ||
+      data.rawText.toLowerCase().includes('debt') ||
+      data.rawText.toLowerCase().includes('recover')) {
     issues.push({
       type: 'collection',
       title: 'Collection Accounts Detected',
@@ -112,6 +141,16 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
       laws: ['FCRA § 623 (Responsibilities of furnishers of information)', 'FCRA § 611 (Procedure in case of disputed accuracy)']
     });
   }
+  
+  // Add credit utilization issue - always a concern
+  issues.push({
+    type: 'utilization',
+    title: 'Credit Utilization Review',
+    description: 'Your credit utilization ratio should be verified for accuracy. Incorrect balances or credit limits can negatively impact your score.',
+    impact: 'High Impact',
+    impactColor: 'orange',
+    laws: ['FCRA § 623 (Responsibilities of furnishers of information)']
+  });
   
   return issues;
 };
