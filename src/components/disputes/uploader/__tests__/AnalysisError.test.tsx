@@ -5,6 +5,9 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import AnalysisError from '../AnalysisError';
 
+// Extend expect for TypeScript
+import { expect } from 'vitest';
+
 describe('AnalysisError', () => {
   const mockOnReset = vi.fn();
 

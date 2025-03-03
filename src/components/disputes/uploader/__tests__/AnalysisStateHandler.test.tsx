@@ -6,6 +6,9 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import AnalysisStateHandler from '../AnalysisStateHandler';
 
+// Extend expect for TypeScript
+import { expect } from 'vitest';
+
 // Mock the required components
 vi.mock('../AnalyzingReport', () => ({
   __esModule: true,
