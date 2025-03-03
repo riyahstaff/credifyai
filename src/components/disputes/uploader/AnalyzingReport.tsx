@@ -44,50 +44,50 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
     isMounted.current = true;
     callbackTriggered.current = false;
     
-    // First update all steps to 50% immediately to show progress
+    // First update all steps to 50% instantly to show progress
     setSteps(prev => prev.map(step => ({ ...step, progress: 50 })));
     
-    // After 50ms update step 1 to 100%
+    // After 25ms update step 1 to 100%
     const timeout1 = setTimeout(() => {
       if (!isMounted.current) return;
       setSteps(prev => prev.map((step, idx) => 
         idx === 0 ? { ...step, progress: 100, isComplete: true } : { ...step, progress: 75 }
       ));
-    }, 50);
+    }, 25);
     
-    // After 100ms update step 2 to 100%
+    // After 50ms update step 2 to 100%
     const timeout2 = setTimeout(() => {
       if (!isMounted.current) return;
       setSteps(prev => prev.map((step, idx) => 
         idx <= 1 ? { ...step, progress: 100, isComplete: true } : { ...step, progress: 90 }
       ));
-    }, 100);
+    }, 50);
     
-    // After 150ms update step 3 to 100%
+    // After 75ms update step 3 to 100%
     const timeout3 = setTimeout(() => {
       if (!isMounted.current) return;
       setSteps(prev => prev.map((step, idx) => 
         idx <= 2 ? { ...step, progress: 100, isComplete: true } : { ...step, progress: 95 }
       ));
-    }, 150);
+    }, 75);
     
-    // After 200ms update step 4 to 100% and set animationComplete
+    // After 100ms update step 4 to 100% and set animationComplete
     const timeout4 = setTimeout(() => {
       if (!isMounted.current) return;
       setSteps(prev => prev.map(step => ({ ...step, progress: 100, isComplete: true })));
       setAnimationComplete(true);
-    }, 200);
+    }, 100);
     
-    // After 250ms trigger the callback
+    // After 150ms trigger the callback
     const callbackTimeout = setTimeout(() => {
       triggerCallback();
-    }, 250);
+    }, 150);
     
-    // Add a backup final timeout to ensure the callback is triggered
+    // Back-up callback timeout in case the analysis is taking too long
     const finalTimeout = setTimeout(() => {
       console.log("Backup timeout ensuring analysis completes");
       triggerCallback();
-    }, 1000);
+    }, 500);
     
     // Store all timeouts for cleanup
     timeoutIds.current = [timeout1, timeout2, timeout3, timeout4, callbackTimeout, finalTimeout];
