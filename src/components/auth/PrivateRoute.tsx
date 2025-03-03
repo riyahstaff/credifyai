@@ -100,13 +100,14 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
       let componentName = '';
       
       // Check if it's a function or class component and extract name safely
-      if (childType !== null) {  // Add null check here
+      if (childType !== null) {
         if (typeof childType === 'function') {
           componentName = childType.name || '';
         } else if (typeof childType === 'object') {
           // For forwardRef, memo, etc.
-          if (childType && 'displayName' in childType) {
-            componentName = childType.displayName || '';
+          const objType = childType as object;
+          if ('displayName' in objType) {
+            componentName = objType['displayName'] as string || '';
           }
         }
       }
