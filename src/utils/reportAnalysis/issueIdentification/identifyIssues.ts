@@ -103,7 +103,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
       issues.push({
         type: 'collection',
         title: 'Collection Account Disputes',
-        description: 'Your credit report contains collection accounts. Collection agencies must validate debts under the FDCPA, and these accounts can be disputed if they cannot provide proper documentation or if they're over 7 years old.',
+        description: 'Your credit report contains collection accounts. Collection agencies must validate debts under the FDCPA, and these accounts can be disputed if they cannot provide proper documentation or if they\'re over 7 years old.',
         impact: 'Critical Impact',
         impactColor: 'red',
         laws: ['FCRA § 611', 'FDCPA § 809']

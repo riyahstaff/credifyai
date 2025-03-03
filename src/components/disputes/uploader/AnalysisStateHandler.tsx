@@ -79,7 +79,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     
     // Run the check immediately and then set a short timeout as fallback
     checkForGeneratedLetters();
-    const timer = setTimeout(checkForGeneratedLetters, 500);
+    const timer = setTimeout(checkForGeneratedLetters, 1000);
     
     return () => clearTimeout(timer);
   }, [letterGenerated, navigate]);
@@ -107,9 +107,18 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
       return (
         <div className="text-center p-8">
           <div className="w-16 h-16 rounded-full border-4 border-t-credify-teal border-r-credify-teal/30 border-b-credify-teal/10 border-l-credify-teal/30 animate-spin mx-auto mb-6"></div>
-          <p className="text-lg font-medium text-credify-navy dark:text-white">
-            Redirecting to your generated dispute letters...
+          <h3 className="text-xl font-semibold text-credify-navy dark:text-white mb-2">
+            Dispute Letter Generated
+          </h3>
+          <p className="text-credify-navy-light dark:text-white/70 mb-8">
+            Your dispute letter has been generated and is ready to review.
           </p>
+          <button 
+            onClick={() => navigate('/dispute-letters')}
+            className="btn-primary"
+          >
+            View Generated Letter
+          </button>
         </div>
       );
     }
