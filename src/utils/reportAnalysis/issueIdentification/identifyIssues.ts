@@ -38,12 +38,12 @@ export const identifyIssues = (data: CreditReportData): Array<{
     rawTextSample: data.rawText ? data.rawText.substring(0, 100) + '...' : 'none'
   });
   
-  // Check for common credit report patterns regardless of structure
+  // ALWAYS check for common credit report patterns regardless of structure
   if (data.rawText) {
     const lowerText = data.rawText.toLowerCase();
     
-    // Force identification of common issues based on raw text patterns
-    if (lowerText.includes('late') || lowerText.includes('past due') || lowerText.includes('delinquent')) {
+    // Force identification of late payments and force it to be first issue if found
+    if (lowerText.includes('late') || lowerText.includes('past due') || lowerText.includes('delinquent') || lowerText.includes('30 day') || lowerText.includes('60 day') || lowerText.includes('90 day')) {
       console.log("Found late payment indicators in raw text");
       issues.push({
         type: 'late_payment',
@@ -55,7 +55,8 @@ export const identifyIssues = (data: CreditReportData): Array<{
       });
     }
     
-    if (lowerText.includes('collection') || lowerText.includes('charged off')) {
+    // Force identification of collections
+    if (lowerText.includes('collection') || lowerText.includes('charged off') || lowerText.includes('charge-off') || lowerText.includes('charged-off')) {
       console.log("Found collection or charge-off indicators in raw text");
       issues.push({
         type: 'collection',
@@ -67,7 +68,8 @@ export const identifyIssues = (data: CreditReportData): Array<{
       });
     }
     
-    if (lowerText.includes('inquir')) {
+    // Force identification of inquiries
+    if (lowerText.includes('inquir') || lowerText.includes('credit check')) {
       console.log("Found inquiries in raw text");
       issues.push({
         type: 'inquiry',
@@ -76,6 +78,19 @@ export const identifyIssues = (data: CreditReportData): Array<{
         impact: 'High Impact',
         impactColor: 'orange',
         laws: ['FCRA § 604', 'FCRA § 611']
+      });
+    }
+    
+    // Force identification of high account balances
+    if (lowerText.includes('high balance') || lowerText.includes('credit limit') || lowerText.includes('balance')) {
+      console.log("Found high balance indicators in raw text");
+      issues.push({
+        type: 'high_balance',
+        title: 'High Credit Utilization',
+        description: 'Your credit report shows high utilization of available credit. High balances relative to credit limits can negatively impact your score. If these balance amounts are inaccurate, they can be disputed.',
+        impact: 'High Impact',
+        impactColor: 'orange',
+        laws: ['FCRA § 611']
       });
     }
   }
@@ -125,12 +140,12 @@ export const identifyIssues = (data: CreditReportData): Array<{
   
   // CRITICAL: Always ensure we have at least some issues to present
   // This ensures we never have 0 issues returned
-  if (issues.length === 0 || issues.length < 3) {
+  if (issues.length === 0 || issues.length < 5) {
     console.log("Insufficient issues identified, adding mandatory fallback issues");
     
     // Always add FCRA verification rights
     issues.push({
-      type: 'fcra',
+      type: 'fcra_verification',
       title: 'FCRA Verification Rights',
       description: 'Under the Fair Credit Reporting Act, you have the right to dispute any information in your credit report, even if it appears accurate.',
       impact: 'High Impact',
@@ -140,7 +155,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
     
     // Always add Multi-Bureau Reporting Discrepancies
     issues.push({
-      type: 'credit_bureaus',
+      type: 'bureau_discrepancies',
       title: 'Multi-Bureau Reporting Discrepancies',
       description: 'Information often varies between credit bureaus. Items reported to one bureau but not others should be verified for accuracy.',
       impact: 'Medium Impact',
@@ -150,7 +165,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
     
     // Always add Inquiry Disputes
     issues.push({
-      type: 'inquiry',
+      type: 'unauthorized_inquiries',
       title: 'Potential Unauthorized Inquiries',
       description: 'Inquiries on your credit report can lower your score. Any inquiry you did not authorize can be disputed as a violation of the FCRA.',
       impact: 'Medium Impact',
@@ -160,7 +175,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
     
     // Always add Account Verification
     issues.push({
-      type: 'verification',
+      type: 'account_verification',
       title: 'Account Verification Request',
       description: 'You can request verification of all accounts on your credit report. Creditors must fully verify account details or remove them.',
       impact: 'High Impact',
@@ -170,7 +185,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
     
     // Always add General Credit Report Review
     issues.push({
-      type: 'general',
+      type: 'general_review',
       title: 'General Credit Report Review',
       description: 'A comprehensive review of your credit report is recommended to identify any potential errors or inaccuracies that may be affecting your credit score.',
       impact: 'Medium Impact',

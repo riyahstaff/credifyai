@@ -65,9 +65,10 @@ export const handleAnalysisComplete = async ({
     console.log("Identifying issues in report data");
     let detectedIssues = identifyIssues(enhancedData);
     
-    // CRITICAL: Force at least 5 issues if none were found
+    // CRITICAL: Double-check we have at least 5 issues
     if (detectedIssues.length < 5) {
       console.log("Not enough issues detected, forcing minimum 5 issues");
+      
       // Keep existing issues
       const existingIssues = [...detectedIssues];
       
@@ -128,19 +129,22 @@ export const handleAnalysisComplete = async ({
       }
     }
     
+    // Always log and set the issues
+    console.log(`Found ${detectedIssues.length} potential issues:`, detectedIssues);
     setIssues(detectedIssues);
-    console.log(`Found ${detectedIssues.length} potential issues`);
     
-    // Force generate dispute letters even if no issues are found
+    // Force generate dispute letters for ALL issues
     if (enhancedData) {
       // Store the report data in session storage
       sessionStorage.setItem('creditReportData', JSON.stringify(enhancedData));
       
-      // Find issues to dispute, or create generic ones if none found
+      // Find issues to dispute
       let issuesToDispute = detectedIssues;
       
-      if (detectedIssues.length === 0) {
-        // Create generic issues if none were found (should never happen now)
+      // Always ensure we have issues to dispute
+      if (issuesToDispute.length === 0) {
+        // This should never happen with our improvements, but just in case
+        console.error("No issues to dispute, adding fallback issues");
         issuesToDispute = [
           {
             type: "general",
@@ -161,9 +165,8 @@ export const handleAnalysisComplete = async ({
         ];
       }
       
-      // Generate dispute letters for ALL issues (to ensure we have enough)
-      const topIssues = issuesToDispute;
-      console.log(`Generating dispute letters for ${topIssues.length} issues`);
+      // Generate dispute letters for ALL issues
+      console.log(`Generating dispute letters for ${issuesToDispute.length} issues`);
       
       // Get user info from local storage or use placeholder
       const userInfo = {
@@ -177,9 +180,14 @@ export const handleAnalysisComplete = async ({
       // Generate a letter for each issue
       const generatedLetters = [];
       
-      for (const issue of topIssues) {
+      for (const issue of issuesToDispute) {
+        // Default to Experian if no specific bureau is mentioned
         const bureauName = issue.account?.bureau || "Experian";
+        
+        // Use account name from issue or title as fallback
         const accountName = issue.account?.accountName || issue.title;
+        
+        // Use account number from issue or "Unknown" as fallback
         const accountNumber = issue.account?.accountNumber || "Unknown";
         
         try {
@@ -214,12 +222,56 @@ export const handleAnalysisComplete = async ({
         }
       }
       
+      // Ensure we have at least one letter
+      if (generatedLetters.length === 0) {
+        console.error("Failed to generate any dispute letters, creating fallback letter");
+        
+        // Create a fallback letter if all generation attempts failed
+        const fallbackLetter = {
+          bureau: "Experian",
+          accountName: "All Accounts",
+          accountNumber: "",
+          errorType: "General Dispute",
+          explanation: "I am disputing all information in my credit report that may be inaccurate or incomplete under my rights provided by the Fair Credit Reporting Act.",
+          creditReport: enhancedData,
+          letterContent: `
+[YOUR NAME]
+[YOUR ADDRESS]
+[CITY, STATE ZIP]
+[DATE]
+
+Experian
+P.O. Box 4500
+Allen, TX 75013
+
+RE: Dispute of Inaccurate Credit Information
+
+To Whom It May Concern:
+
+I am writing to dispute inaccurate information in my credit report. I have the right under the Fair Credit Reporting Act (FCRA), Section 611, to dispute incomplete or inaccurate information.
+
+After reviewing my credit report, I have identified multiple items that I believe are inaccurate and request that they be verified and corrected.
+
+I request that all items in my credit report be verified for accuracy. If any information cannot be fully verified, it must be removed from my credit report as required by the FCRA.
+
+Please investigate these matters and correct my credit report accordingly.
+
+Sincerely,
+
+[YOUR NAME]
+          `,
+          timestamp: new Date()
+        };
+        
+        generatedLetters.push(fallbackLetter);
+      }
+      
       if (generatedLetters.length > 0) {
         // Store all generated letters in session storage
         sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(generatedLetters));
         sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(generatedLetters[0]));
         
-        // Set letter generated flag
+        // Set letter generated flag 
         setLetterGenerated(true);
         sessionStorage.setItem('autoGeneratedLetter', 'true');
         

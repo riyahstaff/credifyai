@@ -6,8 +6,6 @@ import AnalyzingReport from './AnalyzingReport';
 import ReportAnalysisResults from './ReportAnalysisResults';
 import UploadConfirmation from './UploadConfirmation';
 import { useToast } from '@/hooks/use-toast';
-import { identifyIssues, enhanceReportData } from '@/utils/reportAnalysis';
-import { generateEnhancedDisputeLetter } from '@/lib/supabase/letterGenerator';
 
 interface AnalysisStateHandlerProps {
   fileUploaded: boolean;
@@ -68,7 +66,11 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
         
         if (pendingLetter || generatedLetters) {
           console.log("Found letters in session storage, navigating to letters page");
-          navigate('/dispute-letters');
+          
+          // Short delay to ensure everything is ready
+          setTimeout(() => {
+            navigate('/dispute-letters');
+          }, 300);
         } else {
           console.log("No letters found in session storage despite letterGenerated flag");
         }
@@ -77,7 +79,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     
     // Run the check immediately and then set a short timeout as fallback
     checkForGeneratedLetters();
-    const timer = setTimeout(checkForGeneratedLetters, 1000);
+    const timer = setTimeout(checkForGeneratedLetters, 500);
     
     return () => clearTimeout(timer);
   }, [letterGenerated, navigate]);
@@ -100,10 +102,19 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     // If letterGenerated is true, immediately navigate
     if (letterGenerated) {
       console.log("Dispute letter generated, navigating to letters page");
-      setTimeout(() => navigate('/dispute-letters'), 100);
-      return <div className="text-center p-8">Redirecting to your generated dispute letters...</div>;
+      
+      // Show loading state while navigation happens
+      return (
+        <div className="text-center p-8">
+          <div className="w-16 h-16 rounded-full border-4 border-t-credify-teal border-r-credify-teal/30 border-b-credify-teal/10 border-l-credify-teal/30 animate-spin mx-auto mb-6"></div>
+          <p className="text-lg font-medium text-credify-navy dark:text-white">
+            Redirecting to your generated dispute letters...
+          </p>
+        </div>
+      );
     }
     
+    // Show results if we have issues but no letters yet
     return (
       <div>
         <ReportAnalysisResults 
