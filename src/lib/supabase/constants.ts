@@ -14,6 +14,8 @@ export const DISPUTE_TEMPLATES = {
   ACCOUNT_CLOSED: 'account_closed_template.txt',
   GENERAL_DISPUTE: 'general_dispute_template.txt',
   FCRA_VIOLATION: 'fcra_violation_template.txt',
+  UNAUTHORIZED_INQUIRY: 'unauthorized_inquiry_template.txt',
+  COLLECTION_DISPUTE: 'collection_dispute_template.txt',
 };
 
 // FCRA and legal reference sections
