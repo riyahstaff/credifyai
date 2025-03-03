@@ -1,9 +1,9 @@
 
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, expect } from 'vitest';
 
-// Make expect available globally
-global.expect = vi.expect;
+// No need to set expect globally as Vitest already does this
+// Instead, we'll just make sure it's imported
 
 // Add TypeScript support for jest-dom matchers
 declare global {
