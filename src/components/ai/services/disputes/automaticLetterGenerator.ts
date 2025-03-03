@@ -44,7 +44,7 @@ export const generateAutomaticDisputeLetter = async (
           .replace(/\[CITY\]/g, userInfo.city)
           .replace(/\[STATE\]/g, userInfo.state)
           .replace(/\[ZIP\]/g, userInfo.zip)
-          .replace(/\[DATE\]/|\[CURRENT_DATE\]/g, new Date().toLocaleDateString('en-US', {
+          .replace(/\[DATE\]|\[CURRENT_DATE\]/g, new Date().toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
