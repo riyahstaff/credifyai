@@ -32,30 +32,26 @@ export const handleAnalysisComplete = async ({
   setAnalyzed,
   toast
 }: AnalysisProcessorProps & { toast: ReturnType<typeof useToast> }) => {
-  console.log("Analysis complete callback triggered");
+  console.log("handleAnalysisComplete called");
   
-  // Always transition out of analyzing state
-  setAnalyzing(false);
-  
-  if (!uploadedFile) {
-    setAnalysisError("No file was available for analysis");
-    // Always set analyzed to true to ensure transition from loading state
-    setAnalyzed(true);
-    return;
-  }
-  
-  try {      
-    // Process the credit report
+  try {
+    // Always transition out of analyzing state first to prevent UI artifacts
+    setAnalyzing(false);
+    
+    if (!uploadedFile) {
+      console.error("No file available for analysis");
+      setAnalysisError("No file was available for analysis");
+      setAnalyzed(true);
+      return;
+    }
+    
     console.log("Processing credit report:", uploadedFile.name);
     const data = await processCreditReport(uploadedFile);
     
-    // Extract real account names from the report
     console.log("Enhancing report data");
     const enhancedData = enhanceReportData(data);
-    
     setReportData(enhancedData);
     
-    // Identify potential issues
     console.log("Identifying issues in report data");
     const detectedIssues = identifyIssues(enhancedData);
     setIssues(detectedIssues);
@@ -129,17 +125,24 @@ export const handleAnalysisComplete = async ({
       description: `Found ${detectedIssues.length} potential issues in your credit report.`,
     });
     
-    // IMPORTANT: Make sure to set analyzed to true
+    console.log("Setting analyzed to true");
+    // This is critical - set analyzed to true to show the results
     setAnalyzed(true);
+    
   } catch (error) {
     console.error("Error analyzing report:", error);
+    setAnalysisError(error instanceof Error ? error.message : "Unknown error processing report");
     toast.toast({
       title: "Analysis failed",
       description: error instanceof Error ? error.message : "Failed to process your credit report.",
       variant: "destructive",
     });
-    setAnalysisError(error instanceof Error ? error.message : "Unknown error processing report");
-    // Even on error, we want to mark the analysis as completed
+    
+    // Even on error, ensure we set analyzed to true
+    setAnalyzed(true);
+  } finally {
+    // Double ensure both state flags are correctly set
+    setAnalyzing(false);
     setAnalyzed(true);
   }
 };

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
@@ -35,6 +35,9 @@ const UploadReport = () => {
   
   const [letterGenerated, setLetterGenerated] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  
+  // Add a ref to prevent state from being reset during animation
+  const analysisInProgress = useRef(false);
 
   const handleFile = (file: File) => {
     // Update file info
@@ -45,16 +48,31 @@ const UploadReport = () => {
   };
 
   const onAnalysisComplete = async () => {
-    await handleAnalysisComplete({
-      uploadedFile,
-      setReportData,
-      setIssues,
-      setLetterGenerated,
-      setAnalysisError,
-      setAnalyzing,
-      setAnalyzed,
-      toast
-    });
+    console.log("Analysis complete callback triggered in UploadReport");
+    if (!analysisInProgress.current) {
+      console.log("Analysis was not in progress, ignoring callback");
+      return; // Prevent duplicate processing
+    }
+    
+    try {
+      analysisInProgress.current = false; // Mark as no longer in progress
+      
+      await handleAnalysisComplete({
+        uploadedFile,
+        setReportData,
+        setIssues,
+        setLetterGenerated,
+        setAnalysisError,
+        setAnalyzing,
+        setAnalyzed,
+        toast
+      });
+    } catch (error) {
+      console.error("Error in analysis completion:", error);
+      setAnalyzing(false);
+      setAnalyzed(true); // Ensure we move to the analyzed state even on error
+      setAnalysisError(error instanceof Error ? error.message : "An unexpected error occurred");
+    }
   };
 
   const resetUpload = () => {
@@ -66,6 +84,7 @@ const UploadReport = () => {
     setUploadedFile(null);
     setLetterGenerated(false);
     setAnalysisError(null);
+    analysisInProgress.current = false;
   };
 
   const handleGenerateDispute = (account?: CreditReportAccount) => {
@@ -93,11 +112,16 @@ const UploadReport = () => {
       return;
     }
     
+    console.log("Starting analysis - setting analyzing state to true");
+    analysisInProgress.current = true; // Mark analysis as in progress
     setAnalyzing(true);
     setAnalysisError(null);
     // The actual analysis will happen in onAnalysisComplete
     // which is called after the progress animation completes
   };
+
+  // Add debug logging for state changes
+  console.log("UploadReport state:", { fileUploaded, analyzing, analyzed, analysisInProgress: analysisInProgress.current });
 
   return (
     <div className="min-h-screen flex flex-col">

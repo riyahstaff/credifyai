@@ -56,6 +56,9 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     navigate('/dispute-letters');
   };
 
+  // Add debug logging to track state changes
+  console.log("AnalysisStateHandler state:", { fileUploaded, analyzing, analyzed });
+
   if (!fileUploaded) {
     return null;
   }
