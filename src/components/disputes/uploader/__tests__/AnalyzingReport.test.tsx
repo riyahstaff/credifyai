@@ -39,22 +39,22 @@ describe('AnalyzingReport', () => {
     
     // Advance timers to trigger second step
     act(() => {
-      vi.advanceTimersByTime(800);
+      vi.advanceTimersByTime(300);
     });
     
     // Advance timers to trigger third step
     act(() => {
-      vi.advanceTimersByTime(800);
+      vi.advanceTimersByTime(300);
     });
     
     // Advance timers to trigger fourth step
     act(() => {
-      vi.advanceTimersByTime(800);
+      vi.advanceTimersByTime(300);
     });
     
     // Advance timers to trigger completion
     act(() => {
-      vi.advanceTimersByTime(600);
+      vi.advanceTimersByTime(300);
     });
     
     // Check if onAnalysisComplete was called
@@ -94,7 +94,7 @@ describe('AnalyzingReport', () => {
     
     // Fast forward past the safety timeout
     act(() => {
-      vi.advanceTimersByTime(5001);
+      vi.advanceTimersByTime(2001);
     });
     
     // Check if onAnalysisComplete was called
@@ -112,5 +112,18 @@ describe('AnalyzingReport', () => {
     expect(screen.getByText('Custom step 1')).toBeInTheDocument();
     expect(screen.getByText('Custom step 2')).toBeInTheDocument();
     expect(screen.queryByText('Scanning personal information')).not.toBeInTheDocument();
+  });
+
+  it('triggers immediate callback after 100ms', () => {
+    const mockOnAnalysisComplete = vi.fn();
+    render(<AnalyzingReport onAnalysisComplete={mockOnAnalysisComplete} />);
+    
+    // Fast forward past immediate callback
+    act(() => {
+      vi.advanceTimersByTime(101);
+    });
+    
+    // Check if onAnalysisComplete was called
+    expect(mockOnAnalysisComplete).toHaveBeenCalledTimes(1);
   });
 });

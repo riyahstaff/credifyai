@@ -32,9 +32,15 @@ export const handleAnalysisComplete = async ({
   setAnalyzed,
   toast
 }: AnalysisProcessorProps & { toast: ReturnType<typeof useToast> }) => {
+  console.log("Analysis complete callback triggered");
+  
+  // Always transition out of analyzing state
+  setAnalyzing(false);
+  
   if (!uploadedFile) {
-    setAnalyzing(false);
     setAnalysisError("No file was available for analysis");
+    // Always set analyzed to true to ensure transition from loading state
+    setAnalyzed(true);
     return;
   }
   
@@ -123,9 +129,7 @@ export const handleAnalysisComplete = async ({
       description: `Found ${detectedIssues.length} potential issues in your credit report.`,
     });
     
-    // IMPORTANT: Make sure to set the analyzing state to false and analyzed to true
-    // This ensures the UI transitions from loading to results
-    setAnalyzing(false);
+    // IMPORTANT: Make sure to set analyzed to true
     setAnalyzed(true);
   } catch (error) {
     console.error("Error analyzing report:", error);
@@ -135,7 +139,6 @@ export const handleAnalysisComplete = async ({
       variant: "destructive",
     });
     setAnalysisError(error instanceof Error ? error.message : "Unknown error processing report");
-    setAnalyzing(false);
     // Even on error, we want to mark the analysis as completed
     setAnalyzed(true);
   }

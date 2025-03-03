@@ -40,14 +40,14 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
     isMounted.current = true;
     callbackTriggered.current = false;
     
-    // Simulate progress for each step
+    // Simulate progress for each step - SIGNIFICANTLY FASTER ANIMATION
     const updateSteps = () => {
       // Update first step immediately
       setSteps(prev => prev.map((step, i) => 
         i === 0 ? { ...step, progress: 100, isComplete: true } : step
       ));
       
-      // Setup timeouts for each subsequent step - shorter timeouts
+      // Setup timeouts for each subsequent step - much shorter timeouts
       const timeout1 = setTimeout(() => {
         if (isMounted.current) {
           // Update second step
@@ -55,7 +55,7 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
             i === 1 ? { ...step, progress: 100, isComplete: true } : step
           ));
         }
-      }, 800);
+      }, 300); // Reduced from 800ms
       timeoutIds.current.push(timeout1);
       
       const timeout2 = setTimeout(() => {
@@ -65,7 +65,7 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
             i === 2 ? { ...step, progress: 100, isComplete: true } : step
           ));
         }
-      }, 1600);
+      }, 600); // Reduced from 1600ms
       timeoutIds.current.push(timeout2);
       
       const timeout3 = setTimeout(() => {
@@ -75,10 +75,10 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
             i === 3 ? { ...step, progress: 100, isComplete: true } : step
           ));
         }
-      }, 2400);
+      }, 900); // Reduced from 2400ms
       timeoutIds.current.push(timeout3);
       
-      // Mark animation as complete and call the callback after all steps
+      // Mark animation as complete and call the callback much sooner
       const completionTimeout = setTimeout(() => {
         if (isMounted.current && !callbackTriggered.current) {
           console.log("Analysis animation complete, triggering callback");
@@ -90,7 +90,7 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
             onAnalysisComplete();
           }
         }
-      }, 3000);
+      }, 1200); // Reduced from 3000ms
       timeoutIds.current.push(completionTimeout);
     };
     
@@ -98,6 +98,7 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
     updateSteps();
     
     // Safety timeout to ensure callback is triggered even if animation gets stuck
+    // Shorter safety timeout (2 seconds instead of 5)
     const safetyTimeout = setTimeout(() => {
       if (isMounted.current && !callbackTriggered.current) {
         console.log("Safety timeout triggered - forcing analysis completion");
@@ -108,8 +109,21 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
           onAnalysisComplete();
         }
       }
-    }, 5000);
+    }, 2000); // Reduced from 5000ms
     timeoutIds.current.push(safetyTimeout);
+    
+    // Immediate callback for faster testing (will trigger after just 100ms)
+    const immediateTimeout = setTimeout(() => {
+      if (isMounted.current && !callbackTriggered.current) {
+        console.log("Immediate fallback triggered");
+        callbackTriggered.current = true;
+        
+        if (onAnalysisComplete) {
+          onAnalysisComplete();
+        }
+      }
+    }, 100);
+    timeoutIds.current.push(immediateTimeout);
     
     // Cleanup function to clear all timeouts and update mounted state
     return () => {

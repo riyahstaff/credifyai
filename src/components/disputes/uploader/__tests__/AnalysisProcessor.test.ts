@@ -98,6 +98,7 @@ describe('handleAnalysisComplete', () => {
     expect(mockSetAnalyzing).toHaveBeenCalledWith(false);
     expect(mockSetAnalysisError).toHaveBeenCalledWith("No file was available for analysis");
     expect(processCreditReport).not.toHaveBeenCalled();
+    expect(mockSetAnalyzed).toHaveBeenCalledWith(true);
   });
 
   it('processes credit report and identifies issues', async () => {
@@ -162,7 +163,7 @@ describe('handleAnalysisComplete', () => {
     
     expect(mockSetAnalysisError).toHaveBeenCalledWith('Test error message');
     expect(mockSetAnalyzing).toHaveBeenCalledWith(false);
-    expect(mockSetAnalyzed).not.toHaveBeenCalled();
+    expect(mockSetAnalyzed).toHaveBeenCalledWith(true);
     expect(mockToast.toast).toHaveBeenCalledWith(expect.objectContaining({
       title: "Analysis failed",
       variant: "destructive"
