@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { FileText } from 'lucide-react';
@@ -28,7 +27,6 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
   const [selectedBureau, setSelectedBureau] = useState<string | null>(null);
   const [generatedLetter, setGeneratedLetter] = useState('');
   
-  // Load report data and selected account from session storage if available
   useEffect(() => {
     const storedReportData = sessionStorage.getItem('creditReportData');
     const storedSelectedAccount = sessionStorage.getItem('selectedAccount');
@@ -38,11 +36,31 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
         const parsedData = JSON.parse(storedReportData);
         setReportData(parsedData);
         
-        // Show toast that data was loaded
         toast({
           title: "Credit report loaded",
           description: `Loaded credit report with ${parsedData.accounts?.length || 0} accounts.`,
         });
+        
+        if (parsedData.accounts?.length > 0 && !storedSelectedAccount) {
+          const firstAccount = parsedData.accounts[0];
+          setSelectedAccount(firstAccount);
+          sessionStorage.setItem('selectedAccount', JSON.stringify(firstAccount));
+          
+          if (firstAccount.bureau) {
+            const lowerBureau = firstAccount.bureau.toLowerCase();
+            if (lowerBureau.includes('experian')) {
+              setSelectedBureau('Experian');
+            } else if (lowerBureau.includes('equifax')) {
+              setSelectedBureau('Equifax');
+            } else if (lowerBureau.includes('transunion')) {
+              setSelectedBureau('TransUnion');
+            } else {
+              setSelectedBureau('Experian');
+            }
+          } else {
+            setSelectedBureau('Experian');
+          }
+        }
       } catch (error) {
         console.error("Error parsing stored credit report data:", error);
       }
@@ -53,7 +71,6 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
         const parsedAccount = JSON.parse(storedSelectedAccount);
         setSelectedAccount(parsedAccount);
         
-        // Try to determine which bureaus report this account
         if (parsedAccount.bureau) {
           const lowerBureau = parsedAccount.bureau.toLowerCase();
           if (lowerBureau.includes('experian')) {
@@ -62,7 +79,11 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
             setSelectedBureau('Equifax');
           } else if (lowerBureau.includes('transunion')) {
             setSelectedBureau('TransUnion');
+          } else {
+            setSelectedBureau('Experian');
           }
+        } else {
+          setSelectedBureau('Experian');
         }
       } catch (error) {
         console.error("Error parsing stored selected account:", error);
@@ -72,16 +93,34 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
   
   const handleReportProcessed = (data: CreditReportData) => {
     setReportData(data);
-    // Store in session storage
     sessionStorage.setItem('creditReportData', JSON.stringify(data));
+    
+    if (data.accounts && data.accounts.length > 0) {
+      const firstAccount = data.accounts[0];
+      setSelectedAccount(firstAccount);
+      sessionStorage.setItem('selectedAccount', JSON.stringify(firstAccount));
+      
+      if (firstAccount.bureau) {
+        const lowerBureau = firstAccount.bureau.toLowerCase();
+        if (lowerBureau.includes('experian')) {
+          setSelectedBureau('Experian');
+        } else if (lowerBureau.includes('equifax')) {
+          setSelectedBureau('Equifax');
+        } else if (lowerBureau.includes('transunion')) {
+          setSelectedBureau('TransUnion');
+        } else {
+          setSelectedBureau('Experian');
+        }
+      } else {
+        setSelectedBureau('Experian');
+      }
+    }
   };
   
   const handleAccountSelected = (account: CreditReportAccount) => {
     setSelectedAccount(account);
-    // Store in session storage
     sessionStorage.setItem('selectedAccount', JSON.stringify(account));
     
-    // Try to determine which bureaus report this account
     if (account.bureau) {
       const lowerBureau = account.bureau.toLowerCase();
       if (lowerBureau.includes('experian')) {
@@ -90,7 +129,31 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
         setSelectedBureau('Equifax');
       } else if (lowerBureau.includes('transunion')) {
         setSelectedBureau('TransUnion');
+      } else {
+        setSelectedBureau('Experian');
       }
+    } else {
+      setSelectedBureau('Experian');
+    }
+    
+    if (!generatedLetter) {
+      const errorType = "Inaccurate Information";
+      const explanation = `I am disputing this ${account.accountName} account as it contains inaccurate information that requires investigation and correction.`;
+      
+      const disputeData = {
+        bureau: selectedBureau || 'Experian',
+        accountName: account.accountName,
+        accountNumber: account.accountNumber || "Unknown",
+        errorType: errorType,
+        explanation: explanation,
+      };
+      
+      setTimeout(() => {
+        const disputeFormButton = document.querySelector('button[type="submit"]');
+        if (disputeFormButton instanceof HTMLButtonElement) {
+          disputeFormButton.click();
+        }
+      }, 500);
     }
   };
   
@@ -100,6 +163,7 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
   
   const handleDisputeGenerated = (disputeData: any) => {
     setGeneratedLetter(disputeData.letterContent);
+    sessionStorage.setItem('autoGeneratedLetter', 'true');
     onGenerateDispute(disputeData);
   };
   
