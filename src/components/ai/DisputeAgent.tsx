@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Brain, FileText, Sparkles } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { generateEnhancedDisputeLetter } from '@/lib/supabase/letterGenerator';
 
@@ -11,8 +11,13 @@ interface DisputeAgentProps {
 
 const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [isThinking, setIsThinking] = useState(false);
+  
+  // Check if we're in test mode
+  const searchParams = new URLSearchParams(location.search);
+  const testMode = searchParams.get('testMode') === 'true';
   
   const handleActivateAI = async () => {
     setIsThinking(true);
@@ -97,7 +102,12 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
         
         // Navigate to the dispute letters page to view the letters
         if (window.location.pathname !== '/dispute-letters') {
-          navigate('/dispute-letters');
+          // If test mode is active, include it in the URL when navigating
+          if (testMode) {
+            navigate('/dispute-letters?testMode=true');
+          } else {
+            navigate('/dispute-letters');
+          }
         }
       } catch (error) {
         console.error("Error processing report data:", error);
@@ -116,8 +126,12 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
         duration: 5000,
       });
       
-      // Navigate to upload report page
-      navigate('/upload-report');
+      // Navigate to upload report page with test mode parameter if active
+      if (testMode) {
+        navigate('/upload-report?testMode=true');
+      } else {
+        navigate('/upload-report');
+      }
     }
     
     setIsThinking(false);
@@ -140,14 +154,14 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
         </button>
         
         <div className="absolute bottom-full right-0 mb-3 w-64 p-3 bg-white dark:bg-credify-navy rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
-          <div className="text-credify-navy dark:text-white font-medium mb-1">CLEO AI Assistant</div>
+          <div className="text-credify-navy dark:text-white font-medium mb-1">CLEO AI Assistant {testMode && "(Test Mode)"}</div>
           <div className="text-credify-navy-light dark:text-white/70 text-sm">
             I use AI to analyze credit reports, identify FCRA violations, and generate powerful dispute letters.
           </div>
           <div className="mt-2 flex gap-2">
             <button 
               className="text-xs bg-credify-teal/10 hover:bg-credify-teal/20 text-credify-teal px-2 py-1 rounded-full flex items-center gap-1"
-              onClick={() => navigate('/upload-report')}
+              onClick={() => navigate(testMode ? '/upload-report?testMode=true' : '/upload-report')}
             >
               <FileText size={12} />
               <span>Upload Report</span>

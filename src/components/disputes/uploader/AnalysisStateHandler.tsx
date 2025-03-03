@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
 import AnalyzingReport from './AnalyzingReport';
 import ReportAnalysisResults from './ReportAnalysisResults';
@@ -50,8 +50,13 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
   onAnalysisComplete
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  
+  // Check if we're in test mode
+  const searchParams = new URLSearchParams(location.search);
+  const testMode = searchParams.get('testMode') === 'true';
 
   // Add an effect to check for a pending letter and navigate accordingly
   useEffect(() => {
@@ -62,7 +67,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     }
     
     // Check if user has an active subscription for navigation
-    const hasSubscription = profile?.has_subscription === true;
+    const hasSubscription = profile?.has_subscription === true || testMode;
     
     // Check if we have generated letters
     const checkForGeneratedLetters = () => {
@@ -96,7 +101,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
           
           // Short delay to ensure everything is ready
           setTimeout(() => {
-            navigate('/dispute-letters');
+            navigate(testMode ? '/dispute-letters?testMode=true' : '/dispute-letters');
           }, 300);
         } else {
           console.log("No letters found in session storage despite letterGenerated flag");
@@ -109,10 +114,10 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     const timer = setTimeout(checkForGeneratedLetters, 1000);
     
     return () => clearTimeout(timer);
-  }, [letterGenerated, navigate, user, profile]);
+  }, [letterGenerated, navigate, user, profile, testMode]);
 
   // Add debug logging to track state changes
-  console.log("AnalysisStateHandler state:", { fileUploaded, analyzing, analyzed, letterGenerated, issuesCount: issues.length });
+  console.log("AnalysisStateHandler state:", { fileUploaded, analyzing, analyzed, letterGenerated, issuesCount: issues.length, testMode });
 
   // Ensure we have a valid upload before proceeding
   if (!fileUploaded) {
@@ -130,10 +135,10 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     if (letterGenerated) {
       console.log("Dispute letter generated, preparing navigation");
       
-      // Get user subscription status
-      const hasSubscription = profile?.has_subscription === true;
+      // Get user subscription status (or check test mode)
+      const hasSubscription = profile?.has_subscription === true || testMode;
       
-      // If user doesn't have subscription, show subscription message
+      // If user doesn't have subscription and not in test mode, show subscription message
       if (!hasSubscription) {
         return (
           <div className="text-center p-8">
@@ -154,7 +159,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
         );
       }
       
-      // Show loading state for users with subscriptions
+      // Show loading state for users with subscriptions or test mode
       return (
         <div className="text-center p-8">
           <div className="w-16 h-16 rounded-full border-4 border-t-credify-teal border-r-credify-teal/30 border-b-credify-teal/10 border-l-credify-teal/30 animate-spin mx-auto mb-6"></div>
@@ -163,9 +168,10 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
           </h3>
           <p className="text-credify-navy-light dark:text-white/70 mb-8">
             Your dispute letters have been generated and are ready to review.
+            {testMode && <span className="block text-amber-500 mt-2">(Test Mode Active)</span>}
           </p>
           <button 
-            onClick={() => navigate('/dispute-letters')}
+            onClick={() => navigate(testMode ? '/dispute-letters?testMode=true' : '/dispute-letters')}
             className="btn-primary"
           >
             View Generated Letters
