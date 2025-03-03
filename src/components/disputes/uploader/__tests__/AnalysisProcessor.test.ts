@@ -4,6 +4,8 @@ import { handleAnalysisComplete } from '../AnalysisProcessor';
 import { processCreditReport } from '@/utils/creditReportParser';
 import { identifyIssues, enhanceReportData } from '@/utils/reportAnalysis';
 import { generateEnhancedDisputeLetter } from '@/lib/supabase/letterGenerator';
+import { loadSampleDisputeLetters } from '@/utils/creditReport/disputeLetters/sampleLettersLoader';
+import { loadSampleReports } from '@/utils/creditReport/sampleReports';
 
 // Mock dependencies
 vi.mock('@/utils/creditReportParser', () => ({
@@ -17,6 +19,14 @@ vi.mock('@/utils/reportAnalysis', () => ({
 
 vi.mock('@/lib/supabase/letterGenerator', () => ({
   generateEnhancedDisputeLetter: vi.fn(),
+}));
+
+vi.mock('@/utils/creditReport/disputeLetters/sampleLettersLoader', () => ({
+  loadSampleDisputeLetters: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@/utils/creditReport/sampleReports', () => ({
+  loadSampleReports: vi.fn().mockResolvedValue([]),
 }));
 
 describe('handleAnalysisComplete', () => {
