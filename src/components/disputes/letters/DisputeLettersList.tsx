@@ -12,6 +12,9 @@ interface Letter {
   status: string;
   bureaus: string[];
   content: string;
+  accountName?: string;
+  accountNumber?: string;
+  errorType?: string;
 }
 
 interface DisputeLettersListProps {
@@ -48,6 +51,17 @@ const DisputeLettersList: React.FC<DisputeLettersListProps> = ({
                     {letter.status === 'sent' ? 'Sent' : 'Draft'}
                   </span>
                 </div>
+                {letter.accountName && (
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Account:</span> {letter.accountName}
+                    {letter.accountNumber && <span> (#{letter.accountNumber})</span>}
+                  </div>
+                )}
+                {letter.errorType && (
+                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Issue Type:</span> {letter.errorType}
+                  </div>
+                )}
               </div>
               
               <div className="flex space-x-2">

@@ -1,119 +1,78 @@
 
 /**
- * Sample dispute language utilities
+ * Sample dispute language extraction
  */
-import { loadSampleDisputeLetters } from './sampleLettersLoader';
-
-interface DisputePhrases {
-  [key: string]: string[];
-}
-
-// Cache for successful dispute phrases
-let disputePhrasesCache: DisputePhrases = {};
+import { findSampleDispute } from './sampleDisputes';
 
 /**
  * Get sample dispute language based on dispute type and bureau
  */
-export const getSampleDisputeLanguage = async (disputeType: string, bureau?: string): Promise<string> => {
-  console.log(`Fetching sample dispute language for ${disputeType}, bureau: ${bureau || 'any'}`);
-  
+export const getSampleDisputeLanguage = async (
+  disputeType: string, 
+  bureau?: string
+): Promise<string> => {
   try {
-    // Load all sample letters
-    const sampleLetters = await loadSampleDisputeLetters();
+    console.log(`Getting sample dispute language for ${disputeType} and bureau ${bureau || 'any'}`);
+    // First try to find a sample letter
+    const sampleLetter = await findSampleDispute(disputeType, bureau);
     
-    // Find letters that match the dispute type
-    const matchingLetters = sampleLetters.filter(letter => {
-      return letter.disputeType.toLowerCase().includes(disputeType.toLowerCase()) && 
-             (!bureau || letter.bureau?.toLowerCase().includes(bureau.toLowerCase()));
-    });
-    
-    // If we have matches, extract effective language from the most relevant one
-    if (matchingLetters.length > 0) {
-      // Prioritize successful letters
-      const successfulLetters = matchingLetters.filter(l => l.successfulOutcome);
-      const targetLetter = successfulLetters.length > 0 ? successfulLetters[0] : matchingLetters[0];
-      
-      if (targetLetter.effectiveLanguage && targetLetter.effectiveLanguage.length > 0) {
-        // Join multiple language snippets with proper formatting
-        const language = targetLetter.effectiveLanguage.join('\n\n');
-        console.log(`Found sample language for ${disputeType}: ${language.substring(0, 50)}...`);
-        return language;
-      }
+    if (sampleLetter && sampleLetter.effectiveLanguage && sampleLetter.effectiveLanguage.length > 0) {
+      console.log("Found sample letter with effective language");
+      // Return the most relevant paragraph from the sample letter
+      return sampleLetter.effectiveLanguage[0];
     }
     
-    // Fallback to generic language based on dispute type
-    console.log(`No exact match found for ${disputeType}, using fallback language`);
-    return generateFallbackLanguage(disputeType, bureau);
+    // If no sample letter found, use fallback dispute language based on dispute type
+    console.log("No sample letter found, using fallback dispute language");
+    return getFallbackDisputeLanguage(disputeType);
   } catch (error) {
     console.error("Error getting sample dispute language:", error);
-    return generateFallbackLanguage(disputeType, bureau);
+    return getFallbackDisputeLanguage(disputeType);
   }
 };
 
 /**
- * Get all successful dispute phrases for analysis
+ * Get fallback dispute language based on dispute type
  */
-export const getSuccessfulDisputePhrases = async (): Promise<DisputePhrases> => {
-  // Use cached phrases if available
-  if (Object.keys(disputePhrasesCache).length > 0) {
-    return disputePhrasesCache;
+const getFallbackDisputeLanguage = (disputeType: string): string => {
+  const lowerType = disputeType.toLowerCase();
+  
+  if (lowerType.includes('late') || lowerType.includes('payment')) {
+    return "This late payment report is inaccurate. My payment history for this account shows that all payments were made on time according to the terms of the agreement. Under FCRA Section 623(a)(3), furnishers of information must accurately report payment history. This inaccurate late payment notation is having a significant negative impact on my credit score and should be removed.";
   }
   
-  try {
-    // Load all sample letters
-    const sampleLetters = await loadSampleDisputeLetters();
-    
-    // Extract successful phrases by dispute type
-    const phrases: DisputePhrases = {};
-    
-    for (const letter of sampleLetters) {
-      if (letter.successfulOutcome && letter.effectiveLanguage) {
-        const disputeType = letter.disputeType.toLowerCase();
-        
-        if (!phrases[disputeType]) {
-          phrases[disputeType] = [];
-        }
-        
-        // Add unique phrases
-        for (const phrase of letter.effectiveLanguage) {
-          if (!phrases[disputeType].includes(phrase)) {
-            phrases[disputeType].push(phrase);
-          }
-        }
-      }
-    }
-    
-    // Cache the results
-    disputePhrasesCache = phrases;
-    return phrases;
-  } catch (error) {
-    console.error("Error getting successful dispute phrases:", error);
-    return {};
-  }
-};
-
-/**
- * Generate fallback language when no sample is available
- */
-const generateFallbackLanguage = (disputeType: string, bureau?: string): string => {
-  const disputeLower = disputeType.toLowerCase();
-  
-  if (disputeLower.includes('late') || disputeLower.includes('payment')) {
-    return "I have reviewed my payment history and can confirm that all payments were made on time. My records show no late payments for this account. This inaccuracy is harming my credit score and must be corrected immediately under the Fair Credit Reporting Act.";
+  if (lowerType.includes('not mine') || lowerType.includes('fraud') || lowerType.includes('identity')) {
+    return "This account does not belong to me and I have no knowledge of it. I have never opened an account with this creditor and have not authorized anyone else to do so in my name. Under FCRA Section 605B, information resulting from identity theft should be blocked from appearing on consumer reports. I request that you conduct a thorough investigation and remove this fraudulent account from my credit report.";
   }
   
-  if (disputeLower.includes('balance') || disputeLower.includes('amount')) {
-    return "The balance reported for this account is incorrect. My records indicate a different amount than what is being reported. This error violates the Fair Credit Reporting Act requirement for accurate reporting.";
+  if (lowerType.includes('balance')) {
+    return "The balance reported for this account is incorrect. My records indicate a different balance amount, and this discrepancy must be corrected. Under FCRA Section 623, furnishers of information must provide accurate account balance information to credit reporting agencies. This incorrect balance is misleading to potential creditors and negatively impacts my credit utilization ratio.";
   }
   
-  if (disputeLower.includes('account') && (disputeLower.includes('not') || disputeLower.includes('mine'))) {
-    return "This account does not belong to me. I have never opened or authorized this account. This appears to be a case of mixed files or possibly identity theft that must be investigated immediately.";
+  if (lowerType.includes('inquiry') || lowerType.includes('hard pull')) {
+    return "I did not authorize this credit inquiry, and it appears on my credit report without my permission. Under FCRA Section 604, consumer reporting agencies may only furnish consumer reports with a permissible purpose, which typically requires my explicit authorization for most credit inquiries. This unauthorized inquiry has damaged my credit score and should be removed.";
   }
   
-  if (disputeLower.includes('inquiry') || disputeLower.includes('pull')) {
-    return "I did not authorize this inquiry on my credit report. Under the Fair Credit Reporting Act, inquiries can only be made with proper authorization. I request immediate investigation and removal of this unauthorized inquiry.";
+  if (lowerType.includes('collection') || lowerType.includes('debt')) {
+    return "This collection account is being disputed because it contains inaccurate information. Under FDCPA Section 809, debt collectors must verify debts upon dispute, and FCRA Section 623 requires accurate reporting. The collection agency has not provided proper validation of this debt, and the reporting appears to violate these consumer protection laws.";
   }
   
-  // Generic language for other dispute types
-  return `I am disputing this information as it appears to be inaccurate. After reviewing my records, I've found that this ${disputeType} contains errors that need to be corrected under the Fair Credit Reporting Act.`;
+  if (lowerType.includes('account status') || lowerType.includes('status')) {
+    return "The status of this account is being reported incorrectly. My records indicate that the actual status differs from what is being reported. Under FCRA Section 623, furnishers of information must accurately report account status information. This inaccurate status is misleading and should be corrected to reflect the true standing of the account.";
+  }
+  
+  if (lowerType.includes('closed')) {
+    return "This account has been closed, but it is not being reported as such. My records show that the account was closed on [DATE], but the credit report incorrectly shows it as open. Under FCRA Section 623, furnishers must accurately report account status, including whether an account is closed. This inaccuracy should be corrected to properly reflect the closed status of this account.";
+  }
+  
+  if (lowerType.includes('bankruptcy')) {
+    return "The bankruptcy information on my credit report is inaccurate. Under FCRA Section 605, bankruptcy information must be reported accurately and removed after the appropriate time period (10 years for Chapter 7, 7 years for completed Chapter 13). This inaccurate bankruptcy information is causing significant damage to my creditworthiness and should be corrected immediately.";
+  }
+  
+  if (lowerType.includes('personal') || lowerType.includes('information')) {
+    return "My personal information as reported on my credit report is incorrect. Accurate personal information is essential for proper credit reporting and to prevent identity confusion. Under FCRA Section 611, credit reporting agencies must investigate and correct inaccurate personal information. This error should be corrected to ensure my credit information is properly associated with my correct identity.";
+  }
+  
+  // Default response for other dispute types
+  return "This information is inaccurate and does not correctly reflect the account details or my credit history. Under FCRA Section 611, I have the right to dispute incomplete or inaccurate information, and credit reporting agencies must investigate and correct errors. This inaccuracy is negatively impacting my credit standing and should be corrected after proper investigation.";
 };

@@ -5,6 +5,7 @@
 import { RecommendedDispute, UserInfo, LegalReference } from '../types';
 import { getLegalReferencesForDispute } from '../legalReferences';
 import { getSampleDisputeLanguage } from './sampleLanguage';
+import { findSampleDispute } from './sampleDisputes';
 
 /**
  * Generate a dispute letter for a specific discrepancy
@@ -40,6 +41,33 @@ export const generateDisputeLetterForDiscrepancy = async (
   const legalReferences = discrepancy.legalBasis || 
     getLegalReferencesForDispute(discrepancy.reason, discrepancy.description);
   
+  // Try to find a relevant sample dispute letter to use as a template
+  try {
+    const sampleLetter = await findSampleDispute(discrepancy.reason, discrepancy.bureau);
+    if (sampleLetter) {
+      console.log("Found sample dispute letter for this type of dispute");
+      // Extract key phrases from the sample letter to enhance our letter
+      let enhancedLetter = sampleLetter.content
+        .replace(/\[FULL_NAME\]|\[YOUR_NAME\]|\[NAME\]/g, userInfo.name || '[YOUR NAME]')
+        .replace(/\[ADDRESS\]|\[YOUR_ADDRESS\]/g, userInfo.address || '[YOUR ADDRESS]')
+        .replace(/\[CITY\]/g, userInfo.city || '[CITY]')
+        .replace(/\[STATE\]/g, userInfo.state || '[STATE]')
+        .replace(/\[ZIP\]/g, userInfo.zip || '[ZIP]')
+        .replace(/\[DATE\]|\[CURRENT_DATE\]/g, currentDate)
+        .replace(/\[BUREAU\]/g, discrepancy.bureau)
+        .replace(/\[BUREAU_ADDRESS\]/g, bureauAddress)
+        .replace(/\[ACCOUNT_NAME\]/g, discrepancy.accountName)
+        .replace(/\[ACCOUNT_NUMBER\]/g, discrepancy.accountNumber || '[ACCOUNT NUMBER]')
+        .replace(/\[DISPUTE_REASON\]|\[ERROR_TYPE\]/g, discrepancy.reason)
+        .replace(/\[ERROR_DESCRIPTION\]|\[EXPLANATION\]/g, discrepancy.description);
+      
+      return enhancedLetter;
+    }
+  } catch (error) {
+    console.error("Error finding sample dispute letter:", error);
+    // Continue with regular template if there's an error
+  }
+  
   // If no sample dispute language is available, try to get one
   let disputeExplanation = discrepancy.sampleDisputeLanguage || discrepancy.description;
   
@@ -55,13 +83,34 @@ export const generateDisputeLetterForDiscrepancy = async (
     }
   }
   
-  // Generate citations text
-  const citationsText = legalReferences && legalReferences.length > 0 
-    ? `As required by ${legalReferences.map(ref => `${ref.law} ${ref.section}`).join(', ')}, ` 
-    : 'As required by the Fair Credit Reporting Act (FCRA) Section 611(a), ';
+  // Generate citations text with more specific references
+  let citationsText = "As required by the Fair Credit Reporting Act (FCRA) Section 611(a), ";
   
-  // Generate the letter content
-  return `
+  if (legalReferences && legalReferences.length > 0) {
+    citationsText = "As required by ";
+    legalReferences.forEach((ref, index) => {
+      if (index > 0) {
+        citationsText += index === legalReferences.length - 1 ? " and " : ", ";
+      }
+      citationsText += `${ref.law} ${ref.section} (${ref.title})`;
+    });
+    citationsText += ", ";
+  }
+  
+  // Add additional relevant laws based on dispute type
+  if (discrepancy.reason.toLowerCase().includes('not mine') || 
+      discrepancy.reason.toLowerCase().includes('fraud') || 
+      discrepancy.reason.toLowerCase().includes('identity')) {
+    citationsText += "and consistent with the Fair and Accurate Credit Transactions Act (FACTA), ";
+  }
+  
+  if (discrepancy.reason.toLowerCase().includes('collection') || 
+      discrepancy.reason.toLowerCase().includes('debt')) {
+    citationsText += "and in accordance with the Fair Debt Collection Practices Act (FDCPA), ";
+  }
+  
+  // Generate an enhanced letter with more detailed legal language
+  let letterContent = `
 ${userInfo.name}
 ${userInfo.address}
 ${userInfo.city}, ${userInfo.state} ${userInfo.zip}
@@ -87,14 +136,16 @@ This information is inaccurate because: ${disputeExplanation}
 
 ${citationsText}you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified. Additionally, Section 623 of the FCRA places responsibilities on furnishers of information to provide accurate data to consumer reporting agencies.
 
-I request that you:
-1. Conduct a thorough investigation of this disputed information
+Under Section 611 of the FCRA, you must:
+1. Conduct a thorough investigation of this disputed information within 30 days (45 days if I submit additional information)
 2. Forward all relevant information to the furnisher of this information
-3. Provide me with copies of any documentation used to verify this debt
-4. Remove the disputed item if it cannot be properly verified
-5. Send me an updated copy of my credit report showing the results of your investigation
+3. Consider all information I have submitted
+4. Provide me with the results of your investigation and a free copy of my credit report if changes are made
+5. Remove the disputed item if it cannot be properly verified
 
-Please complete your investigation within the 30-day timeframe (or 45 days if based on information I provide) as required by the FCRA. If you have any questions or need additional information, please contact me at the address listed above.
+If you continue to report this information without proper verification, you may be in violation of the FCRA, which provides for actual and punitive damages, as well as attorneys' fees for failure to comply with these provisions.
+
+Please direct all correspondence regarding this matter to the address listed above. I expect a response within the timeframe specified by the FCRA.
 
 Sincerely,
 
@@ -104,4 +155,6 @@ Enclosures:
 - Copy of credit report with disputed item highlighted
 - [LIST ANY SUPPORTING DOCUMENTATION]
 `;
+
+  return letterContent;
 };
