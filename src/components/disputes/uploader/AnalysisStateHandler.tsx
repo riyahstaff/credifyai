@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
 import AnalyzingReport from './AnalyzingReport';
@@ -52,9 +52,14 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  const viewGeneratedLetters = () => {
-    navigate('/dispute-letters');
-  };
+  // Add an effect to check for a pending letter and navigate accordingly
+  useEffect(() => {
+    if (letterGenerated && sessionStorage.getItem('pendingDisputeLetter')) {
+      console.log("Dispute letter detected in sessionStorage, navigating to letters page");
+      const timer = setTimeout(() => navigate('/dispute-letters'), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [letterGenerated, navigate]);
 
   // Add debug logging to track state changes
   console.log("AnalysisStateHandler state:", { fileUploaded, analyzing, analyzed, letterGenerated });
@@ -96,7 +101,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
               CLEO has automatically generated a dispute letter based on the critical issues found in your report.
             </p>
             <button
-              onClick={viewGeneratedLetters}
+              onClick={() => navigate('/dispute-letters')}
               className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
             >
               View Generated Letter

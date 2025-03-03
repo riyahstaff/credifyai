@@ -34,7 +34,7 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
   // Function to trigger the callback safely
   const triggerCallback = () => {
     if (isMounted.current && !callbackTriggered.current && onAnalysisComplete) {
-      console.log("Triggering analysis complete callback");
+      console.log("Triggering analysis complete callback from AnalyzingReport");
       callbackTriggered.current = true;
       onAnalysisComplete();
     }
@@ -45,56 +45,17 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
     callbackTriggered.current = false;
     
     // Immediately call the callback - this ensures it happens regardless of animation
-    const immediateCallback = setTimeout(() => {
-      triggerCallback();
-    }, 50);
-    timeoutIds.current.push(immediateCallback);
+    triggerCallback();
     
     const updateSteps = () => {
-      // Update first step immediately
-      setSteps(prev => prev.map((step, i) => 
-        i === 0 ? { ...step, progress: 100, isComplete: true } : step
-      ));
-      
-      // Setup timeouts for subsequent steps - with very short intervals for faster progression
-      const timeout1 = setTimeout(() => {
-        if (isMounted.current) {
-          setSteps(prev => prev.map((step, i) => 
-            i === 1 ? { ...step, progress: 100, isComplete: true } : step
-          ));
-        }
-      }, 100);
-      timeoutIds.current.push(timeout1);
-      
-      const timeout2 = setTimeout(() => {
-        if (isMounted.current) {
-          setSteps(prev => prev.map((step, i) => 
-            i === 2 ? { ...step, progress: 100, isComplete: true } : step
-          ));
-        }
-      }, 200);
-      timeoutIds.current.push(timeout2);
-      
-      const timeout3 = setTimeout(() => {
-        if (isMounted.current) {
-          setSteps(prev => prev.map((step, i) => 
-            i === 3 ? { ...step, progress: 100, isComplete: true } : step
-          ));
-          setAnimationComplete(true);
-        }
-      }, 300);
-      timeoutIds.current.push(timeout3);
+      // Update all steps immediately to 100%
+      setSteps(prev => prev.map(step => ({ ...step, progress: 100, isComplete: true })));
+      setAnimationComplete(true);
     };
     
-    // Start the animation
-    updateSteps();
-    
-    // Safety timeout to ensure callback is triggered even if animation gets stuck
-    const safetyTimeout = setTimeout(() => {
-      console.log("Safety timeout triggered for analysis");
-      triggerCallback();
-    }, 1500);
-    timeoutIds.current.push(safetyTimeout);
+    // Start the animation - just complete everything immediately
+    const timeout = setTimeout(updateSteps, 10);
+    timeoutIds.current.push(timeout);
     
     // Cleanup function
     return () => {
