@@ -25,50 +25,74 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
     { name: 'Checking for FCRA violations', progress: 0, isComplete: false },
     { name: 'Preparing recommendations', progress: 0, isComplete: false },
   ]);
+  
+  // Add state to track if animation is complete
+  const [animationComplete, setAnimationComplete] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+    let timeoutIds: number[] = [];
     
     // Simulate progress for each step
     const updateSteps = async () => {
-      // Update first step
-      if (mounted) {
-        setSteps(prev => prev.map((step, i) => 
-          i === 0 ? { ...step, progress: 100, isComplete: true } : step
-        ));
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update second step
-      if (mounted) {
-        setSteps(prev => prev.map((step, i) => 
-          i === 1 ? { ...step, progress: 100, isComplete: true } : step
-        ));
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Update third step
-      if (mounted) {
-        setSteps(prev => prev.map((step, i) => 
-          i === 2 ? { ...step, progress: 100, isComplete: true } : step
-        ));
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update fourth step
-      if (mounted) {
-        setSteps(prev => prev.map((step, i) => 
-          i === 3 ? { ...step, progress: 100, isComplete: true } : step
-        ));
-      }
-      
-      // Notify parent that analysis is complete
-      if (mounted && onAnalysisComplete) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        onAnalysisComplete();
+      try {
+        // Update first step
+        if (mounted) {
+          setSteps(prev => prev.map((step, i) => 
+            i === 0 ? { ...step, progress: 100, isComplete: true } : step
+          ));
+        }
+        
+        // Add each timeout ID to our array so we can clear them if component unmounts
+        const timeout1 = setTimeout(() => {
+          if (mounted) {
+            // Update second step
+            setSteps(prev => prev.map((step, i) => 
+              i === 1 ? { ...step, progress: 100, isComplete: true } : step
+            ));
+          }
+        }, 1000);
+        timeoutIds.push(timeout1);
+        
+        const timeout2 = setTimeout(() => {
+          if (mounted) {
+            // Update third step
+            setSteps(prev => prev.map((step, i) => 
+              i === 2 ? { ...step, progress: 100, isComplete: true } : step
+            ));
+          }
+        }, 2500);
+        timeoutIds.push(timeout2);
+        
+        const timeout3 = setTimeout(() => {
+          if (mounted) {
+            // Update fourth step
+            setSteps(prev => prev.map((step, i) => 
+              i === 3 ? { ...step, progress: 100, isComplete: true } : step
+            ));
+          }
+        }, 3500);
+        timeoutIds.push(timeout3);
+        
+        // Mark animation as complete and call the callback after all steps
+        const completionTimeout = setTimeout(() => {
+          if (mounted) {
+            console.log("Analysis animation complete, triggering callback");
+            setAnimationComplete(true);
+            
+            // Notify parent that analysis animation is complete
+            if (onAnalysisComplete) {
+              onAnalysisComplete();
+            }
+          }
+        }, 4000);
+        timeoutIds.push(completionTimeout);
+      } catch (error) {
+        console.error("Error in analysis progress animation:", error);
+        // If there's an error, still try to complete the analysis
+        if (mounted && onAnalysisComplete) {
+          onAnalysisComplete();
+        }
       }
     };
     
@@ -76,6 +100,8 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
     
     return () => {
       mounted = false;
+      // Clear all timeouts if component unmounts
+      timeoutIds.forEach(id => clearTimeout(id));
     };
   }, [onAnalysisComplete]);
   
