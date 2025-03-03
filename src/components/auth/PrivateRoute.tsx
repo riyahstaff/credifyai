@@ -99,8 +99,8 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
       // Check if it's a function or class component and extract name safely
       if (typeof childType === 'function') {
         componentName = childType.name || '';
-      } else if (childType && typeof childType === 'object') {
-        // For forwardRef, memo, etc.
+      } else if (childType && typeof childType === 'object' && 'displayName' in childType) {
+        // For forwardRef, memo, etc. with safe property access check
         componentName = childType.displayName || '';
       }
       
