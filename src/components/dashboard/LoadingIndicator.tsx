@@ -11,15 +11,17 @@ const LoadingIndicator = () => {
   const [extendedTimeout, setExtendedTimeout] = useState(false);
 
   useEffect(() => {
-    // If loading takes more than 2 seconds, show initial timeout message
+    // If loading takes more than 1 second, show initial timeout message
     const timer = setTimeout(() => {
+      console.log("Initial loading timeout occurred");
       setShowTimeout(true);
-    }, 2000);
+    }, 1000);
     
-    // If loading takes more than 5 seconds, show extended timeout message
+    // If loading takes more than 2.5 seconds, show extended timeout message
     const extendedTimer = setTimeout(() => {
+      console.log("Extended loading timeout occurred");
       setExtendedTimeout(true);
-    }, 5000);
+    }, 2500);
     
     return () => {
       clearTimeout(timer);
@@ -44,11 +46,11 @@ const LoadingIndicator = () => {
                   <AlertDescription className="text-amber-700 dark:text-amber-400">
                     {extendedTimeout ? (
                       <>
-                        <p className="mb-2">We're having trouble loading your dashboard. This could be due to:</p>
+                        <p className="mb-2">We're having trouble connecting. This could be due to:</p>
                         <ul className="list-disc pl-5 space-y-1 text-sm">
-                          <li>Authentication session expired or invalid</li>
-                          <li>Connection issues with our services</li>
-                          <li>High server load at the moment</li>
+                          <li>Network connection issues</li>
+                          <li>Server is currently busy</li>
+                          <li>Connection timeout on mobile networks</li>
                         </ul>
                         <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:gap-4">
                           <Link to="/login" className="text-amber-700 dark:text-amber-300 font-medium px-4 py-2 bg-amber-100 dark:bg-amber-900/40 rounded-md text-sm hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors">
@@ -60,7 +62,7 @@ const LoadingIndicator = () => {
                         </div>
                       </>
                     ) : (
-                      <p className="mb-2">We're connecting to our authentication services. This should only take a moment...</p>
+                      <p className="mb-2">We're connecting to our services. This should only take a moment...</p>
                     )}
                   </AlertDescription>
                 </Alert>

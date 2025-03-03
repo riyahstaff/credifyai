@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, Profile, UserSession } from '@/lib/supabase/client';
@@ -39,7 +38,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Fetch the user's profile when they sign in
   const fetchUserProfile = async (userId: string) => {
+    // Check if we've already fetched this profile
+    if (profile && profile.id === userId) {
+      return profile;
+    }
+    
     try {
+      console.log("Fetching user profile for:", userId);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -51,6 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
 
+      console.log("Profile data fetched:", data);
       return data as Profile;
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -96,12 +103,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Check active sessions and sets the user
+    // Check active sessions and sets the user - optimized for mobile
     const initAuth = async () => {
+      console.log("Initializing auth");
       setIsLoading(true);
       
       try {
-        const { data } = await supabase.auth.getSession();
+        // Use shorter timeout for getSession operation
+        const sessionPromise = supabase.auth.getSession();
+        
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Auth session fetch timeout')), 2500);
+        });
+        
+        // Race the session fetch against the timeout
+        const { data } = await Promise.race([
+          sessionPromise,
+          timeoutPromise.then(() => {
+            console.warn("Session fetch timed out, continuing without session");
+            return { data: { session: null } };
+          })
+        ]) as { data: { session: Session | null } };
+        
         const session = data?.session;
         
         setSession(session);
@@ -113,7 +137,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (error) {
         console.error('Error getting session:', error);
+        // For mobile, don't let errors keep us in loading state
+        setSession(null);
+        setUser(null);
       } finally {
+        console.log("Auth initialization complete");
         setIsLoading(false);
       }
     };
@@ -123,6 +151,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (_event, session) => {
+          console.log("Auth state changed, new session:", !!session);
           setSession(session);
           setUser(session?.user ?? null);
           

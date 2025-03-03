@@ -20,39 +20,39 @@ const Dashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Force immediate check of auth state
-    console.log("Initial auth state check:", { user, isLoading, profile });
-    
-    // If auth is loaded already, set checked to true
-    if (!isLoading) {
+    // Mark auth as checked immediately if we have a user or explicit loading is false
+    if (!isLoading || user) {
       setAuthChecked(true);
     }
     
-    // Check if auth is taking too long (5 seconds)
+    console.log("Dashboard auth state:", { user, isLoading, profile, authChecked });
+    
+    // Very short timeout (3 seconds) for mobile devices
     const timeoutId = setTimeout(() => {
-      if (isLoading) {
+      console.log("Auth timeout check triggered");
+      if (!authChecked) {
         console.log("Auth timeout occurred, showing dashboard in demo mode");
         setAuthTimeout(true);
-        setAuthChecked(true); // Force auth checked to prevent infinite loading
+        setAuthChecked(true);
         
         toast({
-          title: "Authentication timeout",
-          description: "Showing dashboard in demo mode. Some features may be limited.",
-          variant: "default",
+          title: "Loading dashboard",
+          description: "Showing preview mode while we connect to services.",
+          duration: 3000,
         });
       }
-    }, 5000);
+    }, 3000);
     
     return () => clearTimeout(timeoutId);
-  }, [isLoading, toast, user, profile]);
+  }, [isLoading, toast, user, profile, authChecked]);
 
-  // If auth is still loading and hasn't timed out, show a loading indicator
-  if (isLoading && !authChecked) {
-    console.log("Showing loading indicator, auth state:", { isLoading, authChecked });
+  // If still in initial loading state, show a loading indicator
+  if (!authChecked) {
+    console.log("Showing loading indicator");
     return <LoadingIndicator />;
   }
 
-  // If auth has timed out or there's an issue, show dashboard with warning
+  // Dashboard view with or without authentication
   const userName = profile?.full_name || user?.email?.split('@')[0] || 'User';
   const isAuthenticated = !!user;
 
