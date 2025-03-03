@@ -44,18 +44,41 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
     isMounted.current = true;
     callbackTriggered.current = false;
     
-    // Immediately call the callback - this ensures it happens regardless of animation
-    triggerCallback();
+    // First update step 1 to 100%
+    setSteps(prev => prev.map((step, idx) => 
+      idx === 0 ? { ...step, progress: 100, isComplete: true } : step
+    ));
     
-    const updateSteps = () => {
-      // Update all steps immediately to 100%
+    // After 300ms update step 2 to 100%
+    const timeout1 = setTimeout(() => {
+      if (!isMounted.current) return;
+      setSteps(prev => prev.map((step, idx) => 
+        idx <= 1 ? { ...step, progress: 100, isComplete: true } : step
+      ));
+    }, 300);
+    
+    // After 600ms update step 3 to 100%
+    const timeout2 = setTimeout(() => {
+      if (!isMounted.current) return;
+      setSteps(prev => prev.map((step, idx) => 
+        idx <= 2 ? { ...step, progress: 100, isComplete: true } : step
+      ));
+    }, 600);
+    
+    // After 900ms update step 4 to 100% and set animationComplete
+    const timeout3 = setTimeout(() => {
+      if (!isMounted.current) return;
       setSteps(prev => prev.map(step => ({ ...step, progress: 100, isComplete: true })));
       setAnimationComplete(true);
-    };
+    }, 900);
     
-    // Start the animation - just complete everything immediately
-    const timeout = setTimeout(updateSteps, 10);
-    timeoutIds.current.push(timeout);
+    // After 1000ms trigger the callback
+    const callbackTimeout = setTimeout(() => {
+      triggerCallback();
+    }, 1000);
+    
+    // Store all timeouts for cleanup
+    timeoutIds.current = [timeout1, timeout2, timeout3, callbackTimeout];
     
     // Cleanup function
     return () => {

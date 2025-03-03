@@ -3,6 +3,8 @@ import { useToast } from '@/hooks/use-toast';
 import { processCreditReport, CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
 import { identifyIssues, enhanceReportData } from '@/utils/reportAnalysis';
 import { generateEnhancedDisputeLetter } from '@/lib/supabase/letterGenerator';
+import { loadSampleDisputeLetters } from '@/utils/creditReport/disputeLetters/sampleLettersLoader';
+import { loadSampleReports } from '@/utils/creditReport/sampleReports';
 
 export interface AnalysisProcessorProps {
   uploadedFile: File | null;
@@ -34,11 +36,11 @@ export const handleAnalysisComplete = async ({
 }: AnalysisProcessorProps & { toast: ReturnType<typeof useToast> }) => {
   console.log("handleAnalysisComplete called");
   
-  // Immediately set to not analyzing to ensure the UI progresses
-  setAnalyzing(false);
-  setAnalyzed(true);
-  
   try {
+    // Immediately set to not analyzing to ensure the UI progresses
+    setAnalyzing(false);
+    setAnalyzed(true);
+    
     if (!uploadedFile) {
       console.error("No file available for analysis");
       setAnalysisError("No file was available for analysis");
@@ -46,6 +48,15 @@ export const handleAnalysisComplete = async ({
     }
     
     console.log("Processing credit report:", uploadedFile.name);
+    
+    // Preload sample dispute letters
+    console.log("Preloading sample dispute letters and reports");
+    const sampleDisputeLetters = await loadSampleDisputeLetters();
+    console.log(`Loaded ${sampleDisputeLetters.length} sample dispute letters`);
+    const sampleReports = await loadSampleReports();
+    console.log(`Loaded ${sampleReports.length} sample credit reports`);
+    
+    // Process the uploaded credit report
     const data = await processCreditReport(uploadedFile);
     
     console.log("Enhancing report data");
@@ -56,35 +67,39 @@ export const handleAnalysisComplete = async ({
     const detectedIssues = identifyIssues(enhancedData);
     setIssues(detectedIssues);
     
-    // Force generate a dispute letter even if no issues are found
+    // Force generate dispute letters even if no issues are found
     if (enhancedData) {
       // Store the report data in session storage
       sessionStorage.setItem('creditReportData', JSON.stringify(enhancedData));
       
-      // Find an issue to dispute, or create a generic one
-      let issueToDispute;
-      if (detectedIssues.length > 0) {
-        // Find highest impact issues first
-        const criticalIssues = detectedIssues.filter(issue => 
-          issue.impact === 'Critical Impact' || issue.impact === 'High Impact'
-        );
-        
-        issueToDispute = criticalIssues.length > 0 ? criticalIssues[0] : detectedIssues[0];
-      } else {
-        // Create a generic issue if none were found
-        issueToDispute = {
-          type: "general",
-          title: "Potential Inaccuracies",
-          description: "I am disputing information in my credit report that may contain inaccuracies or errors requiring investigation.",
-          impact: "Medium Impact" as const,
-          impactColor: "orange",
-          laws: ["FCRA § 611"]
-        };
+      // Find issues to dispute, or create generic ones if none found
+      let issuesToDispute = detectedIssues;
+      
+      if (detectedIssues.length === 0) {
+        // Create generic issues if none were found
+        issuesToDispute = [
+          {
+            type: "general",
+            title: "Potential Inaccuracies",
+            description: "I am disputing information in my credit report that may contain inaccuracies or errors requiring investigation.",
+            impact: "Medium Impact" as const,
+            impactColor: "orange",
+            laws: ["FCRA § 611"]
+          },
+          {
+            type: "account",
+            title: "Account Verification Request",
+            description: "I am requesting verification of all account information as it may contain errors or inaccuracies.",
+            impact: "Medium Impact" as const,
+            impactColor: "orange",
+            laws: ["FCRA § 611", "FCRA § 623"]
+          }
+        ];
       }
       
-      const bureauName = issueToDispute.account?.bureau || "Experian";
-      const accountName = issueToDispute.account?.accountName || "Identified Account";
-      const accountNumber = issueToDispute.account?.accountNumber;
+      // Limit to top 3 issues max
+      const topIssues = issuesToDispute.slice(0, 3);
+      console.log(`Generating dispute letters for ${topIssues.length} issues`);
       
       // Get user info from local storage or use placeholder
       const userInfo = {
@@ -95,55 +110,75 @@ export const handleAnalysisComplete = async ({
         zip: localStorage.getItem('userZip') || "[ZIP]"
       };
       
-      try {
-        // Generate letter automatically
-        console.log("Generating dispute letter for:", accountName);
-        const letterContent = await generateEnhancedDisputeLetter(
-          issueToDispute.title,
-          {
+      // Generate a letter for each issue
+      const generatedLetters = [];
+      
+      for (const issue of topIssues) {
+        const bureauName = issue.account?.bureau || "Experian";
+        const accountName = issue.account?.accountName || "Identified Account";
+        const accountNumber = issue.account?.accountNumber;
+        
+        try {
+          console.log(`Generating dispute letter for: ${accountName} - ${issue.title}`);
+          const letterContent = await generateEnhancedDisputeLetter(
+            issue.title,
+            {
+              accountName: accountName,
+              accountNumber: accountNumber,
+              errorDescription: issue.description,
+              bureau: bureauName
+            },
+            userInfo
+          );
+          
+          // Store the letter data
+          const disputeData = {
+            bureau: bureauName,
             accountName: accountName,
-            accountNumber: accountNumber,
-            errorDescription: issueToDispute.description,
-            bureau: bureauName
-          },
-          userInfo
-        );
-        
-        // Store the letter data to create it in the letter page
-        const disputeData = {
-          bureau: bureauName,
-          accountName: accountName,
-          accountNumber: accountNumber,
-          errorType: issueToDispute.title,
-          explanation: issueToDispute.description,
-          creditReport: enhancedData,
-          letterContent: letterContent,
-          timestamp: new Date()
-        };
-        
-        // Store dispute data in session storage to create the letter when navigating
-        sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(disputeData));
+            accountNumber: accountNumber || "",
+            errorType: issue.title,
+            explanation: issue.description,
+            creditReport: enhancedData,
+            letterContent: letterContent,
+            timestamp: new Date()
+          };
+          
+          generatedLetters.push(disputeData);
+          console.log(`Letter generated for ${accountName}`);
+        } catch (error) {
+          console.error(`Error generating letter for ${accountName}:`, error);
+        }
+      }
+      
+      if (generatedLetters.length > 0) {
+        // Store all generated letters in session storage
+        sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(generatedLetters));
+        sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(generatedLetters[0]));
         
         // Set letter generated flag
         setLetterGenerated(true);
-        
-        // Set a flag to indicate a letter has been generated and is ready
         sessionStorage.setItem('autoGeneratedLetter', 'true');
         
-        console.log("Letter generation complete, letter data stored in session storage");
+        console.log(`${generatedLetters.length} letters generated and stored in session storage`);
         
         // Show success toast for letter generation
         toast.toast({
-          title: "Dispute letter generated",
-          description: `A dispute letter has been created for ${accountName}.`,
+          title: "Dispute letters generated",
+          description: `${generatedLetters.length} dispute letters have been created and are ready for review.`,
         });
-      } catch (error) {
-        console.error("Error auto-generating dispute letter:", error);
-        setAnalysisError("Failed to generate dispute letter. Please try manually creating one.");
+      } else {
+        console.error("Failed to generate any dispute letters");
+        setAnalysisError("Failed to generate dispute letters. Please try manually creating one.");
+        
+        toast.toast({
+          title: "Letter generation failed",
+          description: "Failed to generate dispute letters. Please try creating one manually.",
+          variant: "destructive",
+        });
       }
     }
     
-    // Show success toast
+    // Show success toast for analysis
     toast.toast({
       title: "Analysis complete",
       description: `Found ${detectedIssues.length} potential issues in your credit report.`,
@@ -152,6 +187,9 @@ export const handleAnalysisComplete = async ({
   } catch (error) {
     console.error("Error analyzing report:", error);
     setAnalysisError(error instanceof Error ? error.message : "Unknown error processing report");
+    setAnalyzing(false);
+    setAnalyzed(true);
+    
     toast.toast({
       title: "Analysis failed",
       description: error instanceof Error ? error.message : "Failed to process your credit report.",

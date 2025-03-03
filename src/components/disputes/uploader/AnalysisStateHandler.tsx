@@ -51,14 +51,35 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
   onAnalysisComplete
 }) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Add an effect to check for a pending letter and navigate accordingly
   useEffect(() => {
-    if (letterGenerated && sessionStorage.getItem('pendingDisputeLetter')) {
-      console.log("Dispute letter detected in sessionStorage, navigating to letters page");
-      const timer = setTimeout(() => navigate('/dispute-letters'), 500);
-      return () => clearTimeout(timer);
-    }
+    // Check if we have generated letters
+    const checkForGeneratedLetters = () => {
+      console.log("Checking for generated letters, letterGenerated:", letterGenerated);
+      
+      if (letterGenerated) {
+        console.log("Letters generated flag is true, navigating to dispute-letters page");
+        
+        // Check if we have letters in session storage
+        const pendingLetter = sessionStorage.getItem('pendingDisputeLetter');
+        const generatedLetters = sessionStorage.getItem('generatedDisputeLetters');
+        
+        if (pendingLetter || generatedLetters) {
+          console.log("Found letters in session storage, navigating to letters page");
+          navigate('/dispute-letters');
+        } else {
+          console.log("No letters found in session storage despite letterGenerated flag");
+        }
+      }
+    };
+    
+    // Run the check immediately and then set a short timeout as fallback
+    checkForGeneratedLetters();
+    const timer = setTimeout(checkForGeneratedLetters, 1000);
+    
+    return () => clearTimeout(timer);
   }, [letterGenerated, navigate]);
 
   // Add debug logging to track state changes
@@ -76,11 +97,11 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
 
   // Show analyzed state
   if (analyzed) {
-    // If letterGenerated is true and a pendingDisputeLetter exists, immediately navigate
-    if (letterGenerated && sessionStorage.getItem('pendingDisputeLetter')) {
+    // If letterGenerated is true, immediately navigate
+    if (letterGenerated) {
       console.log("Dispute letter generated, navigating to letters page");
       setTimeout(() => navigate('/dispute-letters'), 100);
-      return <div className="text-center p-8">Redirecting to your generated dispute letter...</div>;
+      return <div className="text-center p-8">Redirecting to your generated dispute letters...</div>;
     }
     
     return (
@@ -95,16 +116,16 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
         {letterGenerated && (
           <div className="mt-6 bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800/30">
             <h3 className="text-lg font-medium text-green-800 dark:text-green-300 mb-2">
-              Dispute Letter Generated
+              Dispute Letters Generated
             </h3>
             <p className="text-green-700 dark:text-green-400 mb-3">
-              CLEO has automatically generated a dispute letter based on the critical issues found in your report.
+              CLEO has automatically generated dispute letters based on the critical issues found in your report.
             </p>
             <button
               onClick={() => navigate('/dispute-letters')}
               className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
             >
-              View Generated Letter
+              View Generated Letters
             </button>
           </div>
         )}
