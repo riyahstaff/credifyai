@@ -1,122 +1,144 @@
 
 /**
- * Credit Report Data Types
+ * Core types for credit report data and functionality
  */
 
-/**
- * Personal information from credit report
- */
-export interface PersonalInfo {
-  name?: string;
-  addresses?: string[];
-  phoneNumbers?: string[];
-  ssn?: string;
-  dateOfBirth?: string;
-  employmentInfo?: string[];
+// Credit report bureau information
+export interface CreditReportBureaus {
+  experian: boolean;
+  equifax: boolean;
+  transunion: boolean;
 }
 
-/**
- * Credit report account information
- */
+// Personal information extracted from credit report
+export interface PersonalInfo {
+  name?: string;
+  address?: string;
+  previousAddresses?: string[];
+  ssn?: string;
+  dob?: string;
+  phones?: string[];
+  employers?: string[];
+}
+
+// Account information from credit report
 export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
   accountType?: string;
-  dateOpened?: string;
-  dateReported?: string;
+  openDate?: string;
   status?: string;
-  paymentStatus?: string;
-  balance?: string;
-  currentBalance?: string;
+  lastReportedDate?: string;
   creditLimit?: string;
   highBalance?: string;
-  monthlyPayment?: string;
-  pastDue?: string;
-  bureau?: string;
+  currentBalance?: string;
+  paymentStatus?: string;
+  paymentHistory?: Record<string, string>;
+  isNegative?: boolean;
   remarks?: string[];
-  paymentHistory?: string;
+  bureau?: string;
+  lastActivity?: string;
+  accountDesignation?: string; // Individual, Joint, Authorized User
+  creditorContactInfo?: string;
+  isCollection?: boolean;
+  chargeOffAmount?: string;
 }
 
-/**
- * Full credit report data structure
- */
+// Inquiry information from credit report
+export interface CreditReportInquiry {
+  inquiryDate: string;
+  bureau: string;
+  inquiryBy: string;
+  type: string;
+}
+
+// Public record information from credit report
+export interface CreditReportPublicRecord {
+  recordType: string;
+  dateReported: string;
+  referenceNumber?: string;
+  court?: string;
+  status?: string;
+  amount?: string;
+  bureau: string;
+  liabilityAmount?: string;
+  assets?: string;
+  filingDate?: string;
+  dateSatisfied?: string;
+}
+
+// Analysis results for a credit report
+export interface AnalysisResults {
+  totalAccounts: number;
+  openAccounts: number;
+  closedAccounts: number;
+  negativeItems: number;
+  inquiryCount: number;
+  publicRecordCount: number;
+  creditUtilization?: number;
+  accountTypeSummary: Record<string, number>;
+  
+  // Additional fields for recommendations
+  totalDiscrepancies?: number;
+  highSeverityIssues?: number;
+  accountsWithIssues?: number;
+  recommendedDisputes?: RecommendedDispute[];
+}
+
+// Overall credit report data structure
 export interface CreditReportData {
+  bureaus: CreditReportBureaus;
   personalInfo?: PersonalInfo;
-  bureaus: {
-    experian: boolean;
-    equifax: boolean;
-    transunion: boolean;
-  };
   accounts: CreditReportAccount[];
-  inquiries: Array<{
-    inquiryDate: string;
-    creditor: string;
-    bureau: string;
-  }>;
-  publicRecords?: Array<{
-    recordType: string;
-    bureau: string;
-    dateReported: string;
-    status: string;
-  }>;
-  reportSections?: Record<string, string>;
-  fileContent?: string;
+  inquiries: CreditReportInquiry[];
+  publicRecords: CreditReportPublicRecord[];
   rawText?: string;
-  htmlContent?: string; // New field for HTML formatted content
-  analysisResults?: {
-    totalAccounts: number;
-    openAccounts: number;
-    closedAccounts: number;
-    negativeItems: number;
-    inquiryCount: number;
-    publicRecordCount: number;
-    creditUtilization?: number;
-    accountTypeSummary: Record<string, number>;
-  };
+  htmlContent?: string;
+  analysisResults?: AnalysisResults;
 }
 
-/**
- * Legal reference for dispute letters
- */
+// Legal reference structure
 export interface LegalReference {
   law: string;
   section: string;
-  description: string;
-  relevance: string;
+  title: string;
+  text: string;
+  applicability?: string[];
 }
 
-/**
- * User information for dispute letters
- */
+// User information for generating dispute letters
 export interface UserInfo {
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  email?: string;
+  phone?: string;
 }
 
-/**
- * Recommended dispute from credit report analysis
- */
+// Recommended dispute information
 export interface RecommendedDispute {
+  id: string;
+  type: string;
+  title: string;
+  bureau: string;
   accountName: string;
   accountNumber?: string;
-  bureau: string;
   reason: string;
   description: string;
-  severity: string;
+  impact: 'High' | 'Medium' | 'Low';
   legalBasis?: LegalReference[];
+  disputeStrategy?: string;
   sampleDisputeLanguage?: string;
+  successRate?: number;
 }
 
-/**
- * Sample dispute letter for reference
- */
+// Sample dispute letter structure
 export interface SampleDisputeLetter {
   content: string;
   disputeType: string;
-  bureau?: string;
+  bureau: string;
   successfulOutcome: boolean;
   effectiveLanguage?: string[];
   legalCitations?: string[];

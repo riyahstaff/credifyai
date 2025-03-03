@@ -1,124 +1,137 @@
 
-import React, { useEffect, useState, useRef } from 'react';
-import AnalysisProgress from './AnalysisProgress';
+import React, { useState, useEffect, useRef } from 'react';
+import { ProgressBar } from '@/components/ui/progress';
+
+interface AnalysisStep {
+  name: string;
+  progress: number;
+  isComplete: boolean;
+}
 
 interface AnalyzingReportProps {
-  steps?: Array<{
-    name: string;
-    progress: number;
-    isComplete: boolean;
-  }>;
   onAnalysisComplete?: () => void;
+  steps?: AnalysisStep[];
 }
 
 const AnalyzingReport: React.FC<AnalyzingReportProps> = ({ 
-  steps: initialSteps,
-  onAnalysisComplete 
+  onAnalysisComplete,
+  steps: initialSteps
 }) => {
-  const [steps, setSteps] = useState<Array<{
-    name: string;
-    progress: number;
-    isComplete: boolean;
-  }>>(initialSteps || [
+  // Use default steps if none provided
+  const defaultSteps: AnalysisStep[] = [
     { name: 'Scanning personal information', progress: 0, isComplete: false },
     { name: 'Analyzing account information', progress: 0, isComplete: false },
     { name: 'Checking for FCRA violations', progress: 0, isComplete: false },
-    { name: 'Preparing recommendations', progress: 0, isComplete: false },
-  ]);
+    { name: 'Preparing recommendations', progress: 0, isComplete: false }
+  ];
   
-  const [animationComplete, setAnimationComplete] = useState(false);
-  const isMounted = useRef(true);
-  const timeoutIds = useRef<NodeJS.Timeout[]>([]);
+  const [steps, setSteps] = useState<AnalysisStep[]>(initialSteps || defaultSteps);
   const callbackTriggered = useRef(false);
+  const timeoutsRef = useRef<number[]>([]);
 
-  // Function to trigger the callback safely
+  // Function to update step progress
+  const updateStepProgress = (index: number, progress: number, isComplete: boolean = false) => {
+    setSteps(prevSteps => {
+      const newSteps = [...prevSteps];
+      newSteps[index] = {
+        ...newSteps[index],
+        progress,
+        isComplete
+      };
+      return newSteps;
+    });
+  };
+  
+  // Function to trigger completion callback
   const triggerCallback = () => {
-    if (isMounted.current && !callbackTriggered.current && onAnalysisComplete) {
+    if (onAnalysisComplete && !callbackTriggered.current) {
       console.log("Triggering analysis complete callback from AnalyzingReport");
       callbackTriggered.current = true;
       onAnalysisComplete();
     }
   };
 
+  // Effect to animate the progress bars
   useEffect(() => {
-    isMounted.current = true;
-    callbackTriggered.current = false;
+    // Clear any existing timeouts
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
     
-    // First update all steps to 50% instantly to show progress
-    setSteps(prev => prev.map(step => ({ ...step, progress: 50 })));
+    // Call the completion callback immediately to prevent hanging
+    // This ensures the analysis process continues even if animations are slow
+    triggerCallback();
     
-    // After 500ms update step 1 to 100%
-    const timeout1 = setTimeout(() => {
-      if (!isMounted.current) return;
-      setSteps(prev => prev.map((step, idx) => 
-        idx === 0 ? { ...step, progress: 100, isComplete: true } : { ...step, progress: 75 }
-      ));
-    }, 500);
+    // Animate each step (just for visual effect)
+    steps.forEach((step, index) => {
+      const animateStep = (progress: number) => {
+        if (progress <= 100) {
+          updateStepProgress(index, progress, progress === 100);
+          
+          const timeout = window.setTimeout(() => {
+            animateStep(progress + 5);
+          }, 100);
+          
+          timeoutsRef.current.push(timeout);
+        }
+      };
+      
+      // Stagger the start of each animation
+      const startTimeout = window.setTimeout(() => {
+        animateStep(0);
+      }, index * 500);
+      
+      timeoutsRef.current.push(startTimeout);
+    });
     
-    // After 1000ms update step 2 to 100%
-    const timeout2 = setTimeout(() => {
-      if (!isMounted.current) return;
-      setSteps(prev => prev.map((step, idx) => 
-        idx <= 1 ? { ...step, progress: 100, isComplete: true } : { ...step, progress: 90 }
-      ));
-    }, 1000);
-    
-    // After 1500ms update step 3 to 100%
-    const timeout3 = setTimeout(() => {
-      if (!isMounted.current) return;
-      setSteps(prev => prev.map((step, idx) => 
-        idx <= 2 ? { ...step, progress: 100, isComplete: true } : { ...step, progress: 95 }
-      ));
-    }, 1500);
-    
-    // After 2000ms update step 4 to 100% and set animationComplete
-    const timeout4 = setTimeout(() => {
-      if (!isMounted.current) return;
-      setSteps(prev => prev.map(step => ({ ...step, progress: 100, isComplete: true })));
-      setAnimationComplete(true);
-    }, 2000);
-    
-    // After 2500ms trigger the callback
-    const callbackTimeout = setTimeout(() => {
+    // Make sure to call completion again after all animations complete
+    const finalTimeout = window.setTimeout(() => {
       triggerCallback();
-    }, 2500);
+    }, steps.length * 500 + 2000);
     
-    // Back-up callback timeout in case the analysis is taking too long
-    const finalTimeout = setTimeout(() => {
-      console.log("Backup timeout ensuring analysis completes");
-      triggerCallback();
-    }, 5000);
-    
-    // Store all timeouts for cleanup
-    timeoutIds.current = [timeout1, timeout2, timeout3, timeout4, callbackTimeout, finalTimeout];
+    timeoutsRef.current.push(finalTimeout);
     
     // Cleanup function
     return () => {
-      console.log("AnalyzingReport unmounting");
-      isMounted.current = false;
-      
-      // Clear all timeouts
-      timeoutIds.current.forEach(id => clearTimeout(id));
-      timeoutIds.current = [];
-      
-      // Final chance to trigger the callback if not already done
+      timeoutsRef.current.forEach(clearTimeout);
+      // Ensure callback is triggered if component unmounts
       triggerCallback();
     };
-  }, [onAnalysisComplete]);
+  }, []);
   
+  // Backup timeout to ensure analysis completes even if something goes wrong
+  useEffect(() => {
+    const backupTimeout = window.setTimeout(() => {
+      console.log("Backup timeout ensuring analysis completes");
+      triggerCallback();
+    }, 5000); // 5 second backup
+
+    return () => clearTimeout(backupTimeout);
+  }, []);
+
   return (
-    <div className="text-center p-8">
-      <div className="w-20 h-20 rounded-full border-4 border-t-credify-teal border-r-credify-teal/40 border-b-credify-teal/10 border-l-credify-teal/40 animate-spin mx-auto mb-6"></div>
-      
-      <h3 className="text-xl font-semibold text-credify-navy dark:text-white mb-2">
+    <div className="text-center p-4">
+      <h3 className="text-xl font-semibold mb-2 text-credify-navy dark:text-white">
         Analyzing Your Credit Report
       </h3>
-      
-      <p className="text-credify-navy-light dark:text-white/70 mb-8 max-w-md mx-auto">
+      <p className="text-gray-600 dark:text-gray-300 mb-6">
         Our AI is carefully scanning your report for errors, inaccuracies, and potential FCRA violations.
       </p>
       
-      <AnalysisProgress steps={steps} />
+      <div className="space-y-6 max-w-lg mx-auto">
+        {steps.map((step, index) => (
+          <div key={index} className="text-left">
+            <div className="flex justify-between mb-1">
+              <span className={`text-sm font-medium ${step.isComplete ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                {step.name}
+              </span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {step.progress}%
+              </span>
+            </div>
+            <ProgressBar value={step.progress} className={step.isComplete ? 'bg-green-500' : undefined} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

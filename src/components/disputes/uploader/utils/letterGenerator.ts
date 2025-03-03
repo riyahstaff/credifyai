@@ -74,6 +74,12 @@ export const generateDisputeLetters = async (
   const userInfo = getUserInfo();
   const generatedLetters = [];
   
+  // If no issues are provided, return a fallback letter
+  if (!issues || issues.length === 0) {
+    return [createFallbackLetter()];
+  }
+  
+  // Try to generate letters for each issue, up to maxLetters
   for (const issue of issues.slice(0, maxLetters)) { 
     const bureauName = issue.account?.bureau || "Experian";
     const accountName = issue.account?.accountName || issue.title;
@@ -81,16 +87,56 @@ export const generateDisputeLetters = async (
     
     try {
       console.log(`Generating dispute letter for: ${accountName} - ${issue.title}`);
-      const letterContent = await generateEnhancedDisputeLetter(
-        issue.title,
-        {
-          accountName: accountName,
-          accountNumber: accountNumber,
-          errorDescription: issue.description,
-          bureau: bureauName
-        },
-        userInfo
-      );
+      
+      // Use a try-catch with timeout to prevent hanging
+      const letterContentPromise = Promise.race([
+        generateEnhancedDisputeLetter(
+          issue.title,
+          {
+            accountName: accountName,
+            accountNumber: accountNumber,
+            errorDescription: issue.description,
+            bureau: bureauName
+          },
+          userInfo
+        ),
+        // Timeout after 5 seconds to prevent hanging
+        new Promise<string>((resolve) => {
+          setTimeout(() => {
+            resolve(`
+${userInfo.name}
+${userInfo.address}
+${userInfo.city}, ${userInfo.state} ${userInfo.zip}
+
+${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+
+${bureauName}
+P.O. Box 4500
+Allen, TX 75013
+
+Re: Dispute of Inaccurate Information - ${accountName}
+
+To Whom It May Concern:
+
+I am writing to dispute the following information in my credit report:
+
+Account Name: ${accountName}
+Account Number: ${accountNumber || "[ACCOUNT NUMBER]"}
+Reason for Dispute: ${issue.title}
+
+This information is inaccurate because: ${issue.description}
+
+Under Section 611 of the Fair Credit Reporting Act, you are required to investigate this dispute and remove information that cannot be verified.
+
+Sincerely,
+
+${userInfo.name}
+            `);
+          }, 5000);
+        })
+      ]);
+      
+      const letterContent = await letterContentPromise;
       
       const disputeData = {
         bureau: bureauName,
@@ -124,7 +170,8 @@ export const generateDisputeLetters = async (
 export const storeGeneratedLetters = (
   letters: any[]
 ): boolean => {
-  if (letters.length === 0) {
+  if (!letters || letters.length === 0) {
+    console.error("No letters to store");
     return false;
   }
   

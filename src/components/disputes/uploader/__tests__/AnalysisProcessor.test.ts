@@ -1,202 +1,160 @@
 
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { handleAnalysisComplete } from '../AnalysisProcessor';
-import { processCreditReport } from '@/utils/creditReportParser';
-import { identifyIssues, enhanceReportData } from '@/utils/reportAnalysis';
-import { generateEnhancedDisputeLetter } from '@/lib/supabase/letterGenerator';
+import { enhanceReportData } from '@/utils/reportAnalysis';
+import { identifyIssues } from '@/utils/reportAnalysis';
+import { storeReportData } from '../utils/reportStorage';
+import { generateDisputeLetters, storeGeneratedLetters } from '../utils/letterGenerator';
 import { loadSampleDisputeLetters } from '@/utils/creditReport/disputeLetters/sampleLettersLoader';
 import { loadSampleReports } from '@/utils/creditReport/sampleReports';
+import { createMinimalReportData } from '@/utils/creditReport/helpers';
 
-// Mock dependencies
+// Mock all dependencies
 vi.mock('@/utils/creditReportParser', () => ({
-  processCreditReport: vi.fn(),
+  processCreditReport: vi.fn().mockImplementation(async () => createMinimalReportData())
 }));
 
 vi.mock('@/utils/reportAnalysis', () => ({
-  identifyIssues: vi.fn(),
-  enhanceReportData: vi.fn(),
+  enhanceReportData: vi.fn(data => data),
+  identifyIssues: vi.fn().mockReturnValue([
+    {
+      type: 'test',
+      title: 'Test Issue',
+      description: 'Test description',
+      impact: 'High Impact' as const,
+      impactColor: 'red',
+      laws: ['FCRA 611']
+    }
+  ])
 }));
 
-vi.mock('@/lib/supabase/letterGenerator', () => ({
-  generateEnhancedDisputeLetter: vi.fn(),
+vi.mock('../utils/reportStorage', () => ({
+  storeReportData: vi.fn()
+}));
+
+vi.mock('../utils/letterGenerator', () => ({
+  generateDisputeLetters: vi.fn().mockResolvedValue([
+    {
+      bureau: 'Experian',
+      accountName: 'Test Account',
+      errorType: 'Test Error',
+      letterContent: 'Test content'
+    }
+  ]),
+  storeGeneratedLetters: vi.fn().mockReturnValue(true)
 }));
 
 vi.mock('@/utils/creditReport/disputeLetters/sampleLettersLoader', () => ({
-  loadSampleDisputeLetters: vi.fn().mockResolvedValue([]),
+  loadSampleDisputeLetters: vi.fn().mockResolvedValue([])
 }));
 
 vi.mock('@/utils/creditReport/sampleReports', () => ({
-  loadSampleReports: vi.fn().mockResolvedValue([]),
+  loadSampleReports: vi.fn().mockResolvedValue([])
 }));
 
-describe('handleAnalysisComplete', () => {
-  // Setup mock functions and props
-  const mockSetReportData = vi.fn();
-  const mockSetIssues = vi.fn();
-  const mockSetLetterGenerated = vi.fn();
-  const mockSetAnalysisError = vi.fn();
-  const mockSetAnalyzing = vi.fn();
-  const mockSetAnalyzed = vi.fn();
-  
-  const mockFile = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
-  
-  // Create properly structured toast mock
-  const mockToast = {
-    toast: vi.fn(),
-    dismiss: vi.fn(),
-    toasts: []
+// Create test setup
+const createHandlerProps = () => {
+  return {
+    uploadedFile: new File(['test'], 'test.txt'),
+    setReportData: vi.fn(),
+    setIssues: vi.fn(),
+    setLetterGenerated: vi.fn(),
+    setAnalysisError: vi.fn(),
+    setAnalyzing: vi.fn(),
+    setAnalyzed: vi.fn(),
+    toast: {
+      toast: vi.fn()
+    }
   };
+};
 
-  const mockProps = {
-    uploadedFile: mockFile,
-    setReportData: mockSetReportData,
-    setIssues: mockSetIssues,
-    setLetterGenerated: mockSetLetterGenerated,
-    setAnalysisError: mockSetAnalysisError,
-    setAnalyzing: mockSetAnalyzing,
-    setAnalyzed: mockSetAnalyzed,
-    toast: mockToast,
-  };
-
-  // Mock sessionStorage
-  const mockSessionStorage = (() => {
-    let store = {};
-    return {
-      getItem: vi.fn((key) => store[key] || null),
-      setItem: vi.fn((key, value) => {
-        store[key] = value;
-      }),
-      clear: vi.fn(() => {
-        store = {};
-      }),
-    };
-  })();
-
-  // Mock localStorage
-  const mockLocalStorage = (() => {
-    let store = {};
-    return {
-      getItem: vi.fn((key) => store[key] || null),
-      setItem: vi.fn((key, value) => {
-        store[key] = value;
-      }),
-      clear: vi.fn(() => {
-        store = {};
-      }),
-    };
-  })();
-
+// Tests
+describe('AnalysisProcessor', () => {
   beforeEach(() => {
-    Object.defineProperty(window, 'sessionStorage', { value: mockSessionStorage });
-    Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
-    
-    // Reset all mocks
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    mockSessionStorage.clear();
-    mockLocalStorage.clear();
+  it('should process a credit report and generate dispute letters', async () => {
+    // Arrange
+    const props = createHandlerProps();
+
+    // Act
+    await handleAnalysisComplete(props);
+
+    // Assert
+    expect(props.setAnalyzing).toHaveBeenCalledWith(true);
+    expect(props.setAnalyzing).toHaveBeenCalledWith(false);
+    expect(props.setAnalyzed).toHaveBeenCalledWith(true);
+    expect(props.setLetterGenerated).toHaveBeenCalledWith(true);
+    expect(loadSampleDisputeLetters).toHaveBeenCalled();
+    expect(loadSampleReports).toHaveBeenCalled();
+    expect(enhanceReportData).toHaveBeenCalled();
+    expect(identifyIssues).toHaveBeenCalled();
+    expect(storeReportData).toHaveBeenCalled();
+    expect(generateDisputeLetters).toHaveBeenCalled();
+    expect(storeGeneratedLetters).toHaveBeenCalled();
   });
 
-  it('handles error when no file is provided', async () => {
-    await handleAnalysisComplete({
-      ...mockProps,
-      uploadedFile: null,
+  it('should handle errors during processing', async () => {
+    // Arrange
+    const props = createHandlerProps();
+    vi.mocked(enhanceReportData).mockImplementationOnce(() => {
+      throw new Error('Test error');
     });
-    
-    expect(mockSetAnalyzing).toHaveBeenCalledWith(false);
-    expect(mockSetAnalysisError).toHaveBeenCalledWith("No file was available for analysis");
-    expect(processCreditReport).not.toHaveBeenCalled();
-    expect(mockSetAnalyzed).toHaveBeenCalledWith(true);
-  });
 
-  it('processes credit report and identifies issues', async () => {
-    const mockReportData = { 
-      accounts: [],
-      bureaus: {
-        experian: true,
-        equifax: false,
-        transunion: false
-      },
-      inquiries: [], // Add missing required property
-      analysisResults: {
-        totalAccounts: 0,
-        openAccounts: 0,
-        closedAccounts: 0,
-        negativeItems: 0,
-        inquiryCount: 0,
-        publicRecordCount: 0,
-        accountTypeSummary: {}
-      }
-    };
-    
-    const mockEnhancedData = { 
-      accounts: [], 
-      personalInfo: { name: 'Test User' },
-      bureaus: {
-        experian: true,
-        equifax: false,
-        transunion: false
-      },
-      inquiries: [], // Add missing required property
-      analysisResults: {
-        totalAccounts: 0,
-        openAccounts: 0,
-        closedAccounts: 0,
-        negativeItems: 0,
-        inquiryCount: 0,
-        publicRecordCount: 0,
-        accountTypeSummary: {}
-      }
-    };
-    
-    const mockIssues = [{ 
-      type: 'error', 
-      title: 'Test Issue',
-      description: 'Description',
-      impact: 'High Impact' as const,
-      impactColor: 'red',
-      laws: []
-    }];
-    
-    // Setup mock implementations
-    vi.mocked(processCreditReport).mockResolvedValue(mockReportData);
-    vi.mocked(enhanceReportData).mockReturnValue(mockEnhancedData);
-    vi.mocked(identifyIssues).mockReturnValue(mockIssues);
-    
-    await handleAnalysisComplete(mockProps);
-    
-    // Verify process flow
-    expect(processCreditReport).toHaveBeenCalledWith(mockFile);
-    expect(enhanceReportData).toHaveBeenCalledWith(mockReportData);
-    expect(identifyIssues).toHaveBeenCalledWith(mockEnhancedData);
-    
-    // Verify state updates
-    expect(mockSetReportData).toHaveBeenCalledWith(mockEnhancedData);
-    expect(mockSetIssues).toHaveBeenCalledWith(mockIssues);
-    expect(mockSetAnalyzing).toHaveBeenCalledWith(false);
-    expect(mockSetAnalyzed).toHaveBeenCalledWith(true);
-    
-    // Verify session storage
-    expect(sessionStorage.setItem).toHaveBeenCalledWith(
-      'creditReportData', 
-      JSON.stringify(mockEnhancedData)
-    );
-  });
+    // Act
+    await handleAnalysisComplete(props);
 
-  it('handles errors during report processing', async () => {
-    const testError = new Error('Test error message');
-    vi.mocked(processCreditReport).mockRejectedValue(testError);
-    
-    await handleAnalysisComplete(mockProps);
-    
-    expect(mockSetAnalysisError).toHaveBeenCalledWith('Test error message');
-    expect(mockSetAnalyzing).toHaveBeenCalledWith(false);
-    expect(mockSetAnalyzed).toHaveBeenCalledWith(true);
-    expect(mockToast.toast).toHaveBeenCalledWith(expect.objectContaining({
-      title: "Analysis failed",
-      variant: "destructive"
+    // Assert
+    expect(props.setAnalysisError).toHaveBeenCalledWith('Test error');
+    expect(props.setAnalyzing).toHaveBeenCalledWith(false);
+    expect(props.setAnalyzed).toHaveBeenCalledWith(true);
+    expect(props.toast.toast).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Analysis failed',
+      variant: 'destructive'
     }));
+  });
+
+  it('should handle missing file', async () => {
+    // Arrange
+    const props = createHandlerProps();
+    props.uploadedFile = null;
+
+    // Act
+    await handleAnalysisComplete(props);
+
+    // Assert
+    expect(props.setAnalysisError).toHaveBeenCalledWith('No file was available for analysis');
+    expect(props.setAnalyzing).toHaveBeenCalledWith(false);
+    expect(props.setAnalyzed).toHaveBeenCalledWith(true);
+  });
+
+  it('should handle minimal data correctly', async () => {
+    // Arrange
+    const props = createHandlerProps();
+    
+    const minimalData = createMinimalReportData();
+    
+    // Add minimal required data
+    minimalData.accounts = [
+      {
+        accountName: 'Test Account',
+        bureau: 'Experian',
+        isNegative: false
+      }
+    ];
+    
+    minimalData.inquiries = [];
+    minimalData.publicRecords = [];
+    
+    vi.mocked(enhanceReportData).mockReturnValueOnce(minimalData);
+
+    // Act
+    await handleAnalysisComplete(props);
+
+    // Assert
+    expect(props.setReportData).toHaveBeenCalledWith(minimalData);
+    expect(identifyIssues).toHaveBeenCalledWith(minimalData);
+    expect(props.setAnalyzed).toHaveBeenCalledWith(true);
   });
 });
