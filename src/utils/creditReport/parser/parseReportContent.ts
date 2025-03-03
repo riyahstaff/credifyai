@@ -13,8 +13,10 @@ import { convertReportToHtml } from '../formatters/htmlFormatter';
 
 /**
  * Parse text content from a credit report into structured data
+ * @param content Text content to parse
+ * @param isPdf Optional flag indicating if the source was a PDF
  */
-export const parseReportContent = (content: string): CreditReportData => {
+export const parseReportContent = (content: string, isPdf: boolean = false): CreditReportData => {
   console.log("Parsing credit report content, length:", content.length);
   
   // Create empty report structure
@@ -27,7 +29,7 @@ export const parseReportContent = (content: string): CreditReportData => {
     accounts: [],
     inquiries: [],
     rawText: content, // Store the raw text for later reference
-    htmlContent: convertReportToHtml(content) // Add HTML formatted content
+    htmlContent: convertReportToHtml(content, isPdf) // Add HTML formatted content with PDF flag
   };
   
   // Check which bureaus are mentioned in the report
@@ -57,3 +59,21 @@ export const parseReportContent = (content: string): CreditReportData => {
   
   return reportData;
 };
+
+// Helper to process raw file content including PDF detection
+export const parseReportFile = async (file: File): Promise<CreditReportData> => {
+  const isPdf = file.type === 'application/pdf';
+  console.log(`Processing file as ${isPdf ? 'PDF' : 'text'}`);
+  
+  try {
+    // Import extractors dynamically to prevent circular dependencies
+    const { extractTextFromPDF } = await import('../extractors');
+    const content = await extractTextFromPDF(file);
+    
+    return parseReportContent(content, isPdf);
+  } catch (error) {
+    console.error("Error parsing report file:", error);
+    throw new Error(`Failed to parse report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+

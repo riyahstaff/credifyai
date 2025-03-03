@@ -12,17 +12,21 @@ import {
 import { Button } from '@/components/ui/button';
 import HtmlReportViewer from './HtmlReportViewer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FileText, FileCode } from 'lucide-react';
 
 interface ReportPreviewProps {
   reportData: CreditReportData | null;
   className?: string;
+  uploadedFile?: File | null;
 }
 
 const ReportPreview: React.FC<ReportPreviewProps> = ({ 
   reportData,
-  className = ''
+  className = '',
+  uploadedFile
 }) => {
   const [viewType, setViewType] = useState<'html' | 'structured'>('html');
+  const isPdf = uploadedFile?.type === 'application/pdf';
   
   if (!reportData) {
     return (
@@ -36,16 +40,25 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
     <div className={`report-preview ${className}`}>
       <Tabs defaultValue="html" onValueChange={(value) => setViewType(value as 'html' | 'structured')}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Report Preview</h3>
+          <h3 className="text-lg font-semibold">
+            Report Preview 
+            {isPdf && <span className="ml-2 text-sm text-blue-500">(PDF Source)</span>}
+          </h3>
           <TabsList>
-            <TabsTrigger value="html">HTML View</TabsTrigger>
-            <TabsTrigger value="structured">Structured Data</TabsTrigger>
+            <TabsTrigger value="html" className="flex items-center gap-1">
+              <FileCode size={16} />
+              HTML View
+            </TabsTrigger>
+            <TabsTrigger value="structured" className="flex items-center gap-1">
+              <FileText size={16} />
+              Structured Data
+            </TabsTrigger>
           </TabsList>
         </div>
         
         <TabsContent value="html" className="border rounded-md p-4 bg-white">
           {reportData.rawText ? (
-            <HtmlReportViewer reportText={reportData.rawText} />
+            <HtmlReportViewer reportText={reportData.rawText} isPdf={isPdf} />
           ) : (
             <div className="p-4 text-center text-gray-500">
               No report text available for preview.
@@ -141,3 +154,4 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
 };
 
 export default ReportPreview;
+

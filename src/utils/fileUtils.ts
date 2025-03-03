@@ -19,13 +19,39 @@ export const isPDF = (file: File): boolean => {
  * Extract text content from a file (text or PDF)
  */
 export const extractTextFromFile = async (file: File): Promise<string> => {
-  if (isPDF(file)) {
-    // This would ideally use a PDF parsing library
-    // For now, just return a placeholder
-    return `PDF content extraction placeholder for: ${file.name}`;
-  } else {
-    // Assume it's a text file
-    return await file.text();
+  try {
+    if (isPDF(file)) {
+      // Use our improved PDF extractor
+      const { extractTextFromPDF } = await import('./creditReport/extractors');
+      return await extractTextFromPDF(file);
+    } else {
+      // Assume it's a text file
+      return await file.text();
+    }
+  } catch (error) {
+    console.error("Error extracting text from file:", error);
+    throw new Error(`Failed to extract text: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
+/**
+ * Extract and format HTML from a file (text or PDF)
+ */
+export const extractAndFormatHtml = async (file: File): Promise<string> => {
+  try {
+    if (isPDF(file)) {
+      // Use our dedicated PDF-to-HTML converter
+      const { extractAndFormatPDF } = await import('./creditReport/extractors');
+      return await extractAndFormatPDF(file);
+    } else {
+      // For text files, first get the text then convert to HTML
+      const text = await file.text();
+      const { convertReportToHtml } = await import('./creditReport/formatters/htmlFormatter');
+      return convertReportToHtml(text, false);
+    }
+  } catch (error) {
+    console.error("Error extracting and formatting HTML:", error);
+    throw new Error(`Failed to convert to HTML: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -69,3 +95,4 @@ export const formatDate = (dateString: string): string => {
     return dateString;
   }
 };
+

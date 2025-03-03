@@ -30,6 +30,7 @@ export const extractTextFromPDF = async (file: File): Promise<string> => {
           
           // Try to extract text content from the PDF binary data
           text = extractTextFromBinaryPDF(content);
+          console.log("PDF content extracted, length:", text.length);
         } else {
           // For text files, we can just use the result directly
           console.log("Processing text file");
@@ -65,26 +66,34 @@ export const extractTextFromPDF = async (file: File): Promise<string> => {
 };
 
 /**
- * Very simple extraction of text from PDF binary data
- * This is a placeholder for a more sophisticated PDF parsing solution
+ * Improved extraction of text from PDF binary data
+ * This is a more thorough approach to extract text from PDF content
  */
 function extractTextFromBinaryPDF(binaryData: string): string {
   let extractedText = "";
   
-  // Look for text markers in the PDF data
+  // More comprehensive text markers in PDF data
   const textMarkers = [
     { start: "BT", end: "ET" }, // Begin Text/End Text markers
     { start: "/Text", end: "EMC" }, // Text object markers
     { start: "(", end: ")" }, // Text inside parentheses
-    { start: "<", end: ">" } // Text inside angle brackets
+    { start: "<", end: ">" }, // Text inside angle brackets
+    { start: "/Contents", end: "endstream" }, // Content streams
+    { start: "/Title", end: "/", offset: 7 }, // Document title
+    { start: "/Subject", end: "/", offset: 9 }, // Document subject
+    { start: "/Keywords", end: "/", offset: 10 }, // Document keywords
+    { start: "/Author", end: "/", offset: 8 } // Document author
   ];
   
+  // First pass: Extract text using markers
   for (const marker of textMarkers) {
     let startPos = 0;
     while ((startPos = binaryData.indexOf(marker.start, startPos)) !== -1) {
-      const endPos = binaryData.indexOf(marker.end, startPos + marker.start.length);
+      const contentStart = startPos + marker.start.length + (marker.offset || 0);
+      const endPos = binaryData.indexOf(marker.end, contentStart);
+      
       if (endPos !== -1) {
-        const potentialText = binaryData.substring(startPos + marker.start.length, endPos);
+        const potentialText = binaryData.substring(contentStart, endPos);
         
         // Filter to only include printable ASCII characters and common separators
         const cleanText = potentialText.replace(/[^\x20-\x7E\n\r\t]/g, "").trim();
@@ -100,21 +109,21 @@ function extractTextFromBinaryPDF(binaryData: string): string {
     }
   }
   
-  // Also look for words that may indicate relevant credit report sections
+  // Second pass: Look for sections with higher probability of being credit report content
   const creditReportKeywords = [
     "CREDIT REPORT", "PERSONAL INFORMATION", "ACCOUNT SUMMARY", 
     "ACCOUNTS", "INQUIRIES", "PUBLIC RECORDS", "EXPERIAN", "EQUIFAX", 
     "TRANSUNION", "FICO", "SCORE", "TRADE", "TRADELINE", "CREDIT CARD",
     "MORTGAGE", "AUTO LOAN", "PAYMENT HISTORY", "LATE PAYMENT", "BALANCE",
-    "CREDIT LIMIT", "DISPUTE"
+    "CREDIT LIMIT", "DISPUTE", "CREDITOR", "LOAN", "FINANCE"
   ];
   
   for (const keyword of creditReportKeywords) {
     let keywordPos = 0;
     while ((keywordPos = binaryData.indexOf(keyword, keywordPos)) !== -1) {
-      // Extract a chunk of text around the keyword
-      const startPos = Math.max(0, keywordPos - 50);
-      const endPos = Math.min(binaryData.length, keywordPos + keyword.length + 100);
+      // Extract a larger chunk of text around the keyword for more context
+      const startPos = Math.max(0, keywordPos - 100);
+      const endPos = Math.min(binaryData.length, keywordPos + keyword.length + 200);
       const chunk = binaryData.substring(startPos, endPos);
       
       // Filter to only include printable ASCII characters and common separators
@@ -128,5 +137,17 @@ function extractTextFromBinaryPDF(binaryData: string): string {
     }
   }
   
-  return extractedText;
+  // Post-processing: Deduplicate lines, ensure proper spacing
+  const lines = extractedText.split('\n');
+  const uniqueLines = [...new Set(lines)].filter(line => line.trim().length > 0);
+  
+  return uniqueLines.join('\n');
 }
+
+// Helper function to convert extracted text to HTML format
+export const extractAndFormatPDF = async (file: File): Promise<string> => {
+  const extractedText = await extractTextFromPDF(file);
+  const { convertReportToHtml } = await import('../creditReport/formatters/htmlFormatter');
+  return convertReportToHtml(extractedText, true); // Pass true to indicate it's from PDF
+};
+

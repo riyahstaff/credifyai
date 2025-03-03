@@ -6,8 +6,10 @@
 
 /**
  * Convert plain text credit report to formatted HTML
+ * @param content The text content to convert
+ * @param isPdf Optional flag indicating if the source was a PDF
  */
-export const convertReportToHtml = (content: string): string => {
+export const convertReportToHtml = (content: string, isPdf: boolean = false): string => {
   if (!content || content.trim().length === 0) {
     return '<div class="empty-report">No report content available</div>';
   }
@@ -64,11 +66,50 @@ export const convertReportToHtml = (content: string): string => {
     });
   });
   
+  // PDF-specific enhancements
+  if (isPdf) {
+    // Add a class to indicate this is PDF content
+    html = `<div class="pdf-content">${html}</div>`;
+    
+    // Remove excessive whitespace that might come from PDF parsing
+    html = html.replace(/(<br\s*\/?>){3,}/gi, '<br><br>');
+    
+    // Try to identify tabular data and format as tables
+    html = formatPdfTables(html);
+  }
+  
   // Wrap entire report in a container
-  html = `<div class="credit-report-html">${html}</div>`;
+  html = `<div class="credit-report-html ${isPdf ? 'pdf-source' : ''}">${html}</div>`;
   
   return html;
 };
+
+/**
+ * Format potential tabular data in PDF text to HTML tables
+ */
+function formatPdfTables(html: string): string {
+  // Look for patterns that might indicate tabular data
+  const tablePatterns = [
+    // Pattern for account listings
+    {
+      pattern: /(\w+[\s\w]*)\s+(\d{2}\/\d{2}\/\d{2,4})\s+(\$[\d,.]+)\s+(Current|Late|Paid|Delinquent)/g,
+      replacement: '<table class="detected-table"><tr><td>$1</td><td>$2</td><td>$3</td><td>$4</td></tr></table>'
+    },
+    // Pattern for inquiry listings
+    {
+      pattern: /(\d{2}\/\d{2}\/\d{2,4})\s+([A-Z\s]+)\s+(EXPERIAN|EQUIFAX|TRANSUNION)/gi,
+      replacement: '<table class="detected-table"><tr><td>$1</td><td>$2</td><td>$3</td></tr></table>'
+    }
+  ];
+  
+  let formattedHtml = html;
+  
+  tablePatterns.forEach(({ pattern, replacement }) => {
+    formattedHtml = formattedHtml.replace(pattern, replacement);
+  });
+  
+  return formattedHtml;
+}
 
 /**
  * Extract text from HTML content (for when we need to revert back to plain text)
@@ -81,11 +122,14 @@ export const extractTextFromHtml = (html: string): string => {
     .replace(/<\/p>/gi, '\n')
     .replace(/<\/h[1-6]>/gi, '\n')
     .replace(/<\/li>/gi, '\n')
+    .replace(/<\/td>/gi, ' ')
+    .replace(/<\/tr>/gi, '\n')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>');
+    .replace(/&gt;/g, '>')
+    .replace(/\n{3,}/g, '\n\n'); // Reduce excessive line breaks
 };
 
 /**
@@ -160,5 +204,30 @@ export const getReportStyles = (): string => {
       color: #6b7280;
       font-style: italic;
     }
+    
+    /* PDF-specific styles */
+    .pdf-source {
+      border-left: 4px solid #3b82f6;
+      padding-left: 1rem;
+    }
+    
+    .pdf-content {
+      font-family: 'Courier New', Courier, monospace;
+      background-color: #f9fafb;
+      padding: 1rem;
+      border-radius: 0.375rem;
+    }
+    
+    .detected-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+    
+    .detected-table td {
+      border: 1px solid #e5e7eb;
+      padding: 0.5rem;
+    }
   `;
 };
+

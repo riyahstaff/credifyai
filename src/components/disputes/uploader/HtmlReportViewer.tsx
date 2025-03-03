@@ -5,21 +5,23 @@ import { convertReportToHtml, getReportStyles } from '@/utils/creditReport/forma
 interface HtmlReportViewerProps {
   reportText: string;
   className?: string;
+  isPdf?: boolean;
 }
 
 const HtmlReportViewer: React.FC<HtmlReportViewerProps> = ({ 
   reportText,
-  className = ''
+  className = '',
+  isPdf = false
 }) => {
   const [htmlContent, setHtmlContent] = useState('');
   
   useEffect(() => {
     if (reportText) {
-      setHtmlContent(convertReportToHtml(reportText));
+      setHtmlContent(convertReportToHtml(reportText, isPdf));
     } else {
       setHtmlContent('<div class="empty-report">No report content available</div>');
     }
-  }, [reportText]);
+  }, [reportText, isPdf]);
   
   return (
     <div className={`html-report-viewer ${className}`}>
@@ -33,3 +35,4 @@ const HtmlReportViewer: React.FC<HtmlReportViewerProps> = ({
 };
 
 export default HtmlReportViewer;
+
