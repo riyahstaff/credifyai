@@ -86,7 +86,10 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
   const testModeCompatibleComponents = [
     'DisputeLettersPage',
     'DisputeGenerator',
-    'UploadReport'
+    'UploadReport',
+    'CreditReportUploader',
+    'DisputeResult',
+    'AiAssistantPrompt'
   ];
   
   // We need to update this method to properly handle children that don't accept testMode prop
@@ -97,15 +100,19 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
       let componentName = '';
       
       // Check if it's a function or class component and extract name safely
-      if (typeof childType === 'function') {
-        componentName = childType.name || '';
-      } else if (childType && typeof childType === 'object' && 'displayName' in childType) {
-        // For forwardRef, memo, etc. with safe property access check
-        componentName = childType.displayName || '';
+      if (childType !== null) {  // Add null check here
+        if (typeof childType === 'function') {
+          componentName = childType.name || '';
+        } else if (typeof childType === 'object') {
+          // For forwardRef, memo, etc.
+          if (childType && 'displayName' in childType) {
+            componentName = childType.displayName || '';
+          }
+        }
       }
       
       // Only pass testMode to components that are in our compatible list
-      if (testModeCompatibleComponents.includes(componentName)) {
+      if (componentName && testModeCompatibleComponents.includes(componentName)) {
         return React.cloneElement(child, { testMode });
       }
     }
