@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface PrivateRouteProps {
@@ -10,6 +10,14 @@ interface PrivateRouteProps {
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscription = false }) => {
   const { user, isLoading, profile } = useAuth();
+  const location = useLocation();
+  
+  // Store the current path for potential redirect after subscription
+  useEffect(() => {
+    if (requiresSubscription && user && profile && !profile.has_subscription) {
+      sessionStorage.setItem('returnToAfterSubscription', location.pathname);
+    }
+  }, [requiresSubscription, user, profile, location.pathname]);
   
   if (isLoading) {
     // Loading state

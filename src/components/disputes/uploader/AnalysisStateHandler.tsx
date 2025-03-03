@@ -6,6 +6,7 @@ import AnalyzingReport from './AnalyzingReport';
 import ReportAnalysisResults from './ReportAnalysisResults';
 import UploadConfirmation from './UploadConfirmation';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AnalysisStateHandlerProps {
   fileUploaded: boolean;
@@ -50,15 +51,41 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
 }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, profile } = useAuth();
 
   // Add an effect to check for a pending letter and navigate accordingly
   useEffect(() => {
+    // Only proceed if we have a logged-in user
+    if (!user) {
+      console.log("User not logged in, not checking for letters");
+      return;
+    }
+    
+    // Check if user has an active subscription for navigation
+    const hasSubscription = profile?.has_subscription === true;
+    
     // Check if we have generated letters
     const checkForGeneratedLetters = () => {
       console.log("Checking for generated letters, letterGenerated:", letterGenerated);
       
       if (letterGenerated) {
-        console.log("Letters generated flag is true, navigating to dispute-letters page");
+        console.log("Letters generated flag is true, checking subscription status");
+        
+        if (!hasSubscription) {
+          console.log("User does not have subscription, will navigate to subscription page");
+          
+          // Store intended destination to return after subscription
+          sessionStorage.setItem('returnToAfterSubscription', '/dispute-letters');
+          
+          // Add short delay before navigation
+          setTimeout(() => {
+            navigate('/subscription');
+          }, 300);
+          
+          return;
+        }
+        
+        console.log("User has subscription, navigating to dispute-letters page");
         
         // Check if we have letters in session storage
         const pendingLetter = sessionStorage.getItem('pendingDisputeLetter');
@@ -82,7 +109,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     const timer = setTimeout(checkForGeneratedLetters, 1000);
     
     return () => clearTimeout(timer);
-  }, [letterGenerated, navigate]);
+  }, [letterGenerated, navigate, user, profile]);
 
   // Add debug logging to track state changes
   console.log("AnalysisStateHandler state:", { fileUploaded, analyzing, analyzed, letterGenerated, issuesCount: issues.length });
@@ -99,25 +126,49 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
 
   // Show analyzed state
   if (analyzed) {
-    // If letterGenerated is true, immediately navigate
+    // If letterGenerated is true, immediately show a view while navigation happens
     if (letterGenerated) {
-      console.log("Dispute letter generated, navigating to letters page");
+      console.log("Dispute letter generated, preparing navigation");
       
-      // Show loading state while navigation happens
+      // Get user subscription status
+      const hasSubscription = profile?.has_subscription === true;
+      
+      // If user doesn't have subscription, show subscription message
+      if (!hasSubscription) {
+        return (
+          <div className="text-center p-8">
+            <div className="w-16 h-16 rounded-full border-4 border-t-credify-teal border-r-credify-teal/30 border-b-credify-teal/10 border-l-credify-teal/30 animate-spin mx-auto mb-6"></div>
+            <h3 className="text-xl font-semibold text-credify-navy dark:text-white mb-2">
+              Dispute Letters Generated Successfully
+            </h3>
+            <p className="text-credify-navy-light dark:text-white/70 mb-8">
+              A subscription is required to access your dispute letters. You'll be redirected to subscribe.
+            </p>
+            <button 
+              onClick={() => navigate('/subscription')}
+              className="btn-primary"
+            >
+              Continue to Subscription
+            </button>
+          </div>
+        );
+      }
+      
+      // Show loading state for users with subscriptions
       return (
         <div className="text-center p-8">
           <div className="w-16 h-16 rounded-full border-4 border-t-credify-teal border-r-credify-teal/30 border-b-credify-teal/10 border-l-credify-teal/30 animate-spin mx-auto mb-6"></div>
           <h3 className="text-xl font-semibold text-credify-navy dark:text-white mb-2">
-            Dispute Letter Generated
+            Dispute Letters Generated
           </h3>
           <p className="text-credify-navy-light dark:text-white/70 mb-8">
-            Your dispute letter has been generated and is ready to review.
+            Your dispute letters have been generated and are ready to review.
           </p>
           <button 
             onClick={() => navigate('/dispute-letters')}
             className="btn-primary"
           >
-            View Generated Letter
+            View Generated Letters
           </button>
         </div>
       );

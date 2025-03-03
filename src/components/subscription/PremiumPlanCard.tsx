@@ -1,77 +1,62 @@
 
 import React from 'react';
-import { Check, CreditCard, Shield } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 interface PremiumPlanCardProps {
   onSubscribe: (plan: string) => void;
+  isProcessing?: boolean;
 }
 
-const PremiumPlanCard = ({ onSubscribe }: PremiumPlanCardProps) => {
+const PremiumPlanCard: React.FC<PremiumPlanCardProps> = ({ onSubscribe, isProcessing = false }) => {
   return (
-    <div className="bg-white dark:bg-credify-navy/20 rounded-xl shadow-soft border border-gray-100 dark:border-gray-700/30 p-6 md:p-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 bg-credify-teal/10 rounded-full flex items-center justify-center">
-          <Shield className="text-credify-teal" size={24} />
-        </div>
-        <div>
-          <h3 className="text-xl font-bold text-credify-navy dark:text-white">
-            Premium Access
-          </h3>
-          <p className="text-credify-navy-light dark:text-white/70">
-            Everything you need to fix your credit
-          </p>
-        </div>
-      </div>
-      
+    <div className="bg-white dark:bg-credify-navy/30 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700/30 p-6 flex flex-col h-full">
       <div className="mb-6">
-        <div className="flex items-baseline mb-1">
-          <span className="text-3xl font-bold text-credify-navy dark:text-white">$34.99</span>
-          <span className="text-credify-navy-light dark:text-white/70 ml-1">/month</span>
-        </div>
-        <p className="text-credify-navy-light dark:text-white/70 text-sm">
-          Cancel anytime, no long-term contracts
-        </p>
-      </div>
-      
-      <div className="space-y-4 mb-8">
-        <div className="flex items-start gap-3">
-          <Check className="text-green-500 mt-0.5 flex-shrink-0" size={18} />
-          <span className="text-credify-navy dark:text-white">
-            <strong>AI-powered dispute letter generator</strong> with proven templates
-          </span>
-        </div>
-        <div className="flex items-start gap-3">
-          <Check className="text-green-500 mt-0.5 flex-shrink-0" size={18} />
-          <span className="text-credify-navy dark:text-white">
-            <strong>Credit report analysis</strong> to identify all disputable items
-          </span>
-        </div>
-        <div className="flex items-start gap-3">
-          <Check className="text-green-500 mt-0.5 flex-shrink-0" size={18} />
-          <span className="text-credify-navy dark:text-white">
-            <strong>CLEO AI assistant</strong> for personalized credit repair guidance
-          </span>
-        </div>
-        <div className="flex items-start gap-3">
-          <Check className="text-green-500 mt-0.5 flex-shrink-0" size={18} />
-          <span className="text-credify-navy dark:text-white">
-            <strong>Unlimited disputes</strong> across all three credit bureaus
-          </span>
-        </div>
-        <div className="flex items-start gap-3">
-          <Check className="text-green-500 mt-0.5 flex-shrink-0" size={18} />
-          <span className="text-credify-navy dark:text-white">
-            <strong>FCRA compliance</strong> with legal citations in every letter
-          </span>
+        <span className="inline-block bg-credify-teal/10 text-credify-teal px-3 py-1 rounded-full text-sm font-medium mb-2">
+          Most Popular
+        </span>
+        <h3 className="text-xl font-bold text-credify-navy dark:text-white">Premium Plan</h3>
+        <div className="mt-2">
+          <span className="text-3xl font-bold text-credify-navy dark:text-white">$29.99</span>
+          <span className="text-credify-navy-light dark:text-white/70">/month</span>
         </div>
       </div>
       
-      <button
+      <ul className="space-y-3 mb-8 flex-grow">
+        <li className="flex items-start">
+          <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
+          <span className="text-credify-navy-light dark:text-white/80">Unlimited dispute letters to all bureaus</span>
+        </li>
+        <li className="flex items-start">
+          <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
+          <span className="text-credify-navy-light dark:text-white/80">Advanced AI credit report analysis</span>
+        </li>
+        <li className="flex items-start">
+          <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
+          <span className="text-credify-navy-light dark:text-white/80">Premium templates for all dispute types</span>
+        </li>
+        <li className="flex items-start">
+          <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
+          <span className="text-credify-navy-light dark:text-white/80">AI assistant for credit improvement</span>
+        </li>
+        <li className="flex items-start">
+          <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
+          <span className="text-credify-navy-light dark:text-white/80">Email support within 24 hours</span>
+        </li>
+      </ul>
+      
+      <button 
         onClick={() => onSubscribe('premium')}
-        className="w-full bg-credify-teal hover:bg-credify-teal-dark text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+        disabled={isProcessing}
+        className={`btn-primary w-full ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''}`}
       >
-        <CreditCard size={18} />
-        <span>Subscribe Now</span>
+        {isProcessing ? (
+          <>
+            <span className="inline-block h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
+            Processing...
+          </>
+        ) : (
+          'Get Premium'
+        )}
       </button>
     </div>
   );

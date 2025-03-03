@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
@@ -15,8 +15,17 @@ import { supabase } from '@/lib/supabase/client';
 const Subscription = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, profile } = useAuth();
+  const { user, profile, updateSubscriptionStatus } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [redirectPath, setRedirectPath] = useState<string | null>(null);
+  
+  // Get the redirect path from session storage on mount
+  useEffect(() => {
+    const returnPath = sessionStorage.getItem('returnToAfterSubscription');
+    if (returnPath) {
+      setRedirectPath(returnPath);
+    }
+  }, []);
 
   const handleSubscribe = async (plan: string) => {
     try {
@@ -46,14 +55,27 @@ const Subscription = () => {
         .update({ has_subscription: true })
         .eq('id', user?.id);
       
+      // Also update the context
+      if (updateSubscriptionStatus) {
+        await updateSubscriptionStatus(true);
+      }
+      
       toast({
         title: "Subscription activated",
         description: `Your ${plan === 'advanced' ? 'Advanced' : 'Premium'} subscription has been activated successfully.`,
       });
       
-      // Redirect to dispute letters page
+      // Redirect to the stored path or dispute letters page
       setTimeout(() => {
-        navigate('/dispute-letters');
+        // Clear the redirect path from session storage
+        sessionStorage.removeItem('returnToAfterSubscription');
+        
+        // Navigate to the redirect path or default to dispute letters
+        if (redirectPath) {
+          navigate(redirectPath);
+        } else {
+          navigate('/dispute-letters');
+        }
       }, 1500);
     } catch (error) {
       console.error("Subscription error:", error);
@@ -76,10 +98,18 @@ const Subscription = () => {
           <SubscriptionHeader />
           
           <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <PremiumPlanCard onSubscribe={handleSubscribe} />
-            <AdvancedPlanCard onSubscribe={handleSubscribe} />
+            <PremiumPlanCard onSubscribe={handleSubscribe} isProcessing={isProcessing} />
+            <AdvancedPlanCard onSubscribe={handleSubscribe} isProcessing={isProcessing} />
             <WhyPremiumCard />
           </div>
+          
+          {redirectPath && (
+            <div className="text-center mb-12 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-amber-800">
+                Subscribe to continue to your generated dispute letters.
+              </p>
+            </div>
+          )}
           
           <SubscriptionFooter />
         </div>
