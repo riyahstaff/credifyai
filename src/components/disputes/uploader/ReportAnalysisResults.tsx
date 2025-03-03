@@ -5,6 +5,7 @@ import { Check, FileCheck, Upload } from 'lucide-react';
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
 import CreditReportIssue from './CreditReportIssue';
 import { APP_ROUTES } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReportAnalysisResultsProps {
   issues: Array<{
@@ -27,6 +28,31 @@ const ReportAnalysisResults: React.FC<ReportAnalysisResultsProps> = ({
   onResetUpload,
   onGenerateDispute
 }) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const handleGenerateAllLetters = () => {
+    if (reportData) {
+      // Store the report data in session storage
+      sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
+      
+      // Navigate to dispute letters page
+      toast({
+        title: "Generating letters",
+        description: "Creating dispute letters for all identified issues",
+      });
+      
+      // Automatically generate disputes for all issues
+      // This triggers the dispute generation pipeline
+      onGenerateDispute();
+      
+      // Navigate to the dispute letters page
+      setTimeout(() => {
+        navigate(APP_ROUTES.CREATE_DISPUTE);
+      }, 1000);
+    }
+  };
+  
   return (
     <div>
       <div className="flex items-center justify-center gap-2 mb-8">
@@ -90,18 +116,13 @@ const ReportAnalysisResults: React.FC<ReportAnalysisResultsProps> = ({
           <span>Upload New Report</span>
         </button>
         
-        <Link
-          to={APP_ROUTES.CREATE_DISPUTE}
+        <button
+          onClick={handleGenerateAllLetters}
           className="btn-primary flex items-center gap-1"
-          onClick={() => {
-            if (reportData) {
-              sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
-            }
-          }}
         >
           <FileCheck size={18} />
           <span>Generate All Letters</span>
-        </Link>
+        </button>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import {
   generateDisputeLetterForDiscrepancy, 
   getSampleDisputeLanguage 
 } from '@/utils/creditReport/disputeLetters';
+import { useToast } from '@/hooks/use-toast';
 
 export const generateAutomaticDisputeLetter = async (
   targetDispute: RecommendedDispute,
@@ -27,6 +28,7 @@ export const generateAutomaticDisputeLetter = async (
     // If there's no sample dispute language in the dispute object, try to fetch one
     if (!targetDispute.sampleDisputeLanguage) {
       try {
+        console.log("Fetching sample dispute language for", targetDispute.reason);
         const sampleLanguage = await getSampleDisputeLanguage(
           targetDispute.reason, 
           targetDispute.bureau
@@ -35,6 +37,8 @@ export const generateAutomaticDisputeLetter = async (
         if (sampleLanguage) {
           console.log("Found sample dispute language:", sampleLanguage.substring(0, 50) + "...");
           targetDispute.sampleDisputeLanguage = sampleLanguage;
+        } else {
+          console.log("No sample language found, using original description");
         }
       } catch (error) {
         console.error("Error fetching sample dispute language:", error);
@@ -42,7 +46,7 @@ export const generateAutomaticDisputeLetter = async (
       }
     }
     
-    // Perform deep analysis of the dispute reason to craft a more effective letter
+    // Force regenerate the description with deep analysis even if we already have one
     const enhancedDescription = await deepAnalyzeDisputeReason(targetDispute);
     if (enhancedDescription) {
       console.log("Enhanced dispute description:", enhancedDescription.substring(0, 100) + "...");
@@ -50,14 +54,19 @@ export const generateAutomaticDisputeLetter = async (
     }
     
     // Actually generate the letter
+    console.log("Calling letterGenerator with dispute and user info");
     const letterContent = await generateDisputeLetterForDiscrepancy(targetDispute, userInfo);
+    
+    if (!letterContent || letterContent.trim().length < 50) {
+      throw new Error("Generated letter is empty or too short");
+    }
     
     // Add test mode header if applicable
     const finalLetterContent = options?.testMode ? 
       `[TEST MODE - NOT FOR ACTUAL SUBMISSION]\n\n${letterContent}` : 
       letterContent;
     
-    console.log("Letter generated successfully");
+    console.log("Letter generated successfully:", finalLetterContent.substring(0, 50) + "...");
     
     const disputeData = {
       bureau: targetDispute.bureau,
