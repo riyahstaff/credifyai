@@ -136,5 +136,7 @@ export const handleAnalysisComplete = async ({
     });
     setAnalysisError(error instanceof Error ? error.message : "Unknown error processing report");
     setAnalyzing(false);
+    // Even on error, we want to mark the analysis as completed
+    setAnalyzed(true);
   }
 };

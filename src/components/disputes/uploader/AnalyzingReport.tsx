@@ -32,74 +32,84 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
   const isMounted = useRef(true);
   // Use ref to store timeout IDs
   const timeoutIds = useRef<NodeJS.Timeout[]>([]);
+  // Track if callback was already triggered
+  const callbackTriggered = useRef(false);
 
   useEffect(() => {
     // Set mounted flag to true when component mounts
     isMounted.current = true;
+    callbackTriggered.current = false;
     
     // Simulate progress for each step
     const updateSteps = () => {
-      try {
-        // Update first step immediately
-        setSteps(prev => prev.map((step, i) => 
-          i === 0 ? { ...step, progress: 100, isComplete: true } : step
-        ));
-        
-        // Setup timeouts for each subsequent step
-        const timeout1 = setTimeout(() => {
-          if (isMounted.current) {
-            // Update second step
-            setSteps(prev => prev.map((step, i) => 
-              i === 1 ? { ...step, progress: 100, isComplete: true } : step
-            ));
-          }
-        }, 1000);
-        timeoutIds.current.push(timeout1);
-        
-        const timeout2 = setTimeout(() => {
-          if (isMounted.current) {
-            // Update third step
-            setSteps(prev => prev.map((step, i) => 
-              i === 2 ? { ...step, progress: 100, isComplete: true } : step
-            ));
-          }
-        }, 2500);
-        timeoutIds.current.push(timeout2);
-        
-        const timeout3 = setTimeout(() => {
-          if (isMounted.current) {
-            // Update fourth step
-            setSteps(prev => prev.map((step, i) => 
-              i === 3 ? { ...step, progress: 100, isComplete: true } : step
-            ));
-          }
-        }, 3500);
-        timeoutIds.current.push(timeout3);
-        
-        // Mark animation as complete and call the callback after all steps
-        const completionTimeout = setTimeout(() => {
-          if (isMounted.current) {
-            console.log("Analysis animation complete, triggering callback");
-            setAnimationComplete(true);
-            
-            // Notify parent that analysis animation is complete
-            if (onAnalysisComplete) {
-              onAnalysisComplete();
-            }
-          }
-        }, 4000);
-        timeoutIds.current.push(completionTimeout);
-      } catch (error) {
-        console.error("Error in analysis progress animation:", error);
-        // If there's an error, still try to complete the analysis
-        if (isMounted.current && onAnalysisComplete) {
-          onAnalysisComplete();
+      // Update first step immediately
+      setSteps(prev => prev.map((step, i) => 
+        i === 0 ? { ...step, progress: 100, isComplete: true } : step
+      ));
+      
+      // Setup timeouts for each subsequent step - shorter timeouts
+      const timeout1 = setTimeout(() => {
+        if (isMounted.current) {
+          // Update second step
+          setSteps(prev => prev.map((step, i) => 
+            i === 1 ? { ...step, progress: 100, isComplete: true } : step
+          ));
         }
-      }
+      }, 800);
+      timeoutIds.current.push(timeout1);
+      
+      const timeout2 = setTimeout(() => {
+        if (isMounted.current) {
+          // Update third step
+          setSteps(prev => prev.map((step, i) => 
+            i === 2 ? { ...step, progress: 100, isComplete: true } : step
+          ));
+        }
+      }, 1600);
+      timeoutIds.current.push(timeout2);
+      
+      const timeout3 = setTimeout(() => {
+        if (isMounted.current) {
+          // Update fourth step
+          setSteps(prev => prev.map((step, i) => 
+            i === 3 ? { ...step, progress: 100, isComplete: true } : step
+          ));
+        }
+      }, 2400);
+      timeoutIds.current.push(timeout3);
+      
+      // Mark animation as complete and call the callback after all steps
+      const completionTimeout = setTimeout(() => {
+        if (isMounted.current && !callbackTriggered.current) {
+          console.log("Analysis animation complete, triggering callback");
+          setAnimationComplete(true);
+          callbackTriggered.current = true;
+          
+          // Notify parent that analysis animation is complete
+          if (onAnalysisComplete) {
+            onAnalysisComplete();
+          }
+        }
+      }, 3000);
+      timeoutIds.current.push(completionTimeout);
     };
     
     // Start the animation
     updateSteps();
+    
+    // Safety timeout to ensure callback is triggered even if animation gets stuck
+    const safetyTimeout = setTimeout(() => {
+      if (isMounted.current && !callbackTriggered.current) {
+        console.log("Safety timeout triggered - forcing analysis completion");
+        setAnimationComplete(true);
+        callbackTriggered.current = true;
+        
+        if (onAnalysisComplete) {
+          onAnalysisComplete();
+        }
+      }
+    }, 5000);
+    timeoutIds.current.push(safetyTimeout);
     
     // Cleanup function to clear all timeouts and update mounted state
     return () => {
@@ -107,6 +117,13 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
       // Clear all timeouts if component unmounts
       timeoutIds.current.forEach(id => clearTimeout(id));
       timeoutIds.current = [];
+      
+      // Make sure we trigger the callback if component unmounts before animation completes
+      if (!callbackTriggered.current && onAnalysisComplete) {
+        console.log("Component unmounting - triggering callback");
+        callbackTriggered.current = true;
+        onAnalysisComplete();
+      }
     };
   }, [onAnalysisComplete]);
   

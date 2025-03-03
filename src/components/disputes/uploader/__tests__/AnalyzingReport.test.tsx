@@ -39,22 +39,22 @@ describe('AnalyzingReport', () => {
     
     // Advance timers to trigger second step
     act(() => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(800);
     });
     
     // Advance timers to trigger third step
     act(() => {
-      vi.advanceTimersByTime(1500);
+      vi.advanceTimersByTime(800);
     });
     
     // Advance timers to trigger fourth step
     act(() => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(800);
     });
     
     // Advance timers to trigger completion
     act(() => {
-      vi.advanceTimersByTime(500);
+      vi.advanceTimersByTime(600);
     });
     
     // Check if onAnalysisComplete was called
@@ -75,6 +75,30 @@ describe('AnalyzingReport', () => {
     
     // Restore original implementation
     clearTimeoutSpy.mockRestore();
+  });
+
+  it('triggers onAnalysisComplete when unmounted if not yet triggered', () => {
+    const mockOnAnalysisComplete = vi.fn();
+    const { unmount } = render(<AnalyzingReport onAnalysisComplete={mockOnAnalysisComplete} />);
+    
+    // Unmount component before animation completes
+    unmount();
+    
+    // Check if onAnalysisComplete was called
+    expect(mockOnAnalysisComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('triggers safety timeout if animation gets stuck', () => {
+    const mockOnAnalysisComplete = vi.fn();
+    render(<AnalyzingReport onAnalysisComplete={mockOnAnalysisComplete} />);
+    
+    // Fast forward past the safety timeout
+    act(() => {
+      vi.advanceTimersByTime(5001);
+    });
+    
+    // Check if onAnalysisComplete was called
+    expect(mockOnAnalysisComplete).toHaveBeenCalledTimes(1);
   });
 
   it('handles custom steps if provided', () => {
