@@ -36,6 +36,7 @@ const UploadReport = () => {
   }>>([]);
   
   const [letterGenerated, setLetterGenerated] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const handleFile = (file: File) => {
     // Update file info
@@ -45,28 +46,26 @@ const UploadReport = () => {
     setUploadedFile(file);
   };
 
-  const startAnalysis = async () => {
-    if (!fileUploaded || !uploadedFile) {
-      toast({
-        title: "No file found",
-        description: "Please upload a credit report file first.",
-        variant: "destructive",
-      });
+  const handleAnalysisComplete = async () => {
+    if (!uploadedFile) {
+      setAnalyzing(false);
+      setAnalysisError("No file was available for analysis");
       return;
     }
     
-    setAnalyzing(true);
-    
     try {      
       // Process the credit report
+      console.log("Processing credit report:", uploadedFile.name);
       const data = await processCreditReport(uploadedFile);
       
       // Extract real account names from the report
+      console.log("Enhancing report data");
       const enhancedData = enhanceReportData(data);
       
       setReportData(enhancedData);
       
       // Identify potential issues
+      console.log("Identifying issues in report data");
       const detectedIssues = identifyIssues(enhancedData);
       setIssues(detectedIssues);
       
@@ -97,6 +96,7 @@ const UploadReport = () => {
         
         // Generate letter automatically
         try {
+          console.log("Generating dispute letter for:", accountName);
           const letterContent = await generateEnhancedDisputeLetter(
             issueToDispute.title,
             {
@@ -147,17 +147,36 @@ const UploadReport = () => {
         description: error instanceof Error ? error.message : "Failed to process your credit report.",
         variant: "destructive",
       });
+      setAnalysisError(error instanceof Error ? error.message : "Unknown error processing report");
       setAnalyzing(false);
     }
+  };
+
+  const startAnalysis = async () => {
+    if (!fileUploaded || !uploadedFile) {
+      toast({
+        title: "No file found",
+        description: "Please upload a credit report file first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setAnalyzing(true);
+    setAnalysisError(null);
+    // The actual analysis will happen in handleAnalysisComplete
+    // which is called after the progress animation completes
   };
 
   const resetUpload = () => {
     setFileUploaded(false);
     setAnalyzed(false);
+    setAnalyzing(false);
     setReportData(null);
     setIssues([]);
     setUploadedFile(null);
     setLetterGenerated(false);
+    setAnalysisError(null);
   };
 
   const handleGenerateDispute = (account?: CreditReportAccount) => {
@@ -178,14 +197,6 @@ const UploadReport = () => {
   const viewGeneratedLetters = () => {
     navigate('/dispute-letters');
   };
-
-  // Define analysis progress steps
-  const analysisSteps = [
-    { name: 'Scanning personal information', progress: 100, isComplete: true },
-    { name: 'Analyzing account information', progress: 100, isComplete: true },
-    { name: 'Checking for FCRA violations', progress: 75, isComplete: false },
-    { name: 'Preparing recommendations', progress: 10, isComplete: false },
-  ];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -209,7 +220,7 @@ const UploadReport = () => {
                 <FileUploader onFileSelected={handleFile} />
               ) : analyzing ? (
                 // Analyzing State
-                <AnalyzingReport steps={analysisSteps} />
+                <AnalyzingReport onAnalysisComplete={handleAnalysisComplete} />
               ) : analyzed ? (
                 // Analysis Complete
                 <div>
@@ -245,6 +256,19 @@ const UploadReport = () => {
                   onRemoveFile={resetUpload}
                   onStartAnalysis={startAnalysis}
                 />
+              )}
+              
+              {analysisError && (
+                <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/30 text-red-700 dark:text-red-400">
+                  <p className="font-medium mb-1">Error analyzing report:</p>
+                  <p>{analysisError}</p>
+                  <button 
+                    onClick={resetUpload}
+                    className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                  >
+                    Try Again
+                  </button>
+                </div>
               )}
             </div>
             
