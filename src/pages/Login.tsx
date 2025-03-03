@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +12,10 @@ const Login = () => {
   const { user, signIn } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const searchParams = new URLSearchParams(location.search);
+  const testMode = searchParams.get('testMode') === 'true';
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +24,8 @@ const Login = () => {
   const [connectionError, setConnectionError] = useState(false);
 
   useEffect(() => {
-    // Updated check to use the hardcoded fallback values from supabase client
+    console.log("Login page - testMode:", testMode, "Current path:", location.pathname, "Search:", location.search);
+    
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://frfeyttlztydgwahjjsw.supabase.co';
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZyZmV5dHRsenR5ZGd3YWhqanN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA3MTM5NTIsImV4cCI6MjA1NjI4OTk1Mn0.oQ60NfU_HD9wyqDoGrx763wfIvFWg5CpMixKYvOW1QY';
     
@@ -30,13 +34,15 @@ const Login = () => {
       supabaseAnonKey !== 'placeholder-key';
     
     setConnectionError(!hasSupabaseCredentials);
-  }, []);
+  }, [location.pathname, location.search, testMode]);
   
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      const redirectTarget = testMode ? '/dashboard?testMode=true' : '/dashboard';
+      console.log("User logged in, redirecting to:", redirectTarget);
+      navigate(redirectTarget);
     }
-  }, [user, navigate]);
+  }, [user, navigate, testMode]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +64,10 @@ const Login = () => {
           description: "Welcome back!",
           duration: 3000,
         });
+        
+        if (testMode) {
+          console.log("Login successful with testMode, redirecting to dashboard with testMode");
+        }
       }
     } catch (error) {
       toast({
@@ -70,6 +80,10 @@ const Login = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+  
+  const getTestModeUrl = (path: string) => {
+    return testMode ? `${path}?testMode=true` : path;
   };
   
   return (
@@ -93,6 +107,23 @@ const Login = () => {
                   <p className="mt-3 font-medium">
                     For a quick demo, you can explore the app interface without signing in. Contact support if this issue persists.
                   </p>
+                  
+                  {testMode && (
+                    <div className="mt-4 py-2 px-3 bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700/50 rounded-md">
+                      <p className="font-medium text-orange-800 dark:text-orange-400">Test Mode Active</p>
+                      <p className="text-sm text-orange-700 dark:text-orange-500">
+                        You can access premium features by using <code>?testMode=true</code> in the URL.
+                      </p>
+                      <div className="mt-2">
+                        <Link 
+                          to="/dashboard?testMode=true" 
+                          className="text-white bg-credify-teal hover:bg-credify-teal-dark px-3 py-1.5 rounded-md text-sm inline-block"
+                        >
+                          Go to Dashboard (Test Mode)
+                        </Link>
+                      </div>
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
             </div>
@@ -102,6 +133,17 @@ const Login = () => {
             <h1 className="text-2xl font-bold text-credify-navy dark:text-white mb-6 text-center">
               Log In to Your Account
             </h1>
+            
+            {testMode && (
+              <div className="mb-6 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-md">
+                <p className="text-amber-800 dark:text-amber-300 text-sm font-medium">
+                  ⚠️ Test Mode Active
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                  You'll be redirected to dashboard with premium features enabled after login.
+                </p>
+              </div>
+            )}
             
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
@@ -159,10 +201,21 @@ const Login = () => {
                 {isSubmitting ? "Logging in..." : "Log In"}
               </button>
               
+              {testMode && (
+                <div className="text-center mt-4">
+                  <Link
+                    to={getTestModeUrl('/dashboard')}
+                    className="text-credify-teal hover:text-credify-teal-dark font-medium"
+                  >
+                    Skip login and go to Dashboard (Test Mode)
+                  </Link>
+                </div>
+              )}
+              
               <div className="text-center">
                 <p className="text-sm text-credify-navy-light dark:text-white/70">
                   Don't have an account?{' '}
-                  <Link to="/signup" className="text-credify-teal hover:text-credify-teal-light transition-colors font-medium">
+                  <Link to={getTestModeUrl('/signup')} className="text-credify-teal hover:text-credify-teal-light transition-colors font-medium">
                     Sign up
                   </Link>
                 </p>

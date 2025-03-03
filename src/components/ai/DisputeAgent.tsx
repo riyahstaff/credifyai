@@ -19,6 +19,9 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
   const searchParams = new URLSearchParams(location.search);
   const testMode = searchParams.get('testMode') === 'true';
   
+  // Always log the testMode state to help with debugging
+  console.log('DisputeAgent - testMode:', testMode, 'Current path:', location.pathname, 'Search:', location.search);
+  
   const handleActivateAI = async () => {
     setIsThinking(true);
     
@@ -102,12 +105,10 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
         
         // Navigate to the dispute letters page to view the letters
         if (window.location.pathname !== '/dispute-letters') {
-          // If test mode is active, include it in the URL when navigating
-          if (testMode) {
-            navigate('/dispute-letters?testMode=true');
-          } else {
-            navigate('/dispute-letters');
-          }
+          // Ensure we preserve testMode when navigating
+          const targetPath = testMode ? '/dispute-letters?testMode=true' : '/dispute-letters';
+          console.log('Navigating to:', targetPath);
+          navigate(targetPath);
         }
       } catch (error) {
         console.error("Error processing report data:", error);
@@ -127,14 +128,19 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
       });
       
       // Navigate to upload report page with test mode parameter if active
-      if (testMode) {
-        navigate('/upload-report?testMode=true');
-      } else {
-        navigate('/upload-report');
-      }
+      const targetPath = testMode ? '/upload-report?testMode=true' : '/upload-report';
+      console.log('Navigating to:', targetPath);
+      navigate(targetPath);
     }
     
     setIsThinking(false);
+  };
+
+  // Function to navigate while preserving testMode
+  const handleNavigation = (path: string) => {
+    const targetPath = testMode ? `${path}?testMode=true` : path;
+    console.log('Navigation from DisputeAgent:', targetPath);
+    navigate(targetPath);
   };
 
   return (
@@ -161,14 +167,14 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
           <div className="mt-2 flex gap-2">
             <button 
               className="text-xs bg-credify-teal/10 hover:bg-credify-teal/20 text-credify-teal px-2 py-1 rounded-full flex items-center gap-1"
-              onClick={() => navigate(testMode ? '/dashboard?testMode=true' : '/dashboard')}
+              onClick={() => handleNavigation('/dashboard')}
             >
               <FileText size={12} />
               <span>Dashboard</span>
             </button>
             <button 
               className="text-xs bg-credify-teal/10 hover:bg-credify-teal/20 text-credify-teal px-2 py-1 rounded-full flex items-center gap-1"
-              onClick={() => navigate(testMode ? '/upload-report?testMode=true' : '/upload-report')}
+              onClick={() => handleNavigation('/upload-report')}
             >
               <FileText size={12} />
               <span>Upload Report</span>
