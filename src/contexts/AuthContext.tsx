@@ -2,8 +2,18 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, Profile, UserSession } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  signUpUser, 
+  signInUser, 
+  signOutUser,
+  getSessionWithTimeout
+} from '@/utils/auth/authUtils';
+import { 
+  fetchUserProfile,
+  updateUserSubscription
+} from '@/utils/auth/profileUtils';
 
-const AuthContext = createContext<{
+type AuthContextType = {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
@@ -18,7 +28,9 @@ const AuthContext = createContext<{
   }>;
   signOut: () => Promise<void>;
   updateSubscriptionStatus: (hasSubscription: boolean) => Promise<void>;
-}>({
+};
+
+const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   profile: null,
@@ -36,50 +48,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch the user's profile when they sign in
-  const fetchUserProfile = async (userId: string) => {
-    // Check if we've already fetched this profile
-    if (profile && profile.id === userId) {
-      return profile;
-    }
-    
-    try {
-      console.log("Fetching user profile for:", userId);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return null;
-      }
-
-      console.log("Profile data fetched:", data);
-      return data as Profile;
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      return null;
-    }
-  };
-
-  // Update user's subscription status
   const updateSubscriptionStatus = async (hasSubscription: boolean) => {
     if (user) {
       try {
-        // Update the subscription status in the database
-        const { error } = await supabase
-          .from('profiles')
-          .update({ has_subscription: hasSubscription })
-          .eq('id', user.id);
+        const { error, success } = await updateUserSubscription(user.id, hasSubscription);
           
         if (error) {
           throw error;
         }
         
-        // Update the profile state
         if (profile) {
           setProfile({
             ...profile,
@@ -103,29 +80,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Check active sessions and sets the user - optimized for mobile
     const initAuth = async () => {
       console.log("Initializing auth");
       setIsLoading(true);
       
       try {
-        // Use shorter timeout for getSession operation
-        const sessionPromise = supabase.auth.getSession();
-        
-        // Create a timeout promise
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Auth session fetch timeout')), 2500);
-        });
-        
-        // Race the session fetch against the timeout
-        const { data } = await Promise.race([
-          sessionPromise,
-          timeoutPromise.then(() => {
-            console.warn("Session fetch timed out, continuing without session");
-            return { data: { session: null } };
-          })
-        ]) as { data: { session: Session | null } };
-        
+        const { data, error } = await getSessionWithTimeout();
         const session = data?.session;
         
         setSession(session);
@@ -137,7 +97,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (error) {
         console.error('Error getting session:', error);
-        // For mobile, don't let errors keep us in loading state
         setSession(null);
         setUser(null);
       } finally {
@@ -176,100 +135,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Sign up a new user and create their profile
-  const signUp = async (email: string, password: string, fullName: string) => {
-    try {
-      console.log('Signing up with:', { email, fullName });
-      
-      // Create the user in Supabase auth
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-        },
+  const handleSignUp = async (email: string, password: string, fullName: string) => {
+    const result = await signUpUser(email, password, fullName);
+    
+    if (result.success) {
+      toast({
+        title: "Account created!",
+        description: "Please check your email to verify your account.",
+        duration: 5000,
       });
-
-      if (error) {
-        console.error('Signup error:', error);
-        return { error, success: false };
-      }
-
-      console.log('Signup successful, user data:', data);
-
-      if (data?.user) {
-        // Create the user's profile in the profiles table
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              email: email.toLowerCase(),
-              full_name: fullName,
-            },
-          ]);
-
-        if (profileError) {
-          console.error('Error creating user profile:', profileError);
-          return { error: profileError, success: false };
-        }
-
-        console.log('Profile created successfully');
-
-        toast({
-          title: "Account created!",
-          description: "Please check your email to verify your account.",
-          duration: 5000,
-        });
-
-        return { error: null, success: true };
-      }
-
-      return { error: new Error('User creation failed'), success: false };
-    } catch (error) {
-      console.error('Sign up error:', error);
-      return { error: error as Error, success: false };
     }
+    
+    return result;
   };
 
-  // Sign in an existing user
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        return { error, success: false };
-      }
-
+  const handleSignIn = async (email: string, password: string) => {
+    const result = await signInUser(email, password);
+    
+    if (result.success) {
       toast({
         title: "Welcome back!",
         description: "You've successfully logged in.",
         duration: 3000,
       });
-
-      return { error: null, success: true };
-    } catch (error) {
-      console.error('Sign in error:', error);
-      return { error: error as Error, success: false };
     }
+    
+    return result;
   };
 
-  // Sign out
-  const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
+  const handleSignOut = async () => {
+    const { error } = await signOutUser();
+    
+    if (!error) {
       toast({
         title: "Signed out",
         description: "You have been successfully logged out.",
         duration: 3000,
       });
-    } catch (error) {
-      console.error('Sign out error:', error);
+    } else {
       toast({
         title: "Error",
         description: "Failed to sign out. Please try again.",
@@ -286,9 +189,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         profile,
         isLoading,
-        signUp,
-        signIn,
-        signOut,
+        signUp: handleSignUp,
+        signIn: handleSignIn,
+        signOut: handleSignOut,
         updateSubscriptionStatus,
       }}
     >
@@ -297,7 +200,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
