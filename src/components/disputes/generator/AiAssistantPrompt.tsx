@@ -1,35 +1,32 @@
 
 import React from 'react';
-import AgentAvatar from '@/components/ai/AgentAvatar';
-import { Sparkles } from 'lucide-react';
+import { Bot } from 'lucide-react';
 
-const AiAssistantPrompt: React.FC = () => {
+interface AiAssistantPromptProps {
+  testMode?: boolean;
+}
+
+const AiAssistantPrompt: React.FC<AiAssistantPromptProps> = ({ testMode }) => {
   return (
-    <div className="bg-gradient-to-br from-credify-teal/10 to-blue-500/10 dark:from-credify-teal/20 dark:to-blue-500/20 rounded-xl p-5 border border-credify-teal/20 dark:border-credify-teal/30">
+    <div className="bg-white dark:bg-credify-navy/20 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/30 p-5">
       <div className="flex items-start gap-4">
-        <div className="mt-1">
-          <AgentAvatar size="md" />
+        <div className="p-2 bg-credify-teal/10 rounded-full">
+          <Bot size={20} className="text-credify-teal" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-credify-navy dark:text-white mb-2">
-            Need Help? Ask CLEO
+          <h3 className="text-lg font-semibold text-credify-navy dark:text-white mb-1">
+            Need Help? Use Our AI Assistant
+            {testMode && <span className="text-amber-500 text-sm ml-2">(Test Mode)</span>}
           </h3>
           <p className="text-credify-navy-light dark:text-white/70 mb-4">
-            Our AI assistant can help you create a custom dispute letter by asking about your specific situation.
+            Our AI can write a personalized dispute letter for you. Simply click the chat icon in the bottom right corner of your screen to get started.
+            {testMode && " In test mode, all letters will be generated as samples and not sent to credit bureaus."}
           </p>
-          <button
-            onClick={() => {
-              // This would trigger the CLEO agent
-              const cleoButton = document.querySelector('[aria-label="Open AI assistant"]') as HTMLElement;
-              if (cleoButton) {
-                cleoButton.click();
-              }
-            }}
-            className="inline-flex items-center gap-2 bg-white dark:bg-credify-navy/60 hover:bg-gray-50 dark:hover:bg-credify-navy/80 text-credify-navy dark:text-white px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700/50 transition-colors"
-          >
-            <Sparkles size={16} className="text-credify-teal" />
-            <span>Chat with CLEO</span>
-          </button>
+          <div className="text-sm text-credify-navy-light dark:text-white/70 bg-gray-50 dark:bg-credify-navy/40 p-3 rounded-lg border border-gray-100 dark:border-gray-700/30">
+            <p className="italic">
+              "Help me write a dispute letter to TransUnion about my Capital One account showing incorrect late payments"
+            </p>
+          </div>
         </div>
       </div>
     </div>

@@ -12,9 +12,10 @@ interface LetterTemplate {
 
 interface LetterTemplateManagerProps {
   onSelectTemplate: (template: LetterTemplate) => void;
+  testMode?: boolean;
 }
 
-const LetterTemplateManager: React.FC<LetterTemplateManagerProps> = ({ onSelectTemplate }) => {
+const LetterTemplateManager: React.FC<LetterTemplateManagerProps> = ({ onSelectTemplate, testMode }) => {
   const { toast } = useToast();
   const [templates, setTemplates] = useState<LetterTemplate[]>([
     {
@@ -185,8 +186,8 @@ Sincerely,
     onSelectTemplate(template);
     
     toast({
-      title: "Template selected",
-      description: `"${template.name}" will be used for your dispute letter.`,
+      title: testMode ? "Test Template Selected" : "Template Selected",
+      description: `"${template.name}" will be used for your dispute letter${testMode ? ' in test mode' : ''}.`,
     });
   };
   
@@ -214,6 +215,7 @@ Sincerely,
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-credify-navy dark:text-white">
           Letter Templates
+          {testMode && <span className="text-amber-500 text-sm ml-2">(Test Mode)</span>}
         </h3>
         
         <button

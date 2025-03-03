@@ -12,7 +12,11 @@ import { useDisputeLettersData } from './hooks/useDisputeLettersData';
 import { useDisputeLetterActions } from './DisputeLetterActions';
 import { useDisputeLetterGenerator } from './DisputeLetterGenerator';
 
-const DisputeLettersPage = () => {
+interface DisputeLettersPageProps {
+  testMode?: boolean;
+}
+
+const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode }) => {
   const navigate = useNavigate();
   const [showPreview, setShowPreview] = useState(false);
   const [currentLetter, setCurrentLetter] = useState(null);
@@ -37,6 +41,11 @@ const DisputeLettersPage = () => {
       setSelectedView("letters");
     },
     saveLetter: async (disputeData) => {
+      // Skip saving in test mode
+      if (testMode) {
+        console.log("[DisputeLettersPage] Test mode active - not saving letter to database");
+        return true;
+      }
       // This would be implemented using the saveLetter function
       // from the main component, but for now we'll return true
       return true;
@@ -68,6 +77,12 @@ const DisputeLettersPage = () => {
           <DisputeLettersHeader 
             hideCreateButton={true} // Hide manual letter creation
           />
+          
+          {testMode && (
+            <div className="mb-4 p-3 bg-amber-100 text-amber-800 rounded-lg">
+              <p><strong>Test Mode Active:</strong> Letters generated in test mode are not saved to your account and cannot be sent.</p>
+            </div>
+          )}
           
           {/* Letter Tabs */}
           <DisputeLettersTabs

@@ -13,11 +13,13 @@ import UploadAgainButton from './uploader/UploadAgainButton';
 interface CreditReportUploaderProps {
   onReportProcessed: (reportData: CreditReportData) => void;
   onAccountSelected: (account: CreditReportAccount) => void;
+  testMode?: boolean;
 }
 
 const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({ 
   onReportProcessed,
-  onAccountSelected
+  onAccountSelected,
+  testMode
 }) => {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
@@ -44,8 +46,8 @@ const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({
       onReportProcessed(data);
       
       toast({
-        title: "Credit report processed",
-        description: `Successfully analyzed credit report with ${data.accounts.length} accounts.`,
+        title: testMode ? "Test Credit Report Processed" : "Credit Report Processed",
+        description: `Successfully analyzed credit report with ${data.accounts.length} accounts${testMode ? ' in test mode' : ''}.`,
       });
     } catch (error) {
       toast({
@@ -62,8 +64,8 @@ const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({
     onAccountSelected(account);
     
     toast({
-      title: "Account selected",
-      description: `Selected ${account.accountName} for dispute.`,
+      title: testMode ? "Test Account Selected" : "Account Selected",
+      description: `Selected ${account.accountName} for dispute${testMode ? ' in test mode' : ''}.`,
     });
   };
   
@@ -92,6 +94,7 @@ const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({
     <div className="bg-white dark:bg-credify-navy/20 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/30 p-5">
       <h3 className="text-lg font-semibold text-credify-navy dark:text-white mb-4">
         Upload Credit Report
+        {testMode && <span className="text-amber-500 text-sm ml-2">(Test Mode)</span>}
       </h3>
       
       {!reportData ? (

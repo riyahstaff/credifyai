@@ -16,6 +16,7 @@ interface DisputeResultProps {
   selectedBureau: string;
   onReset: () => void;
   onDownload: () => void;
+  testMode?: boolean;
 }
 
 const DisputeResult: React.FC<DisputeResultProps> = ({
@@ -23,7 +24,8 @@ const DisputeResult: React.FC<DisputeResultProps> = ({
   selectedAccount,
   selectedBureau,
   onReset,
-  onDownload
+  onDownload,
+  testMode
 }) => {
   const { toast } = useToast();
   
@@ -44,7 +46,8 @@ const DisputeResult: React.FC<DisputeResultProps> = ({
           </div>
           <div>
             <h4 className="font-medium text-credify-navy dark:text-white">
-              Dispute Letter Generated
+              {testMode ? "Test " : ""}Dispute Letter Generated
+              {testMode && <span className="ml-2 text-xs text-amber-500">(Test Mode)</span>}
             </h4>
             <p className="text-xs text-credify-navy-light dark:text-white/70">
               For {selectedAccount?.accountName} with {selectedBureau}
@@ -92,8 +95,10 @@ const DisputeResult: React.FC<DisputeResultProps> = ({
           onClick={() => {
             // Would integrate with mail sending API in production
             toast({
-              title: "Letter ready to send",
-              description: "Your dispute letter will be sent to the credit bureau.",
+              title: testMode ? "Test Mode Active" : "Letter ready to send",
+              description: testMode 
+                ? "In test mode, letters are not actually sent." 
+                : "Your dispute letter will be sent to the credit bureau.",
             });
           }}
           className="px-4 py-2 bg-credify-teal hover:bg-credify-teal-dark text-white rounded-lg transition-colors flex items-center gap-2"
