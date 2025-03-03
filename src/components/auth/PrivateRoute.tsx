@@ -94,12 +94,18 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
     if (React.isValidElement(child)) {
       // Get the component's display name or function name
       const childType = child.type;
-      const displayName = typeof childType === 'function' 
-        ? childType.displayName || childType.name 
-        : '';
+      let componentName = '';
+      
+      // Check if it's a function or class component and extract name safely
+      if (typeof childType === 'function') {
+        componentName = childType.name || '';
+      } else if (childType && typeof childType === 'object') {
+        // For forwardRef, memo, etc.
+        componentName = childType.displayName || '';
+      }
       
       // Only pass testMode to components that are in our compatible list
-      if (testModeCompatibleComponents.includes(displayName)) {
+      if (testModeCompatibleComponents.includes(componentName)) {
         return React.cloneElement(child, { testMode });
       }
     }
