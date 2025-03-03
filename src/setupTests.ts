@@ -4,7 +4,7 @@ import '@testing-library/jest-dom';
 // Add TypeScript support for jest-dom matchers
 declare global {
   namespace Vi {
-    interface Assertion {
+    interface JestAssertion {
       toBeInTheDocument(): void;
       toBeVisible(): void;
       toHaveTextContent(text: string): void;
@@ -22,3 +22,6 @@ declare global {
     }
   }
 }
+
+// Add a no-op export to ensure this file is treated as a module
+export {};
