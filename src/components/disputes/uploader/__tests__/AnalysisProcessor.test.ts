@@ -101,8 +101,25 @@ describe('handleAnalysisComplete', () => {
   });
 
   it('processes credit report and identifies issues', async () => {
-    const mockReportData = { accounts: [] };
-    const mockEnhancedData = { accounts: [], personalInfo: { name: 'Test User' } };
+    const mockReportData = { 
+      accounts: [],
+      bureaus: {
+        experian: true,
+        equifax: false,
+        transunion: false
+      }
+    };
+    
+    const mockEnhancedData = { 
+      accounts: [], 
+      personalInfo: { name: 'Test User' },
+      bureaus: {
+        experian: true,
+        equifax: false,
+        transunion: false
+      }
+    };
+    
     const mockIssues = [{ 
       type: 'error', 
       title: 'Test Issue',

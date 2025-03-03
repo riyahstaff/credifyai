@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import '@testing-library/jest-dom';
 import AnalyzingReport from '../AnalyzingReport';
 
 describe('AnalyzingReport', () => {

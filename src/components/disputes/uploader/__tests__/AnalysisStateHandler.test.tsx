@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import '@testing-library/jest-dom';
 import AnalysisStateHandler from '../AnalysisStateHandler';
 
 // Mock the required components

@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import '@testing-library/jest-dom';
 import AnalysisError from '../AnalysisError';
 
 describe('AnalysisError', () => {
