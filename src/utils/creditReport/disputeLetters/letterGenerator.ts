@@ -41,6 +41,15 @@ export const generateDisputeLetterForDiscrepancy = async (
   const legalReferences = discrepancy.legalBasis || 
     getLegalReferencesForDispute(discrepancy.reason, discrepancy.description);
   
+  // Format disputed account information
+  const disputedAccountInfo = `
+DISPUTED ITEM(S):
+- Account Name: ${discrepancy.accountName}
+- Account Number: ${discrepancy.accountNumber || '[ACCOUNT NUMBER]'}
+- Reason for Dispute: ${discrepancy.reason}
+- Details: ${discrepancy.description}
+`;
+
   // Try to find a relevant sample dispute letter to use as a template
   try {
     const sampleLetter = await findSampleDispute(discrepancy.reason, discrepancy.bureau);
@@ -59,7 +68,19 @@ export const generateDisputeLetterForDiscrepancy = async (
         .replace(/\[ACCOUNT_NAME\]/g, discrepancy.accountName)
         .replace(/\[ACCOUNT_NUMBER\]/g, discrepancy.accountNumber || '[ACCOUNT NUMBER]')
         .replace(/\[DISPUTE_REASON\]|\[ERROR_TYPE\]/g, discrepancy.reason)
-        .replace(/\[ERROR_DESCRIPTION\]|\[EXPLANATION\]/g, discrepancy.description);
+        .replace(/\[ERROR_DESCRIPTION\]|\[EXPLANATION\]/g, discrepancy.description)
+        .replace(/your credit report/gi, "my credit report")
+        .replace(/Your credit report/gi, "My credit report");
+      
+      // Update enclosures section to only include ID and SSN card
+      enhancedLetter = enhancedLetter.replace(
+        /Enclosures:(\s|.)*$/m, 
+        `Enclosures:
+- Copy of Driver's License
+- Copy of Social Security Card
+
+${disputedAccountInfo}`
+      );
       
       return enhancedLetter;
     }
@@ -131,11 +152,7 @@ I am writing in accordance with my rights under the Fair Credit Reporting Act (F
 
 After reviewing my credit report from ${discrepancy.bureau}, I have identified the following item that is inaccurate and requires investigation and correction:
 
-ACCOUNT DETAILS BEING DISPUTED:
-- Account Name: ${discrepancy.accountName}
-- Account Number: ${discrepancy.accountNumber || '[ACCOUNT NUMBER]'}
-- Reason for Dispute: ${discrepancy.reason}
-- Impact Level: ${discrepancy.impact || 'High'}
+${disputedAccountInfo}
 
 EXPLANATION OF INACCURACY:
 ${disputeExplanation}
@@ -166,8 +183,8 @@ Sincerely,
 ${userInfo.name}
 
 Enclosures:
-- Copy of credit report with disputed item highlighted
-- [SUPPORTING DOCUMENTATION]
+- Copy of Driver's License
+- Copy of Social Security Card
 `;
 
   return letterContent;
