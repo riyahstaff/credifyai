@@ -64,7 +64,10 @@ const DisputeLettersList: React.FC<DisputeLettersListProps> = ({
               <div className="mb-4 lg:mb-0">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="text-lg font-medium text-credify-navy dark:text-white">{letter.title}</h3>
-                  <Badge variant={letter.status === 'resolved' ? 'success' : 'default'}>
+                  <Badge 
+                    variant={letter.status === 'resolved' ? 'secondary' : 'default'}
+                    className={letter.status === 'resolved' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' : ''}
+                  >
                     {letter.status === 'resolved' ? 'Resolved' : 'In Progress'}
                   </Badge>
                 </div>
