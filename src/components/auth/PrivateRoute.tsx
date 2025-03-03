@@ -12,12 +12,16 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
   const { user, isLoading, profile } = useAuth();
   const location = useLocation();
   
+  // Check if we're in testing mode via URL parameter
+  const searchParams = new URLSearchParams(location.search);
+  const testMode = searchParams.get('testMode') === 'true';
+  
   // Store the current path for potential redirect after subscription
   useEffect(() => {
-    if (requiresSubscription && user && profile && !profile.has_subscription) {
+    if (requiresSubscription && user && profile && !profile.has_subscription && !testMode) {
       sessionStorage.setItem('returnToAfterSubscription', location.pathname);
     }
-  }, [requiresSubscription, user, profile, location.pathname]);
+  }, [requiresSubscription, user, profile, location.pathname, testMode]);
   
   if (isLoading) {
     // Loading state
@@ -33,8 +37,8 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
     return <Navigate to="/login" replace />;
   }
 
-  // Check if this route requires subscription
-  if (requiresSubscription && profile) {
+  // Check if this route requires subscription (bypass if in test mode)
+  if (requiresSubscription && profile && !testMode) {
     // Check if user has an active subscription
     const hasActiveSubscription = profile.has_subscription === true;
     
@@ -44,7 +48,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
     }
   }
   
-  // Render children if authenticated and subscription requirements are met
+  // Render children if authenticated and subscription requirements are met (or bypassed in test mode)
   return <>{children}</>;
 };
 
