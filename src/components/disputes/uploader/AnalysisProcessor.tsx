@@ -35,12 +35,10 @@ export const handleAnalysisComplete = async ({
   console.log("handleAnalysisComplete called");
   
   try {
-    // Always transition out of analyzing state first to prevent UI artifacts
-    setAnalyzing(false);
-    
     if (!uploadedFile) {
       console.error("No file available for analysis");
       setAnalysisError("No file was available for analysis");
+      setAnalyzing(false);
       setAnalyzed(true);
       return;
     }
@@ -125,8 +123,8 @@ export const handleAnalysisComplete = async ({
       description: `Found ${detectedIssues.length} potential issues in your credit report.`,
     });
     
-    console.log("Setting analyzed to true");
-    // This is critical - set analyzed to true to show the results
+    // Set states to indicate analysis is complete - IMPORTANT: this must happen even if there's an error
+    setAnalyzing(false);
     setAnalyzed(true);
     
   } catch (error) {
@@ -137,9 +135,6 @@ export const handleAnalysisComplete = async ({
       description: error instanceof Error ? error.message : "Failed to process your credit report.",
       variant: "destructive",
     });
-    
-    // Even on error, ensure we set analyzed to true
-    setAnalyzed(true);
   } finally {
     // Double ensure both state flags are correctly set
     setAnalyzing(false);

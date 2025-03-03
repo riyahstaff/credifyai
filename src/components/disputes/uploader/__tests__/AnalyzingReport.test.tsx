@@ -37,27 +37,28 @@ describe('AnalyzingReport', () => {
     // First step should complete immediately
     expect(screen.getByText('Scanning personal information')).toBeInTheDocument();
     
+    // Expect callback to be called immediately (within 50ms)
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(mockOnAnalysisComplete).toHaveBeenCalledTimes(1);
+    
     // Advance timers to trigger second step
     act(() => {
-      vi.advanceTimersByTime(500);
+      vi.advanceTimersByTime(100);
     });
     
     // Advance timers to trigger third step
     act(() => {
-      vi.advanceTimersByTime(500);
+      vi.advanceTimersByTime(100);
     });
     
     // Advance timers to trigger fourth step
     act(() => {
-      vi.advanceTimersByTime(500);
+      vi.advanceTimersByTime(100);
     });
     
-    // Advance timers to trigger completion
-    act(() => {
-      vi.advanceTimersByTime(500);
-    });
-    
-    // Check if onAnalysisComplete was called
+    // The callback should not be called again
     expect(mockOnAnalysisComplete).toHaveBeenCalledTimes(1);
   });
 
@@ -81,6 +82,9 @@ describe('AnalyzingReport', () => {
     const mockOnAnalysisComplete = vi.fn();
     const { unmount } = render(<AnalyzingReport onAnalysisComplete={mockOnAnalysisComplete} />);
     
+    // Don't advance timers, so the callback hasn't been triggered yet
+    expect(mockOnAnalysisComplete).not.toHaveBeenCalled();
+    
     // Unmount component before animation completes
     unmount();
     
@@ -92,12 +96,18 @@ describe('AnalyzingReport', () => {
     const mockOnAnalysisComplete = vi.fn();
     render(<AnalyzingReport onAnalysisComplete={mockOnAnalysisComplete} />);
     
-    // Fast forward past the safety timeout
+    // Callback should be called at 50ms
     act(() => {
-      vi.advanceTimersByTime(3001);
+      vi.advanceTimersByTime(50);
+    });
+    expect(mockOnAnalysisComplete).toHaveBeenCalledTimes(1);
+    
+    // Fast forward to safety timeout - shouldn't trigger again
+    act(() => {
+      vi.advanceTimersByTime(1500);
     });
     
-    // Check if onAnalysisComplete was called
+    // Check that onAnalysisComplete was not called again
     expect(mockOnAnalysisComplete).toHaveBeenCalledTimes(1);
   });
 

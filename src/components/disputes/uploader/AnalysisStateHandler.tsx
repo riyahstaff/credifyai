@@ -57,17 +57,27 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
   };
 
   // Add debug logging to track state changes
-  console.log("AnalysisStateHandler state:", { fileUploaded, analyzing, analyzed });
+  console.log("AnalysisStateHandler state:", { fileUploaded, analyzing, analyzed, letterGenerated });
 
+  // Ensure we have a valid upload before proceeding
   if (!fileUploaded) {
     return null;
   }
 
+  // Show analyzing state
   if (analyzing) {
     return <AnalyzingReport onAnalysisComplete={onAnalysisComplete} />;
   }
 
+  // Show analyzed state
   if (analyzed) {
+    // If letterGenerated is true and a pendingDisputeLetter exists, immediately navigate
+    if (letterGenerated && sessionStorage.getItem('pendingDisputeLetter')) {
+      console.log("Dispute letter generated, navigating to letters page");
+      setTimeout(() => navigate('/dispute-letters'), 100);
+      return <div className="text-center p-8">Redirecting to your generated dispute letter...</div>;
+    }
+    
     return (
       <div>
         <ReportAnalysisResults 
@@ -97,6 +107,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     );
   }
 
+  // Default to upload confirmation
   return (
     <UploadConfirmation
       fileName={fileName}

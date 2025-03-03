@@ -31,6 +31,7 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
   const timeoutIds = useRef<NodeJS.Timeout[]>([]);
   const callbackTriggered = useRef(false);
 
+  // Function to trigger the callback safely
   const triggerCallback = () => {
     if (isMounted.current && !callbackTriggered.current && onAnalysisComplete) {
       console.log("Triggering analysis complete callback");
@@ -43,20 +44,26 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
     isMounted.current = true;
     callbackTriggered.current = false;
     
+    // Immediately call the callback - this ensures it happens regardless of animation
+    const immediateCallback = setTimeout(() => {
+      triggerCallback();
+    }, 50);
+    timeoutIds.current.push(immediateCallback);
+    
     const updateSteps = () => {
       // Update first step immediately
       setSteps(prev => prev.map((step, i) => 
         i === 0 ? { ...step, progress: 100, isComplete: true } : step
       ));
       
-      // Setup timeouts for subsequent steps - with fixed intervals
+      // Setup timeouts for subsequent steps - with very short intervals for faster progression
       const timeout1 = setTimeout(() => {
         if (isMounted.current) {
           setSteps(prev => prev.map((step, i) => 
             i === 1 ? { ...step, progress: 100, isComplete: true } : step
           ));
         }
-      }, 500);
+      }, 100);
       timeoutIds.current.push(timeout1);
       
       const timeout2 = setTimeout(() => {
@@ -65,7 +72,7 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
             i === 2 ? { ...step, progress: 100, isComplete: true } : step
           ));
         }
-      }, 1000);
+      }, 200);
       timeoutIds.current.push(timeout2);
       
       const timeout3 = setTimeout(() => {
@@ -73,19 +80,10 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
           setSteps(prev => prev.map((step, i) => 
             i === 3 ? { ...step, progress: 100, isComplete: true } : step
           ));
-        }
-      }, 1500);
-      timeoutIds.current.push(timeout3);
-      
-      // Mark animation as complete and call the callback
-      const completionTimeout = setTimeout(() => {
-        if (isMounted.current) {
-          console.log("Animation complete, triggering callback");
           setAnimationComplete(true);
-          triggerCallback();
         }
-      }, 2000);
-      timeoutIds.current.push(completionTimeout);
+      }, 300);
+      timeoutIds.current.push(timeout3);
     };
     
     // Start the animation
@@ -93,9 +91,9 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
     
     // Safety timeout to ensure callback is triggered even if animation gets stuck
     const safetyTimeout = setTimeout(() => {
-      console.log("Safety timeout triggered");
+      console.log("Safety timeout triggered for analysis");
       triggerCallback();
-    }, 3000);
+    }, 1500);
     timeoutIds.current.push(safetyTimeout);
     
     // Cleanup function
