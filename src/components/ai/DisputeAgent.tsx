@@ -161,6 +161,13 @@ const DisputeAgent: React.FC<DisputeAgentProps> = ({ onGenerateDispute }) => {
           <div className="mt-2 flex gap-2">
             <button 
               className="text-xs bg-credify-teal/10 hover:bg-credify-teal/20 text-credify-teal px-2 py-1 rounded-full flex items-center gap-1"
+              onClick={() => navigate(testMode ? '/dashboard?testMode=true' : '/dashboard')}
+            >
+              <FileText size={12} />
+              <span>Dashboard</span>
+            </button>
+            <button 
+              className="text-xs bg-credify-teal/10 hover:bg-credify-teal/20 text-credify-teal px-2 py-1 rounded-full flex items-center gap-1"
               onClick={() => navigate(testMode ? '/upload-report?testMode=true' : '/upload-report')}
             >
               <FileText size={12} />

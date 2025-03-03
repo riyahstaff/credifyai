@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +11,10 @@ const Navbar = () => {
   const { user, profile, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  
+  // Check if we're in test mode
+  const searchParams = new URLSearchParams(location.search);
+  const testMode = searchParams.get('testMode') === 'true';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,15 +29,20 @@ const Navbar = () => {
     setIsOpen(false);
   }, [location]);
 
+  // Add testMode parameter to nav links if in test mode
   const navLinks = [
     { name: 'Home', path: '/' },
-    { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Upload Report', path: '/upload-report' },
-    { name: 'Dispute Letters', path: '/dispute-letters' },
+    { name: 'Dashboard', path: testMode ? '/dashboard?testMode=true' : '/dashboard' },
+    { name: 'Upload Report', path: testMode ? '/upload-report?testMode=true' : '/upload-report' },
+    { name: 'Dispute Letters', path: testMode ? '/dispute-letters?testMode=true' : '/dispute-letters' },
     { name: 'Education', path: '/education' },
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  // Modified to check if the current path matches the link path, ignoring query parameters
+  const isActive = (path: string) => {
+    const pathWithoutQuery = path.split('?')[0];
+    return location.pathname === pathWithoutQuery;
+  };
   
   const handleLogout = async () => {
     await signOut();
@@ -68,7 +78,7 @@ const Navbar = () => {
               </div>
 
               <div className="hidden md:flex items-center space-x-3">
-                {!hasSubscription && (
+                {!hasSubscription && !testMode && (
                   <Link
                     to="/subscription"
                     className="px-4 py-2 bg-gradient-to-r from-credify-teal to-credify-teal-dark text-white rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1.5"
@@ -78,16 +88,16 @@ const Navbar = () => {
                   </Link>
                 )}
                 
-                {hasSubscription && (
+                {(hasSubscription || testMode) && (
                   <div className="px-3 py-1.5 bg-credify-teal/10 text-credify-teal rounded-lg flex items-center gap-1.5">
                     <Shield size={14} />
-                    <span className="text-sm font-medium">Premium</span>
+                    <span className="text-sm font-medium">{testMode ? "Test Mode" : "Premium"}</span>
                   </div>
                 )}
                 
                 <div className="flex items-center gap-2 px-3 py-2 text-credify-navy dark:text-white/90">
                   <User size={18} className="text-credify-teal" />
-                  <span className="font-medium">{profile?.full_name.split(' ')[0] || 'User'}</span>
+                  <span className="font-medium">{profile?.full_name?.split(' ')[0] || 'User'}</span>
                 </div>
                 
                 <button
@@ -150,7 +160,7 @@ const Navbar = () => {
                 </Link>
               ))}
               
-              {!hasSubscription && (
+              {!hasSubscription && !testMode && (
                 <Link
                   to="/subscription"
                   className="block py-2 mt-2 bg-gradient-to-r from-credify-teal to-credify-teal-dark text-white rounded-lg hover:opacity-90 transition-opacity text-center"
@@ -163,10 +173,10 @@ const Navbar = () => {
               )}
               
               <div className="pt-4 pb-2 space-y-3 border-t border-gray-200 dark:border-gray-700/30 mt-2">
-                {hasSubscription && (
+                {(hasSubscription || testMode) && (
                   <div className="flex items-center gap-2 py-2">
                     <Shield size={18} className="text-credify-teal" />
-                    <span className="font-medium text-credify-teal">Premium Member</span>
+                    <span className="font-medium text-credify-teal">{testMode ? "Test Mode Active" : "Premium Member"}</span>
                   </div>
                 )}
                 
