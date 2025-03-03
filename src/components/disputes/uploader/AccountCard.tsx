@@ -31,24 +31,24 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, onSelect }) => {
                 {account.accountType}
               </span>
             )}
-            {(account.dateOpened || account.openDate) && (
+            {(account.openDate || account.dateOpened) && (
               <span className="text-xs text-credify-navy-light dark:text-white/70 flex items-center">
                 <Calendar size={12} className="mr-1" />
-                Opened: {account.dateOpened || account.openDate}
+                Opened: {account.openDate || account.dateOpened}
               </span>
             )}
-            {(account.dateReported || account.lastReportedDate) && (
+            {(account.lastReportedDate || account.dateReported) && (
               <span className="text-xs text-credify-navy-light dark:text-white/70 flex items-center">
                 <Clock size={12} className="mr-1" />
-                Last reported: {account.dateReported || account.lastReportedDate}
+                Last reported: {account.lastReportedDate || account.dateReported}
               </span>
             )}
           </div>
         </div>
         <div className="text-right">
-          {account.currentBalance && (
+          {(account.currentBalance || account.balance) && (
             <div className="font-medium text-credify-navy dark:text-white">
-              {account.currentBalance}
+              {account.currentBalance || account.balance}
             </div>
           )}
           {account.paymentStatus && (

@@ -112,7 +112,6 @@ export interface LegalReference {
   title: string;
   text: string;
   applicability?: string[];
-  // Remove 'description' as it seems to be causing issues
 }
 
 // User information for generating dispute letters

@@ -1,137 +1,81 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Progress } from '@/components/ui/progress';
-
-interface AnalysisStep {
-  name: string;
-  progress: number;
-  isComplete: boolean;
-}
+import React, { useEffect, useState } from 'react';
+import { CircleCheck, Loader2 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress'; // Correct import for Progress
 
 interface AnalyzingReportProps {
   onAnalysisComplete?: () => void;
-  steps?: AnalysisStep[];
 }
 
-const AnalyzingReport: React.FC<AnalyzingReportProps> = ({ 
-  onAnalysisComplete,
-  steps: initialSteps
-}) => {
-  // Use default steps if none provided
-  const defaultSteps: AnalysisStep[] = [
-    { name: 'Scanning personal information', progress: 0, isComplete: false },
-    { name: 'Analyzing account information', progress: 0, isComplete: false },
-    { name: 'Checking for FCRA violations', progress: 0, isComplete: false },
-    { name: 'Preparing recommendations', progress: 0, isComplete: false }
-  ];
-  
-  const [steps, setSteps] = useState<AnalysisStep[]>(initialSteps || defaultSteps);
-  const callbackTriggered = useRef(false);
-  const timeoutsRef = useRef<number[]>([]);
+const AnalyzingReport: React.FC<AnalyzingReportProps> = ({ onAnalysisComplete }) => {
+  const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState('Scanning document');
 
-  // Function to update step progress
-  const updateStepProgress = (index: number, progress: number, isComplete: boolean = false) => {
-    setSteps(prevSteps => {
-      const newSteps = [...prevSteps];
-      newSteps[index] = {
-        ...newSteps[index],
-        progress,
-        isComplete
-      };
-      return newSteps;
-    });
-  };
-  
-  // Function to trigger completion callback
-  const triggerCallback = () => {
-    if (onAnalysisComplete && !callbackTriggered.current) {
-      console.log("Triggering analysis complete callback from AnalyzingReport");
-      callbackTriggered.current = true;
-      onAnalysisComplete();
-    }
-  };
-
-  // Effect to animate the progress bars
   useEffect(() => {
-    // Clear any existing timeouts
-    timeoutsRef.current.forEach(clearTimeout);
-    timeoutsRef.current = [];
-    
-    // Call the completion callback immediately to prevent hanging
-    // This ensures the analysis process continues even if animations are slow
-    triggerCallback();
-    
-    // Animate each step (just for visual effect)
-    steps.forEach((step, index) => {
-      const animateStep = (progress: number) => {
-        if (progress <= 100) {
-          updateStepProgress(index, progress, progress === 100);
+    const simulateProgress = () => {
+      const interval = setInterval(() => {
+        setProgress(prevProgress => {
+          const nextProgress = prevProgress + 1;
           
-          const timeout = window.setTimeout(() => {
-            animateStep(progress + 5);
-          }, 100);
+          // Update the stage message based on progress
+          if (nextProgress === 30) {
+            setStage('Extracting account information');
+          } else if (nextProgress === 60) {
+            setStage('Analyzing for discrepancies');
+          } else if (nextProgress === 85) {
+            setStage('Preparing dispute recommendations');
+          } else if (nextProgress >= 99) {
+            clearInterval(interval);
+            
+            // Ensure onAnalysisComplete is called when progress completes
+            if (onAnalysisComplete) {
+              setTimeout(() => {
+                onAnalysisComplete();
+              }, 500);
+            }
+            return 100;
+          }
           
-          timeoutsRef.current.push(timeout);
-        }
-      };
+          return nextProgress;
+        });
+      }, 100);
       
-      // Stagger the start of each animation
-      const startTimeout = window.setTimeout(() => {
-        animateStep(0);
-      }, index * 500);
-      
-      timeoutsRef.current.push(startTimeout);
-    });
-    
-    // Make sure to call completion again after all animations complete
-    const finalTimeout = window.setTimeout(() => {
-      triggerCallback();
-    }, steps.length * 500 + 2000);
-    
-    timeoutsRef.current.push(finalTimeout);
-    
-    // Cleanup function
-    return () => {
-      timeoutsRef.current.forEach(clearTimeout);
-      // Ensure callback is triggered if component unmounts
-      triggerCallback();
+      return () => clearInterval(interval);
     };
-  }, []);
-  
-  // Backup timeout to ensure analysis completes even if something goes wrong
-  useEffect(() => {
-    const backupTimeout = window.setTimeout(() => {
-      console.log("Backup timeout ensuring analysis completes");
-      triggerCallback();
-    }, 5000); // 5 second backup
-
-    return () => clearTimeout(backupTimeout);
-  }, []);
+    
+    const simulation = simulateProgress();
+    
+    // Cleanup
+    return () => {
+      simulation();
+    };
+  }, [onAnalysisComplete]);
 
   return (
-    <div className="text-center p-4">
-      <h3 className="text-xl font-semibold mb-2 text-credify-navy dark:text-white">
-        Analyzing Your Credit Report
+    <div className="text-center py-6">
+      <div className="flex justify-center mb-6">
+        {progress < 100 ? (
+          <Loader2 className="h-12 w-12 animate-spin text-credify-teal" />
+        ) : (
+          <CircleCheck className="h-12 w-12 text-green-500" />
+        )}
+      </div>
+      
+      <h3 className="text-xl font-semibold text-credify-navy dark:text-white mb-2">
+        {progress < 100 ? "Analyzing Your Credit Report" : "Analysis Complete"}
       </h3>
-      <p className="text-gray-600 dark:text-gray-300 mb-6">
-        Our AI is carefully scanning your report for errors, inaccuracies, and potential FCRA violations.
+      
+      <p className="text-credify-navy-light dark:text-white/70 mb-6">
+        {progress < 100 ? stage : "Ready to view results"}
       </p>
       
-      <div className="space-y-6 max-w-lg mx-auto">
-        {steps.map((step, index) => (
-          <div key={index} className="text-left">
-            <div className="flex justify-between mb-1">
-              <span className={`text-sm font-medium ${step.isComplete ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                {step.name}
-              </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {step.progress}%
-              </span>
-            </div>
-            <Progress value={step.progress} className={step.isComplete ? 'bg-green-500' : undefined} />
-          </div>
-        ))}
+      <div className="w-full max-w-md mx-auto mb-4">
+        <Progress value={progress} className="h-2" />
       </div>
+      
+      <p className="text-sm text-credify-navy-light dark:text-white/60">
+        {progress < 100 ? `${progress}% complete` : "100% complete"}
+      </p>
     </div>
   );
 };
