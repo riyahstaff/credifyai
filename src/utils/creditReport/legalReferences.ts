@@ -18,7 +18,7 @@ export const getLegalReferencesForDispute = (
     law: 'FCRA',
     section: '611',
     title: 'Procedure in case of disputed accuracy',
-    text: 'If the completeness or accuracy of any item of information contained in a consumer's file at a consumer reporting agency is disputed by the consumer and the consumer notifies the agency directly, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate.',
+    text: 'If the completeness or accuracy of any item of information contained in a consumer\'s file at a consumer reporting agency is disputed by the consumer and the consumer notifies the agency directly, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate.',
     applicability: ['All Disputes']
   });
   
@@ -39,7 +39,7 @@ export const getLegalReferencesForDispute = (
         law: 'FCRA',
         section: '605',
         title: 'Requirements relating to information contained in consumer reports',
-        text: 'Consumer reporting agencies must ensure that information in a consumer's credit report is accurate and belongs to the consumer.',
+        text: 'Consumer reporting agencies must ensure that information in a consumer\'s credit report is accurate and belongs to the consumer.',
         applicability: ['Account Ownership']
       });
       break;
@@ -59,7 +59,7 @@ export const getLegalReferencesForDispute = (
         law: 'FCRA',
         section: '604',
         title: 'Permissible purposes of consumer reports',
-        text: 'A consumer reporting agency may furnish a consumer report only under specific permissible purposes, including with the consumer's written consent.',
+        text: 'A consumer reporting agency may furnish a consumer report only under specific permissible purposes, including with the consumer\'s written consent.',
         applicability: ['Unauthorized Inquiries']
       });
       break;
@@ -99,7 +99,7 @@ export const getLegalReferencesForDispute = (
         law: 'FCRA',
         section: '609',
         title: 'Disclosures to consumers',
-        text: 'Consumer reporting agencies must disclose all information in a consumer's file upon request.',
+        text: 'Consumer reporting agencies must disclose all information in a consumer\'s file upon request.',
         applicability: ['All Disputes']
       });
       break;
