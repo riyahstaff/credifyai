@@ -60,7 +60,7 @@ const AccountsSection: React.FC<AccountsSectionProps> = ({
               <AccountCard
                 key={index}
                 account={account}
-                onSelect={onSelectAccount}
+                onSelect={() => onSelectAccount(account)}
               />
             ))
           )}

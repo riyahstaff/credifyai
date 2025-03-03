@@ -5,13 +5,13 @@ import { CreditReportAccount } from '@/utils/creditReport/types';
 
 interface AccountCardProps {
   account: CreditReportAccount;
-  onClick: () => void;
+  onSelect: () => void;
 }
 
-const AccountCard: React.FC<AccountCardProps> = ({ account, onClick }) => {
+const AccountCard: React.FC<AccountCardProps> = ({ account, onSelect }) => {
   return (
     <div
-      onClick={onClick}
+      onClick={onSelect}
       className="border border-gray-200 dark:border-gray-700/30 rounded-lg p-3 hover:border-credify-teal dark:hover:border-credify-teal/70 cursor-pointer transition-all"
     >
       <div className="flex justify-between">
