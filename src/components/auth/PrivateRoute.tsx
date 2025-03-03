@@ -9,6 +9,11 @@ interface PrivateRouteProps {
   requiresSubscription?: boolean;
 }
 
+// Define an interface for components that can accept testMode
+interface TestModeProps {
+  testMode?: boolean;
+}
+
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscription = false }) => {
   const { user, isLoading, profile } = useAuth();
   const location = useLocation();
@@ -107,14 +112,15 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
           // For forwardRef, memo, etc.
           const objType = childType as object;
           if ('displayName' in objType) {
-            componentName = objType['displayName'] as string || '';
+            componentName = (objType as { displayName?: string }).displayName || '';
           }
         }
       }
       
       // Only pass testMode to components that are in our compatible list
       if (componentName && testModeCompatibleComponents.includes(componentName)) {
-        return React.cloneElement(child, { testMode });
+        // Use type assertion to tell TypeScript this component accepts testMode
+        return React.cloneElement(child as React.ReactElement<TestModeProps>, { testMode });
       }
     }
     return child;
