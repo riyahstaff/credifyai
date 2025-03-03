@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import AnalysisProgress from './AnalysisProgress';
 
 interface AnalyzingReportProps {
@@ -28,56 +28,57 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
   
   // Add state to track if animation is complete
   const [animationComplete, setAnimationComplete] = useState(false);
+  // Use ref to track mounted state
+  const isMounted = useRef(true);
+  // Use ref to store timeout IDs
+  const timeoutIds = useRef<NodeJS.Timeout[]>([]);
 
   useEffect(() => {
-    let mounted = true;
-    // Use NodeJS.Timeout for proper typing with setTimeout
-    let timeoutIds: NodeJS.Timeout[] = [];
+    // Set mounted flag to true when component mounts
+    isMounted.current = true;
     
     // Simulate progress for each step
-    const updateSteps = async () => {
+    const updateSteps = () => {
       try {
-        // Update first step
-        if (mounted) {
-          setSteps(prev => prev.map((step, i) => 
-            i === 0 ? { ...step, progress: 100, isComplete: true } : step
-          ));
-        }
+        // Update first step immediately
+        setSteps(prev => prev.map((step, i) => 
+          i === 0 ? { ...step, progress: 100, isComplete: true } : step
+        ));
         
-        // Add each timeout ID to our array so we can clear them if component unmounts
+        // Setup timeouts for each subsequent step
         const timeout1 = setTimeout(() => {
-          if (mounted) {
+          if (isMounted.current) {
             // Update second step
             setSteps(prev => prev.map((step, i) => 
               i === 1 ? { ...step, progress: 100, isComplete: true } : step
             ));
           }
         }, 1000);
-        timeoutIds.push(timeout1);
+        timeoutIds.current.push(timeout1);
         
         const timeout2 = setTimeout(() => {
-          if (mounted) {
+          if (isMounted.current) {
             // Update third step
             setSteps(prev => prev.map((step, i) => 
               i === 2 ? { ...step, progress: 100, isComplete: true } : step
             ));
           }
         }, 2500);
-        timeoutIds.push(timeout2);
+        timeoutIds.current.push(timeout2);
         
         const timeout3 = setTimeout(() => {
-          if (mounted) {
+          if (isMounted.current) {
             // Update fourth step
             setSteps(prev => prev.map((step, i) => 
               i === 3 ? { ...step, progress: 100, isComplete: true } : step
             ));
           }
         }, 3500);
-        timeoutIds.push(timeout3);
+        timeoutIds.current.push(timeout3);
         
         // Mark animation as complete and call the callback after all steps
         const completionTimeout = setTimeout(() => {
-          if (mounted) {
+          if (isMounted.current) {
             console.log("Analysis animation complete, triggering callback");
             setAnimationComplete(true);
             
@@ -87,22 +88,25 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
             }
           }
         }, 4000);
-        timeoutIds.push(completionTimeout);
+        timeoutIds.current.push(completionTimeout);
       } catch (error) {
         console.error("Error in analysis progress animation:", error);
         // If there's an error, still try to complete the analysis
-        if (mounted && onAnalysisComplete) {
+        if (isMounted.current && onAnalysisComplete) {
           onAnalysisComplete();
         }
       }
     };
     
+    // Start the animation
     updateSteps();
     
+    // Cleanup function to clear all timeouts and update mounted state
     return () => {
-      mounted = false;
+      isMounted.current = false;
       // Clear all timeouts if component unmounts
-      timeoutIds.forEach(id => clearTimeout(id));
+      timeoutIds.current.forEach(id => clearTimeout(id));
+      timeoutIds.current = [];
     };
   }, [onAnalysisComplete]);
   
