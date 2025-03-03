@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -81,24 +82,24 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscript
     }
   }, [testMode, requiresSubscription, toast]);
   
+  // Define a list of components that accept the testMode prop
+  const testModeCompatibleComponents = [
+    'DisputeLettersPage',
+    'DisputeGenerator',
+    'UploadReport'
+  ];
+  
   // We need to update this method to properly handle children that don't accept testMode prop
   const childrenWithProps = React.Children.map(children, child => {
     if (React.isValidElement(child)) {
-      // If the child's type has a propTypes or defaultProps that includes testMode, it accepts testMode
-      // Otherwise, we won't pass it
-      // For simplicity, we'll check the displayName or name
+      // Get the component's display name or function name
       const childType = child.type;
-      const displayName = typeof childType === 'function' ? childType.name : '';
+      const displayName = typeof childType === 'function' 
+        ? childType.displayName || childType.name 
+        : '';
       
-      // List of components known to accept testMode
-      const testModeComponents = [
-        'DisputeLettersPage',
-        'DisputeGenerator',
-        'UploadReport'
-      ];
-      
-      if (testModeComponents.includes(displayName)) {
-        // Only pass testMode to components that accept it
+      // Only pass testMode to components that are in our compatible list
+      if (testModeCompatibleComponents.includes(displayName)) {
         return React.cloneElement(child, { testMode });
       }
     }
