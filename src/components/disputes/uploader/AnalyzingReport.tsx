@@ -31,7 +31,8 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
 
   useEffect(() => {
     let mounted = true;
-    let timeoutIds: number[] = [];
+    // Use NodeJS.Timeout for proper typing with setTimeout
+    let timeoutIds: NodeJS.Timeout[] = [];
     
     // Simulate progress for each step
     const updateSteps = async () => {
