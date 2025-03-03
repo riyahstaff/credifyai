@@ -1,4 +1,3 @@
-
 /**
  * Sample dispute letters loading functionality
  */
@@ -143,39 +142,4 @@ export const loadSampleDisputeLetters = async (): Promise<SampleDisputeLetter[]>
     console.error('Error loading sample dispute letters:', error);
     return [];
   }
-};
-
-// Extract key sections from a letter
-export const extractKeyComponentsFromLetter = (content: string): { 
-  effectiveLanguage: string[],
-  legalCitations: string[] 
-} => {
-  const effectiveLanguage: string[] = [];
-  const legalCitations: string[] = [];
-  
-  // Look for FCRA citations
-  const fcraRegex = /FCRA(?:\s+Section|\s+§)?\s+(\d+[a-z]?(?:\(\d+\))?)/gi;
-  let match;
-  while ((match = fcraRegex.exec(content)) !== null) {
-    legalCitations.push(`FCRA Section ${match[1]}`);
-  }
-  
-  // Look for FDCPA citations
-  const fdcpaRegex = /FDCPA(?:\s+Section|\s+§)?\s+(\d+[a-z]?(?:\(\d+\))?)/gi;
-  while ((match = fdcpaRegex.exec(content)) !== null) {
-    legalCitations.push(`FDCPA Section ${match[1]}`);
-  }
-  
-  // Extract effective language - paragraphs that are reasonably sized
-  const paragraphs = content.split(/\n\s*\n/);
-  for (const paragraph of paragraphs) {
-    if (paragraph.length > 40 && paragraph.length < 500 && 
-        !paragraph.includes('[YOUR') && 
-        !paragraph.includes('Sincerely,') &&
-        !paragraph.includes('To Whom It May Concern')) {
-      effectiveLanguage.push(paragraph.trim());
-    }
-  }
-  
-  return { effectiveLanguage, legalCitations };
 };
