@@ -4,6 +4,7 @@ import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParse
 import AnalyzingReport from './AnalyzingReport';
 import ReportAnalysisResults from './ReportAnalysisResults';
 import UploadConfirmation from './UploadConfirmation';
+import ReportPreview from './ReportPreview';
 
 interface AnalysisStateHandlerProps {
   fileUploaded: boolean;
@@ -47,6 +48,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
   onAnalysisComplete
 }) => {
   const [testMode, setTestMode] = useState(false);
+  const [showReportPreview, setShowReportPreview] = useState(false);
   
   // Log important state changes for debugging
   useEffect(() => {
@@ -84,13 +86,30 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
   }
   
   return (
-    <div>
+    <div className="space-y-4">
       <UploadConfirmation 
         fileName={fileName} 
         fileSize={fileSize} 
         onStartAnalysis={onStartAnalysis} 
         onRemoveFile={onResetUpload} 
       />
+      
+      {reportData && (
+        <div className="mt-4 p-4 border rounded-md border-gray-200 bg-gray-50">
+          <button 
+            onClick={() => setShowReportPreview(!showReportPreview)}
+            className="text-blue-600 hover:text-blue-800 font-medium flex items-center"
+          >
+            {showReportPreview ? "Hide Report Preview" : "Show Report Preview"}
+          </button>
+          
+          {showReportPreview && (
+            <div className="mt-4">
+              <ReportPreview reportData={reportData} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -9,6 +9,7 @@ import { extractAccounts } from './accounts';
 import { extractInquiries } from './extractInquiries';
 import { extractPublicRecords } from './extractPublicRecords';
 import { generateAnalysisResults } from './analysisGenerator';
+import { convertReportToHtml } from '../formatters/htmlFormatter';
 
 /**
  * Parse text content from a credit report into structured data
@@ -25,7 +26,8 @@ export const parseReportContent = (content: string): CreditReportData => {
     },
     accounts: [],
     inquiries: [],
-    rawText: content // Store the raw text for later reference
+    rawText: content, // Store the raw text for later reference
+    htmlContent: convertReportToHtml(content) // Add HTML formatted content
   };
   
   // Check which bureaus are mentioned in the report

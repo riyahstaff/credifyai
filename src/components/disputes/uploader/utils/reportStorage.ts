@@ -11,7 +11,9 @@ export const storeReportData = (enhancedData: CreditReportData): boolean => {
       accounts: enhancedData.accounts?.slice(0, 5) || [],
       inquiries: enhancedData.inquiries?.slice(0, 5) || [],
       fileContent: null,
-      reportSections: null
+      reportSections: null,
+      // Store only the first 5000 characters of HTML content for preview purposes
+      htmlContent: enhancedData.htmlContent?.substring(0, 5000) || null
     };
     
     sessionStorage.setItem('creditReportData', JSON.stringify(slimReportData));

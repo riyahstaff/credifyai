@@ -1,79 +1,53 @@
-
 /**
- * Credit Report Types
- * This module contains interfaces for credit report data structures
+ * Credit Report Data Types
  */
 
+/**
+ * Personal information from credit report
+ */
+export interface PersonalInfo {
+  name?: string;
+  addresses?: string[];
+  phoneNumbers?: string[];
+  ssn?: string;
+  dateOfBirth?: string;
+  employmentInfo?: string[];
+}
+
+/**
+ * Credit report account information
+ */
 export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
   accountType?: string;
-  currentBalance?: string;
+  dateOpened?: string;
+  dateReported?: string;
+  status?: string;
+  paymentStatus?: string;
   balance?: string;
-  paymentStatus?: string;
-  dateOpened?: string;
-  dateReported?: string;
-  bureau?: string;
-  remarks?: string[];
-  creditLimit?: string;  // Added this property to fix TypeScript errors
-  // Cross-bureau analysis
-  bureauSpecificData?: {
-    experian?: AccountBureauData;
-    equifax?: AccountBureauData;
-    transunion?: AccountBureauData;
-  };
-  discrepancies?: AccountDiscrepancy[];
-}
-
-export interface AccountBureauData {
-  accountNumber?: string;
   currentBalance?: string;
-  paymentStatus?: string;
-  dateOpened?: string;
-  dateReported?: string;
   creditLimit?: string;
   highBalance?: string;
-  paymentHistory?: Record<string, string>; // Month -> Status
-  lastPaymentDate?: string;
-  lastPaymentAmount?: string;
+  monthlyPayment?: string;
+  pastDue?: string;
+  bureau?: string;
+  remarks?: string[];
+  paymentHistory?: string;
 }
 
-export interface AccountDiscrepancy {
-  field: string; // e.g., "currentBalance", "paymentStatus"
-  bureaus: string[]; // Which bureaus have different values
-  values: Record<string, string>; // Bureau -> Value
-  severity: 'high' | 'medium' | 'low';
-  suggestedDispute?: string;
-  legalBasis?: LegalReference[]; // Added legal basis for the dispute
-}
-
-export interface LegalReference {
-  law: string; // e.g., "FCRA", "METRO 2"
-  section: string; // e.g., "Section 611(a)", "Format Rule 5.1"
-  description: string; // Short description of the legal requirement
-}
-
+/**
+ * Full credit report data structure
+ */
 export interface CreditReportData {
+  personalInfo?: PersonalInfo;
   bureaus: {
-    experian?: boolean;
-    equifax?: boolean;
-    transunion?: boolean;
-  };
-  personalInfo?: {
-    name?: string;
-    address?: string;
-    previousAddresses?: string[];
-    employers?: string[];
-    // New fields for cross-bureau analysis
-    bureauSpecificInfo?: {
-      experian?: PersonalBureauData;
-      equifax?: PersonalBureauData;
-      transunion?: PersonalBureauData;
-    };
-    discrepancies?: PersonalInfoDiscrepancy[];
+    experian: boolean;
+    equifax: boolean;
+    transunion: boolean;
   };
   accounts: CreditReportAccount[];
-  inquiries?: Array<{
+  inquiries: Array<{
     inquiryDate: string;
     creditor: string;
     bureau: string;
@@ -84,58 +58,18 @@ export interface CreditReportData {
     dateReported: string;
     status: string;
   }>;
-  // New field for analysis summary
-  analysisResults?: {
-    totalDiscrepancies: number;
-    highSeverityIssues: number;
-    accountsWithIssues: number;
-    recommendedDisputes: RecommendedDispute[];
-  };
+  reportSections?: Record<string, string>;
+  fileContent?: string;
   rawText?: string;
-}
-
-export interface PersonalBureauData {
-  name?: string;
-  address?: string;
-  previousAddresses?: string[];
-  dateOfBirth?: string;
-  socialSecurityNumber?: string;
-}
-
-export interface PersonalInfoDiscrepancy {
-  field: string; // e.g., "address", "name"
-  bureaus: string[]; // Which bureaus have different values
-  values: Record<string, string>; // Bureau -> Value
-  severity: 'high' | 'medium' | 'low';
-  suggestedDispute?: string;
-  legalBasis?: LegalReference[];
-}
-
-export interface RecommendedDispute {
-  accountName: string;
-  accountNumber?: string;
-  bureau: string;
-  reason: string;
-  description: string;
-  severity: 'high' | 'medium' | 'low';
-  discrepancyDetails?: AccountDiscrepancy;
-  sampleDisputeLanguage?: string;
-  legalBasis?: LegalReference[];
-}
-
-export interface SampleDisputeLetter {
-  content: string;
-  disputeType: string;
-  bureau?: string;
-  successfulOutcome?: boolean;
-  effectiveLanguage?: string[];
-  legalCitations?: string[];
-}
-
-export interface UserInfo {
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
+  htmlContent?: string; // New field for HTML formatted content
+  analysisResults?: {
+    totalAccounts: number;
+    openAccounts: number;
+    closedAccounts: number;
+    negativeItems: number;
+    inquiryCount: number;
+    publicRecordCount: number;
+    creditUtilization?: number;
+    accountTypeSummary: Record<string, number>;
+  };
 }
