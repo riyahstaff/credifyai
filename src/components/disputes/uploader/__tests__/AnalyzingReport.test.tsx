@@ -5,9 +5,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import AnalyzingReport from '../AnalyzingReport';
 
-// Extend expect for TypeScript
-import { expect } from 'vitest';
-
 describe('AnalyzingReport', () => {
   // Setup mocks
   beforeEach(() => {
