@@ -15,71 +15,51 @@ export const generateDisputeLetters = async (
 ) => {
   console.log(`Generating dispute letters for ${issues.length} issues`);
   
+  // Extract accounts for dispute letters
+  const accounts = reportData?.accounts || [];
+  
   // Extract the most important issues to generate letters for
   const priorityIssues = issues
     .filter(issue => issue.impact === 'Critical Impact' || issue.impact === 'High Impact')
-    .slice(0, 5); // Limit to top 5 high-priority issues
-  
-  // If we don't have enough priority issues, add some medium impact ones
+    .slice(0, 5);
+    
   const mediumIssues = issues
     .filter(issue => issue.impact === 'Medium Impact')
     .slice(0, 3 - priorityIssues.length);
   
-  // Combine high priority and medium issues
   const selectedIssues = [...priorityIssues, ...mediumIssues];
   
-  // Make sure we have at least one issue to generate a letter for
   if (selectedIssues.length === 0 && issues.length > 0) {
     selectedIssues.push(issues[0]);
   }
   
-  // Generate a letter for each issue
-  const letters = await Promise.all(selectedIssues.map(async issue => {
+  // Generate letters
+  const letters = await Promise.all(selectedIssues.map(async (issue, index) => {
     console.log(`Generating dispute letter for: ${issue.title} - ${issue.account?.accountName || 'General Issue'}`);
     
-    // A rough extraction of bureau information from issues or accounts
     const bureau = determineBureau(issue);
-    
-    // Get account information from the issue if available
     const accountName = issue.account?.accountName || issue.title;
     const accountNumber = issue.account?.accountNumber || '';
     
-    // Prepare the parameters for the letter generator
     const disputeParams = {
       bureau: bureau,
       accountName: accountName,
       accountNumber: accountNumber,
       errorType: issue.title,
-      explanation: issue.description
+      explanation: issue.description,
+      accounts: accounts // Include all accounts from the report
     };
     
-    // Prepare sample phrases to use in the letter
-    const samplePhrases: Record<string, string[]> = {};
-    if (issue.type.includes('balance')) {
-      samplePhrases.balanceDisputes = ["The balance reported is incorrect and should be verified with supporting documentation."];
-    } else if (issue.type.includes('payment') || issue.title.toLowerCase().includes('late')) {
-      samplePhrases.latePaymentDisputes = ["The payment history reported is inaccurate and must be verified with original documentation."];
-    } else if (issue.type.includes('ownership') || issue.title.toLowerCase().includes('not mine')) {
-      samplePhrases.accountOwnershipDisputes = ["This account does not belong to me and should be removed from my credit report."];
-    }
-    
     try {
-      // Get accounts from the report data if available
-      const accounts = reportData?.accounts || [];
-      
-      // Generate the letter content
       const letterContent = await generateManualDisputeLetter(
         disputeParams,
-        samplePhrases,
+        {},
         {
           testMode: false,
-          accounts: accounts 
+          accounts: accounts
         }
       );
       
-      console.log(`Letter generated for ${issue.title} - ${accountName}`);
-      
-      // Return the letter data
       return {
         bureau: bureau,
         accountName: accountName,
@@ -88,7 +68,7 @@ export const generateDisputeLetters = async (
         explanation: issue.description,
         letterContent: letterContent,
         timestamp: new Date().toISOString(),
-        accounts: accounts // Include all accounts from the report
+        accounts: accounts
       };
     } catch (error) {
       console.error(`Error generating letter for ${issue.title}:`, error);
@@ -96,8 +76,14 @@ export const generateDisputeLetters = async (
     }
   }));
   
-  // Filter out any null values (failed generation)
-  return letters.filter(letter => letter !== null);
+  const validLetters = letters.filter(letter => letter !== null);
+  
+  // Store the letters
+  if (validLetters.length > 0) {
+    storeGeneratedLetters(validLetters);
+  }
+  
+  return validLetters;
 };
 
 /**
