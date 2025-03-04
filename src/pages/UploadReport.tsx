@@ -109,7 +109,7 @@ const UploadReport = () => {
       const result = await handleGenerateDispute(selectedIssue);
       
       // Verify result and ensure storage
-      if (result && result.disputeData) {
+      if (result && typeof result === 'object' && 'disputeData' in result) {
         console.log("Dispute generation successful, storing letter");
         storeLetterInStorage(result.disputeData);
         
@@ -128,6 +128,8 @@ const UploadReport = () => {
             });
           }
         }, 1000);
+        
+        return true;
       } else {
         console.error("Dispute generation returned invalid result");
         toast({
@@ -135,6 +137,7 @@ const UploadReport = () => {
           description: "There was a problem generating your dispute letter. Please try again.",
           variant: "destructive",
         });
+        return false;
       }
     } catch (error) {
       console.error("Error in enhanced dispute generation:", error);
@@ -143,6 +146,7 @@ const UploadReport = () => {
         description: "An error occurred while generating your dispute letter.",
         variant: "destructive",
       });
+      return false;
     }
   };
 
