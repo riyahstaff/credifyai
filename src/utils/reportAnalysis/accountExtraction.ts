@@ -12,85 +12,119 @@ import { isValidAccountName } from './validation';
 export const extractAccountsFromRawText = (rawText: string): Array<{ name: string, number?: string }> => {
   const accounts: Array<{ name: string, number?: string }> = [];
   
-  // Look for common account sections
-  const accountSectionRegexes = [
-    /Accounts\s+(?:Overview|Information|Summary)[\s\S]*?((?:Account|Creditor)[\s\S]*?(?=\n\s*\n))/gi,
-    /Credit\s+(?:Accounts|Cards|Lines)[\s\S]*?((?:Account|Creditor)[\s\S]*?(?=\n\s*\n))/gi,
-    /(?:Open|Closed)\s+Accounts[\s\S]*?((?:Account|Creditor)[\s\S]*?(?=\n\s*\n))/gi
+  // Look for common account section headers followed by account names
+  const accountHeaderPatterns = [
+    /account(?:\s+name)?s?[:\s]+([A-Z][A-Z\s&]+)(?:[\s,#-]+(\d[\d-]+))?/gi,
+    /creditor[:\s]+([A-Z][A-Z\s&]+)(?:[\s,#-]+(\d[\d-]+))?/gi,
+    /([A-Z][A-Z\s&]+(?:BANK|FINANCE|CREDIT|LOAN|AUTO|MORTGAGE|CARD|ONE|EXPRESS|AMEX|CAPITAL|CHASE))(?:[\s,#-]+(\d[\d-]+))?/g,
+    /account\s+information(?:[:\s]+)?(?:[\r\n]+)([A-Z][A-Z\s&]+)(?:[\s,#-]+(\d[\d-]+))?/gi
   ];
-  
-  // Common creditor names to look for
+
+  // Common credit account providers to look for
   const commonCreditors = [
-    'AMEX', 'American Express', 'Bank of America', 'Capital One', 'Chase', 'Citibank', 'Discover',
-    'Wells Fargo', 'USAA', 'US Bank', 'Synchrony', 'Barclays', 'TD Bank', 'HSBC', 'PNC Bank',
-    'Navy Federal', 'Pentagon Federal', 'Goldman Sachs', 'Apple Card', 'Macy\'s', 'Target',
-    'Walmart', 'Home Depot', 'Lowe\'s', 'Best Buy', 'Amazon', 'PayPal', 'Marcus'
+    "CARMAX AUTO FINANCE", "CAPITAL ONE", "CHASE", "BANK OF AMERICA", "WELLS FARGO", 
+    "DISCOVER", "AMERICAN EXPRESS", "AMEX", "CITI", "CITIBANK", "TD BANK",
+    "SYNCHRONY", "CREDIT ONE", "AUTO", "FINANCE", "LOAN", "MORTGAGE", "STUDENT"
   ];
   
-  // Try to find account sections
-  for (const regex of accountSectionRegexes) {
+  // Look for accounts using each pattern
+  for (const pattern of accountHeaderPatterns) {
     let match;
-    while ((match = regex.exec(rawText)) !== null) {
-      // Found an account section, try to extract account names
-      const accountSection = match[1];
-      const lines = accountSection.split('\n');
-      
-      for (const line of lines) {
-        // Look for account name patterns
-        const accountNameMatch = line.match(/(Account|Creditor)\s*(?:Name)?:\s*([^\n\r]+)/i) ||
-                              line.match(/([A-Z][A-Za-z\s&']+(?:BANK|CREDIT|CARD|LOANS?|MORTGAGE|AUTO|FINANCIAL|FUNDING))(?:\s+#\s*\d+)?/i);
-        
-        if (accountNameMatch) {
-          const potentialName = accountNameMatch[2] || accountNameMatch[1];
-          if (isValidAccountName(potentialName)) {
-            // Try to find account number on same line
-            const accountNumberMatch = line.match(/#\s*(\d+)/i) || line.match(/Account\s*(?:Number|#):\s*([^\n\r]+)/i);
-            accounts.push({
-              name: potentialName.trim(),
-              number: accountNumberMatch ? accountNumberMatch[1].trim() : undefined
-            });
-          }
-        }
+    while ((match = pattern.exec(rawText)) !== null) {
+      if (match[1] && match[1].length > 3) {
+        accounts.push({
+          name: match[1].trim(),
+          number: match[2] ? match[2].trim() : undefined
+        });
       }
     }
   }
   
-  // If no account sections found, look for common creditor names throughout text
-  if (accounts.length === 0) {
-    for (const creditor of commonCreditors) {
-      const regex = new RegExp(`\\b${creditor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'ig');
-      if (regex.test(rawText)) {
-        accounts.push({ name: creditor });
+  // Look for common creditors directly
+  for (const creditor of commonCreditors) {
+    // Find creditor name in text with potential account number following it
+    const creditorRegex = new RegExp(`${creditor}(?:[\\s,#-]+(\\d[\\d-]+))?`, 'gi');
+    let match;
+    while ((match = creditorRegex.exec(rawText)) !== null) {
+      accounts.push({
+        name: creditor,
+        number: match[1] ? match[1].trim() : undefined
+      });
+    }
+  }
+  
+  // Look for inquiries
+  const inquiryPatterns = [
+    /inquir(?:y|ies)(?:[:\s]+)(?:[\r\n]+)?([A-Z][A-Z\s&]+)/gi,
+    /(?:INQUIRY|INQUIRIES)(?:[:\s]+)(?:[\r\n]+)?([A-Z][A-Z\s&]+)/g
+  ];
+  
+  for (const pattern of inquiryPatterns) {
+    let match;
+    while ((match = pattern.exec(rawText)) !== null) {
+      if (match[1] && match[1].length > 3) {
+        accounts.push({
+          name: `Inquiry: ${match[1].trim()}`
+        });
       }
     }
   }
   
-  // Return unique accounts
-  return accounts.filter((account, index, self) => 
-    index === self.findIndex(a => a.name.toLowerCase() === account.name.toLowerCase())
+  // Look for personal information sections
+  if (rawText.toLowerCase().includes('address') || 
+      rawText.toLowerCase().includes('personal information') || 
+      rawText.toLowerCase().includes('consumer information')) {
+    accounts.push({
+      name: "Personal Information"
+    });
+  }
+  
+  // Look for student loan mentions
+  if (rawText.toLowerCase().includes('student loan') || 
+      rawText.toLowerCase().includes('department of education') || 
+      rawText.toLowerCase().includes('dept of ed')) {
+    accounts.push({
+      name: "Student Loan"
+    });
+  }
+  
+  // Remove duplicates based on name
+  const uniqueAccounts = Array.from(
+    new Map(accounts.map(item => [item.name.toUpperCase(), item])).values()
   );
+  
+  return uniqueAccounts;
 };
 
 /**
- * Find a matching account name from extracted text
+ * Try to find a matching real account for a parsed account based on context
  */
 export const findMatchingAccount = (
   account: CreditReportAccount, 
-  extractedAccounts: Array<{ name: string, number?: string }>
-): { name: string, number?: string } | undefined => {
-  // If the account already has a valid name, return undefined
+  realAccounts: Array<{ name: string, number?: string }>
+): { name: string, number?: string } | null => {
+  // If account already has a valid-looking name, keep it
   if (isValidAccountName(account.accountName)) {
-    return undefined;
+    return null;
   }
   
-  // Try to find a match based on account number if available
+  // If we have an account number, try to match by that first
   if (account.accountNumber) {
-    const numberMatch = extractedAccounts.find(extracted => 
-      extracted.number && extracted.number === account.accountNumber
+    const matchByNumber = realAccounts.find(real => 
+      real.number && real.number === account.accountNumber
     );
-    if (numberMatch) return numberMatch;
+    
+    if (matchByNumber) {
+      return matchByNumber;
+    }
   }
   
-  // Otherwise return the first extracted account if any
-  return extractedAccounts.length > 0 ? extractedAccounts[0] : undefined;
+  // Otherwise, just return the first real account we haven't matched yet
+  // This is imperfect but better than gibberish
+  // In a real implementation, we would use more context like balance, dates, etc.
+  if (realAccounts.length > 0) {
+    return realAccounts[0];
+  }
+  
+  return null;
 };

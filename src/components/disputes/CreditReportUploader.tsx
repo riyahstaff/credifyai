@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { processCreditReport, CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
+import { processCreditReport, CreditReportData, CreditReportAccount } from '@/utils/creditReport';
 import { formatFileSize } from '@/utils/fileUtils';
 
 // Import new component files
@@ -33,13 +33,7 @@ const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   
   const handleFileSelected = async (file: File) => {
-    if (!file) {
-      console.error("No file selected");
-      return;
-    }
-    
     setUploadedFile(file);
-    console.log("File selected:", file.name, file.size);
     await processFile(file);
   };
   
@@ -47,15 +41,7 @@ const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({
     setIsUploading(true);
     
     try {
-      console.log("Processing file:", file.name);
-      // Pass the file directly to processCreditReport which now accepts File objects
       const data = await processCreditReport(file);
-      console.log("Credit report processed successfully:", data);
-      
-      if (!data || !data.accounts || !Array.isArray(data.accounts)) {
-        throw new Error("Invalid report data structure");
-      }
-      
       setReportData(data);
       onReportProcessed(data);
       
@@ -64,7 +50,6 @@ const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({
         description: `Successfully analyzed credit report with ${data.accounts.length} accounts${testMode ? ' in test mode' : ''}.`,
       });
     } catch (error) {
-      console.error("Error processing credit report:", error);
       toast({
         title: "Error processing report",
         description: error instanceof Error ? error.message : "Failed to process credit report.",
@@ -76,17 +61,11 @@ const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({
   };
   
   const handleSelectAccount = (account: CreditReportAccount) => {
-    if (!account) {
-      console.error("Attempting to select undefined account");
-      return;
-    }
-    
-    console.log("Account selected for dispute:", account);
     onAccountSelected(account);
     
     toast({
       title: testMode ? "Test Account Selected" : "Account Selected",
-      description: `Selected ${account.accountName || 'Unknown Account'} for dispute${testMode ? ' in test mode' : ''}.`,
+      description: `Selected ${account.accountName} for dispute${testMode ? ' in test mode' : ''}.`,
     });
   };
   
@@ -102,8 +81,8 @@ const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({
   };
   
   const filteredAccounts = reportData?.accounts.filter(account => 
-    (account.accountName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ((account.accountType || "").toLowerCase().includes(searchTerm.toLowerCase()))
+    account.accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (account.accountType && account.accountType.toLowerCase().includes(searchTerm.toLowerCase()))
   ) || [];
   
   const resetReport = () => {
@@ -132,7 +111,7 @@ const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({
           />
           
           <AccountsSection 
-            accounts={filteredAccounts}
+            accounts={reportData.accounts}
             isExpanded={expandedSections.accounts}
             filteredAccounts={filteredAccounts}
             onToggleSection={() => toggleSection('accounts')}

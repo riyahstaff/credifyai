@@ -1,51 +1,16 @@
 
-import { CreditReportData } from '@/utils/creditReportParser';
-import { analyzeCreditReport } from '@/components/ai/services/creditReport/analysisService';
-import { generateDisputeLetters } from '../utils/letterGenerator';
 import { useToast } from '@/hooks/use-toast';
+import { processCreditReport } from '@/utils/creditReportParser';
+import { identifyIssues } from '@/utils/reportAnalysis';
+import { AnalysisHandlerProps } from '../types/analysisTypes';
+import { ensureMinimumIssues } from '../utils/issueGenerator';
+import { generateDisputeLetters, storeGeneratedLetters } from '../utils/letterGenerator';
+import { storeReportData } from '../utils/reportStorage';
+import { createFallbackLetter } from './fallbackLetterCreator';
 
-interface AnalysisResult {
-  reportData: CreditReportData | null;
-  issues: any[];
-  error: string | null;
-}
-
-export const handleCreditReportAnalysis = async (fileContent: string): Promise<AnalysisResult> => {
-  try {
-    console.log("Starting credit report analysis...");
-    const { reportData, issues } = await analyzeCreditReport(fileContent);
-    
-    if (!reportData) {
-      console.error("Credit report analysis failed: No report data returned");
-      return { reportData: null, issues: [], error: "Credit report analysis failed: No report data returned" };
-    }
-    
-    console.log("Credit report analysis completed successfully");
-    return { reportData, issues, error: null };
-  } catch (error: any) {
-    console.error("Error during credit report analysis:", error);
-    return { reportData: null, issues: [], error: error.message || "Credit report analysis failed" };
-  }
-};
-
-interface LetterGenerationResult {
-  lettersGenerated: boolean;
-  error: string | null;
-}
-
-export const handleDisputeLetterGeneration = async (issues: any[], reportData: CreditReportData): Promise<LetterGenerationResult> => {
-  try {
-    console.log("Starting dispute letter generation...");
-    await generateDisputeLetters(issues, reportData);
-    console.log("Dispute letter generation completed successfully");
-    return { lettersGenerated: true, error: null };
-  } catch (error: any) {
-    console.error("Error during dispute letter generation:", error);
-    return { lettersGenerated: false, error: error.message || "Dispute letter generation failed" };
-  }
-};
-
-// Adding the missing handleAnalysisComplete function
+/**
+ * Main handler function for processing credit report analysis
+ */
 export const handleAnalysisComplete = async ({
   uploadedFile,
   setReportData,
@@ -55,113 +20,82 @@ export const handleAnalysisComplete = async ({
   setAnalyzing,
   setAnalyzed,
   toast
-}: {
-  uploadedFile: File;
-  setReportData: (data: CreditReportData) => void;
-  setIssues: (issues: any[]) => void;
-  setLetterGenerated: (generated: boolean) => void;
-  setAnalysisError: (error: string | null) => void;
-  setAnalyzing: (analyzing: boolean) => void;
-  setAnalyzed: (analyzed: boolean) => void;
-  toast: ReturnType<typeof useToast>;
-}) => {
+}: AnalysisHandlerProps) => {
+  console.log("handleAnalysisComplete called");
+  
   try {
-    // Read the file content
-    const reader = new FileReader();
+    setAnalyzing(true);
     
-    reader.onload = async (e) => {
-      try {
-        const fileContent = e.target?.result as string;
-        
-        // Analyze the credit report
-        const { reportData, issues, error: analysisError } = await handleCreditReportAnalysis(fileContent);
-        
-        if (analysisError) {
-          console.error("Analysis error:", analysisError);
-          setAnalysisError(analysisError);
-          setAnalyzing(false);
-          setAnalyzed(true);
-          toast.toast({
-            title: "Analysis Failed",
-            description: analysisError,
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        if (reportData) {
-          // Set the report data and issues
-          setReportData(reportData);
-          setIssues(issues);
-          
-          // Generate dispute letters
-          try {
-            const { lettersGenerated, error: letterError } = await handleDisputeLetterGeneration(issues, reportData);
-            
-            if (letterError) {
-              console.warn("Letter generation warning:", letterError);
-              toast.toast({
-                title: "Letter Generation Issue",
-                description: letterError,
-                variant: "default", 
-              });
-            }
-            
-            setLetterGenerated(lettersGenerated);
-          } catch (letterGenError: any) {
-            console.error("Letter generation error:", letterGenError);
-            toast.toast({
-              title: "Letter Generation Failed",
-              description: letterGenError.message || "Failed to generate dispute letters",
-              variant: "default", 
-            });
-          }
-          
-          // Mark analysis as complete
-          setAnalyzing(false);
-          setAnalyzed(true);
-          toast.toast({
-            title: "Analysis Complete",
-            description: "Your credit report has been analyzed successfully.",
-            variant: "default",
-          });
-        }
-      } catch (processingError: any) {
-        console.error("File processing error:", processingError);
-        setAnalysisError(processingError.message || "Error processing file");
-        setAnalyzing(false);
-        setAnalyzed(true);
-        toast.toast({
-          title: "Processing Error",
-          description: processingError.message || "Error processing your credit report file",
-          variant: "destructive",
-        });
-      }
-    };
-    
-    reader.onerror = () => {
-      const errorMsg = "Error reading the file";
-      console.error(errorMsg);
-      setAnalysisError(errorMsg);
+    if (!uploadedFile) {
+      console.error("No file available for analysis");
+      setAnalysisError("No file was available for analysis");
       setAnalyzing(false);
       setAnalyzed(true);
-      toast.toast({
-        title: "File Error",
-        description: errorMsg,
-        variant: "destructive",
-      });
-    };
+      return;
+    }
     
-    // Start reading the file
-    reader.readAsText(uploadedFile);
-  } catch (error: any) {
-    console.error("Analysis process error:", error);
-    setAnalysisError(error.message || "Error during analysis process");
+    // Process the credit report
+    console.log("Processing credit report:", uploadedFile.name);
+    const data = await processCreditReport(uploadedFile);
+    
+    if (!data) {
+      throw new Error("Failed to process credit report data");
+    }
+    
+    // Store the report data
+    setReportData(data);
+    storeReportData(data);
+    
+    // Identify issues in the report
+    console.log("Identifying issues in report data");
+    let detectedIssues = identifyIssues(data);
+    detectedIssues = ensureMinimumIssues(detectedIssues, 3);
+    
+    console.log(`Found ${detectedIssues.length} potential issues:`, detectedIssues);
+    setIssues(detectedIssues);
+    
+    // Generate dispute letters
+    console.log(`Generating dispute letters for ${detectedIssues.length} issues`);
+    const generatedLetters = await generateDisputeLetters(detectedIssues, data);
+    
+    if (generatedLetters && generatedLetters.length > 0) {
+      console.log(`Generated ${generatedLetters.length} dispute letters successfully`);
+      setLetterGenerated(true);
+      sessionStorage.setItem('autoGeneratedLetter', 'true');
+      
+      toast.toast({
+        title: "Dispute letters generated",
+        description: `${generatedLetters.length} dispute letters have been created and are ready for review.`,
+      });
+    } else {
+      console.warn("No letters were generated");
+      
+      // Create a fallback letter if no letters were generated
+      const fallbackLetter = createFallbackLetter(data);
+      storeGeneratedLetters([fallbackLetter]);
+      setLetterGenerated(true);
+      
+      toast.toast({
+        title: "Fallback dispute letter generated",
+        description: "We created a basic dispute letter since we couldn't generate specific letters for the issues found.",
+      });
+    }
+    
     setAnalyzing(false);
     setAnalyzed(true);
+    
+    // Force navigation by logging this special message 
+    console.log("ANALYSIS_COMPLETE_READY_FOR_NAVIGATION");
+    
+  } catch (error) {
+    console.error("Error analyzing report:", error);
+    setAnalysisError(error instanceof Error ? error.message : "Unknown error processing report");
+    setAnalyzing(false);
+    setAnalyzed(true);
+    
     toast.toast({
-      title: "Analysis Error",
-      description: error.message || "An error occurred during the analysis process",
+      title: "Analysis failed",
+      description: error instanceof Error ? error.message : "Failed to process your credit report.",
       variant: "destructive",
     });
   }
