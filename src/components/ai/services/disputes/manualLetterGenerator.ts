@@ -74,10 +74,11 @@ export const generateManualDisputeLetter = async (
     "";
   
   // Create the account section in the format requested
+  const accountNumber = dispute.accountNumber || 'Unknown'; // Handle undefined accountNumber
   const accountSection = `
 Alleging Creditor and Account as is reported on my credit report:
 ${dispute.accountName.toUpperCase()}
-ACCOUNT- ${dispute.accountNumber ? 'xxxxxxxx' + dispute.accountNumber.substring(Math.max(0, dispute.accountNumber.length - 4)) : 'xxxxxxxx####'}
+ACCOUNT- ${accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 'xxxxxxxx####'}
 Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant
 `;
 

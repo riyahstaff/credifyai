@@ -5,6 +5,7 @@ import { RecommendedDispute } from '@/utils/creditReport/types';
 export type DisputeType = {
   bureau: string;
   accountName: string;
+  accountNumber?: string;  // Added this property
   errorType: string;
   explanation: string;
 };
