@@ -5,7 +5,7 @@ import { getSampleDisputeLanguage } from '@/utils/creditReport/disputeLetters';
 export const generateManualDisputeLetter = async (
   dispute: DisputeType,
   samplePhrases: Record<string, string[]> = {},
-  options?: { testMode?: boolean }
+  options?: { testMode?: boolean; creditReportNumber?: string }
 ): Promise<string> => {
   // Log if we're generating in test mode
   if (options?.testMode) {
@@ -28,8 +28,9 @@ export const generateManualDisputeLetter = async (
     day: 'numeric'
   });
   
-  // Credit report number (placeholder)
-  const creditReportNumber = 'CR' + Math.floor(Math.random() * 10000000);
+  // Use provided credit report number or generate a placeholder one
+  // In a real scenario, this should be extracted from the credit report
+  const creditReportNumber = options?.creditReportNumber || 'CR' + Math.floor(Math.random() * 10000000);
   
   // Try to find appropriate sample language based on dispute type
   let additionalLanguage = "";
