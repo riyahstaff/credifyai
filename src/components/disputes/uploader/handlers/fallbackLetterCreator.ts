@@ -1,0 +1,65 @@
+
+/**
+ * Create a fallback dispute letter when no issues can be processed
+ */
+export const createFallbackLetter = (reportData?: any) => {
+  // Include accounts from the report if available
+  const accounts = reportData?.accounts || [];
+  
+  // Format account information
+  let accountsSection = '';
+  if (accounts && accounts.length > 0) {
+    accountsSection = accounts.map((account: any, index: number) => {
+      const accountName = account.accountName || 'UNKNOWN CREDITOR';
+      const accountNumber = account.accountNumber || '';
+      const maskedNumber = accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 'xxxxxxxx####';
+      
+      return `
+Alleging Creditor#${index + 1} and Account #${index + 1} as is reported on my credit report:
+${accountName.toUpperCase()}
+ACCOUNT- ${maskedNumber}
+Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant`;
+    }).join('\n');
+  }
+  
+  return {
+    bureau: "Experian",
+    accountName: "All Accounts",
+    accountNumber: "",
+    errorType: "General Dispute",
+    explanation: "I am disputing all information in my credit report that may be inaccurate or incomplete under my rights provided by the Fair Credit Reporting Act.",
+    accounts: accounts,
+    letterContent: `
+[YOUR NAME]
+[YOUR ADDRESS]
+[CITY, STATE ZIP]
+[DATE]
+
+Re: My certified letter in notice of an official consumer declaration of complaint for your thus far NOT proven true, NOT proven correct, NOT proven complete, NOT proven timely, or NOT proven compliant mis-information, to include likely the deficient of proven metro 2 compliant data field formatted reporting as MANDATED! I am enacting my consumer and or civil rights to compel you here and now to absolutely and permanently remove any and all aspects of untrue, inaccurate, not complete, not timely, not proven mine, not proven my responsibility, and or not proven adequately and entirely compliant allegations of credit information.
+
+Experian
+P.O. Box 4500
+Allen, TX 75013
+
+To Whom It May Concern:
+
+I received a copy of my credit report and found the following item(s) to be errors, or are deficient of proof of not being untrue, incorrect, incomplete, untimely, not mine, not my responsibility, or else wise not compliant, to include to metro 2 reporting standards.
+
+Here as follows are items in potential error requiring immediate annulment of the retainment and or reporting:
+${accountsSection}
+
+I am writing to dispute inaccurate information in my credit report. I have the right under the Fair Credit Reporting Act (FCRA), Section 611, to dispute incomplete or inaccurate information.
+
+After reviewing my credit report, I have identified multiple items that I believe are inaccurate and request that they be verified and corrected.
+
+I request that all items in my credit report be verified for accuracy. If any information cannot be fully verified, it must be removed from my credit report as required by the FCRA.
+
+Please investigate these matters and correct my credit report accordingly.
+
+Sincerely,
+
+[YOUR NAME]
+    `,
+    timestamp: new Date().toISOString()
+  };
+};

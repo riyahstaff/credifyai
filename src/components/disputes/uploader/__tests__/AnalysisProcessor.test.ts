@@ -1,6 +1,6 @@
 
 import { describe, it, vi, expect, beforeEach } from 'vitest';
-import { handleAnalysisComplete } from '../AnalysisProcessor';
+import { handleAnalysisComplete } from '../handlers/analysisHandler';
 import { toast } from '@/hooks/use-toast';
 import { AnalysisHandlerProps } from '../types/analysisTypes';
 
