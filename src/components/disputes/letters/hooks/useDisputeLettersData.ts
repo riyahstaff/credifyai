@@ -14,6 +14,7 @@ interface Letter {
   accountName?: string;
   accountNumber?: string;
   errorType?: string;
+  letterContent?: string; // Added this property to fix the TypeScript error
 }
 
 export function useDisputeLettersData(testMode: boolean = false) {
@@ -60,7 +61,8 @@ export function useDisputeLettersData(testMode: boolean = false) {
                 content: letter.letterContent || letter.content || '',
                 accountName: letter.accountName || '',
                 accountNumber: letter.accountNumber || '',
-                errorType: letter.errorType || 'General Dispute'
+                errorType: letter.errorType || 'General Dispute',
+                letterContent: letter.letterContent || letter.content || '' // Ensuring letterContent is always set
               }));
               
               console.log("[useDisputeLettersData] Formatted letters:", formattedLetters);
@@ -110,7 +112,8 @@ export function useDisputeLettersData(testMode: boolean = false) {
               content: pendingLetter.letterContent || pendingLetter.content || '',
               accountName: pendingLetter.accountName || '',
               accountNumber: pendingLetter.accountNumber || '',
-              errorType: pendingLetter.errorType || 'General Dispute'
+              errorType: pendingLetter.errorType || 'General Dispute',
+              letterContent: pendingLetter.letterContent || pendingLetter.content || '' // Ensuring letterContent is always set
             };
             
             // Ensure the letter content is not empty
