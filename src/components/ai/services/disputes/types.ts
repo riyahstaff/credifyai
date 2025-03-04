@@ -5,9 +5,10 @@ import { RecommendedDispute } from '@/utils/creditReport/types';
 export type DisputeType = {
   bureau: string;
   accountName: string;
-  accountNumber?: string;  // Added this property
+  accountNumber: string;  // Made required to match other interfaces
   errorType: string;
   explanation: string;
+  letterContent?: string; // Added to match updated DisputeData interface
 };
 
 export interface SamplePhrases {

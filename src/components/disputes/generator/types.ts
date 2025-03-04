@@ -22,6 +22,7 @@ export interface DisputeData {
   accountNumber: string;
   errorType: string;
   explanation: string;
+  letterContent?: string;
   actualAccountInfo: {
     name: string;
     number: string;
@@ -30,4 +31,6 @@ export interface DisputeData {
     reportedDate?: string;
     status?: string;
   };
+  // Allow additional properties for extensibility
+  [key: string]: any;
 }

@@ -3,7 +3,11 @@ import { DisputeData } from '../types';
 
 export const processDisputeData = (disputeData: DisputeData, testMode: boolean = false) => {
   if (testMode) {
-    disputeData = { ...disputeData, generatedInTestMode: true };
+    // Create a properly typed copy with the test mode flag
+    disputeData = { 
+      ...disputeData, 
+      testMode: true // Using a property that's allowed by [key: string]: any
+    };
   }
   
   // Store the dispute data in session storage

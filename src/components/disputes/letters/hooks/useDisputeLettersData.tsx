@@ -1,19 +1,25 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { getUserDisputeLetters, saveDisputeLetter } from '@/lib/supabase/disputeLetters';
-import { Letter, getSampleLetters } from './sampleLettersData';
+import type { Letter } from './sampleLettersData';
+import { getSampleLetters } from './sampleLettersData';
 import { 
   loadLettersFromStorage, 
   saveLettersToStorage, 
   addLetterToStorage 
 } from './letterStorageUtils';
 
-export { Letter }; // Export the Letter interface for backward compatibility
+// Import the AuthContext
+import { useContext } from 'react';
+import { AuthContext } from '@/contexts/AuthContext';
+
+export type { Letter }; // Export the Letter type properly
 
 export const useDisputeLettersData = (testMode: boolean = false) => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user } = useContext(AuthContext); // Using AuthContext instead of useAuth hook
   const [letters, setLetters] = useState<Letter[]>([]);
   const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null);
   const [isLoading, setIsLoading] = useState(true);

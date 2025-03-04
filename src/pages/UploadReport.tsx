@@ -15,6 +15,12 @@ import {
   storeLetterInStorage 
 } from '@/components/disputes/uploader/utils/bureauUtils';
 
+// Define the return type for handleGenerateDispute
+interface DisputeGenerationResult {
+  success: boolean;
+  disputeData?: any;
+}
+
 const UploadReport = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -101,14 +107,14 @@ const UploadReport = () => {
   const hasPendingLetters = verifyLetterStorage();
 
   // Custom dispute generation handler with extra verification
-  const handleDisputeGeneration = async (selectedIssue: any) => {
+  const handleDisputeGeneration = async (selectedIssue: any): Promise<DisputeGenerationResult> => {
     try {
       console.log("Starting dispute generation with extra verification");
       
-      // Call the original handler and explicitly type the return value
+      // Call the original handler and get the result
       const result = await handleGenerateDispute(selectedIssue);
       
-      // Verify result and ensure storage
+      // Properly type-check the result
       if (result && typeof result === 'object' && 'disputeData' in result) {
         console.log("Dispute generation successful, storing letter");
         storeLetterInStorage(result.disputeData);
@@ -129,7 +135,7 @@ const UploadReport = () => {
           }
         }, 1000);
         
-        return true;
+        return { success: true, disputeData: result.disputeData };
       } else {
         console.error("Dispute generation returned invalid result");
         toast({
@@ -137,7 +143,7 @@ const UploadReport = () => {
           description: "There was a problem generating your dispute letter. Please try again.",
           variant: "destructive",
         });
-        return false;
+        return { success: false };
       }
     } catch (error) {
       console.error("Error in enhanced dispute generation:", error);
@@ -146,7 +152,7 @@ const UploadReport = () => {
         description: "An error occurred while generating your dispute letter.",
         variant: "destructive",
       });
-      return false;
+      return { success: false };
     }
   };
 

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
@@ -103,7 +104,8 @@ export function useDisputeGeneratorState(testMode: boolean = false) {
     const isInquiryDispute = disputeData.errorType.toLowerCase().includes('inquiry') || 
       (selectedAccount && selectedAccount.accountType === 'Inquiry');
     
-    let letterContent = disputeData.letterContent;
+    // Get the letter content from the input or use a default
+    let letterContent = disputeData.letterContent || "";
     
     if (isInquiryDispute && (!letterContent || letterContent.length < 100)) {
       letterContent = generateFallbackInquiryDisputeLetter();
