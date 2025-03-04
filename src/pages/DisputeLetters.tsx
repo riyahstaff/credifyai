@@ -36,7 +36,7 @@ const DisputeLetters = () => {
         try {
           const letters = JSON.parse(generatedLetters);
           letterCount = letters.length;
-          console.log(`[DisputeLetters] Found ${letterCount} generated letters in session storage`);
+          console.log(`[DisputeLetters] Found ${letterCount} generated letters in session storage:`, letters);
         } catch (e) {
           console.error("Error parsing generated letters:", e);
         }

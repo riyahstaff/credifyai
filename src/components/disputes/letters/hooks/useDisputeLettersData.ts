@@ -42,6 +42,8 @@ export function useDisputeLettersData(testMode: boolean = false) {
         if (generatedLettersJSON) {
           try {
             const parsedLetters = JSON.parse(generatedLettersJSON);
+            console.log("Parsed generated letters:", parsedLetters);
+            
             if (Array.isArray(parsedLetters) && parsedLetters.length > 0) {
               console.log(`Found ${parsedLetters.length} generated letters in session storage`);
               
@@ -61,6 +63,7 @@ export function useDisputeLettersData(testMode: boolean = false) {
                 errorType: letter.errorType
               }));
               
+              console.log("Formatted letters:", formattedLetters);
               setLetters(formattedLetters);
               
               // Toast notification about loaded letters
@@ -74,6 +77,8 @@ export function useDisputeLettersData(testMode: boolean = false) {
               
               setIsLoading(false);
               return;
+            } else {
+              console.warn("Parsed generated letters is not an array or is empty");
             }
           } catch (error) {
             console.error("Error parsing generated letters:", error);
@@ -84,7 +89,7 @@ export function useDisputeLettersData(testMode: boolean = false) {
         if (pendingLetterJSON) {
           try {
             const pendingLetter = JSON.parse(pendingLetterJSON);
-            console.log("Found pending letter in session storage");
+            console.log("Found pending letter in session storage", pendingLetter);
             
             // Create formatted letter
             const formattedLetter = {
