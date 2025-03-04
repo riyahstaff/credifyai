@@ -36,14 +36,17 @@ const DisputeLetters = () => {
         try {
           const letters = JSON.parse(generatedLetters);
           letterCount = letters.length;
+          console.log(`[DisputeLetters] Found ${letterCount} generated letters in session storage`);
         } catch (e) {
           console.error("Error parsing generated letters:", e);
         }
       } else if (pendingLetter) {
         letterCount = 1;
+        console.log("[DisputeLetters] Found 1 pending letter in session storage");
       }
       
       if (letterCount > 0) {
+        console.log(`[DisputeLetters] Showing toast for ${letterCount} letters`);
         toast({
           title: testMode ? "Test Letters Ready" : "Dispute Letters Ready",
           description: `${letterCount} dispute ${letterCount === 1 ? 'letter has' : 'letters have'} been generated based on your credit report analysis${testMode ? ' in test mode' : ''}.`,
@@ -51,6 +54,7 @@ const DisputeLetters = () => {
         });
       } else {
         // If the flag is true but no letters were found, show an error
+        console.log("[DisputeLetters] No letters found despite flag being true");
         toast({
           title: "Letter Generation Issue",
           description: "There was a problem generating dispute letters. Please try again or contact support.",
