@@ -1,12 +1,16 @@
 
 // Safe access to the bureau property which might not exist on some CreditReportAccount objects
 export const getBureauFromAccount = (account: any): string => {
-  if (account?.bureau) {
+  if (!account) {
+    return 'Experian'; // Default if account is null or undefined
+  }
+  
+  if (account.bureau) {
     return account.bureau;
   }
   
   // Try to extract from bureauReporting if available
-  if (account?.bureauReporting && Array.isArray(account.bureauReporting) && account.bureauReporting.length > 0) {
+  if (account.bureauReporting && Array.isArray(account.bureauReporting) && account.bureauReporting.length > 0) {
     return account.bureauReporting[0];
   }
   
@@ -16,6 +20,10 @@ export const getBureauFromAccount = (account: any): string => {
 
 // Determine the bureau for a dispute issue
 export const determineBureau = (issue: any): string => {
+  if (!issue) {
+    return getDefaultBureau(); // Default if issue is null or undefined
+  }
+  
   // Check if the issue has an account with bureau information
   if (issue.account) {
     return getBureauFromAccount(issue.account);
@@ -42,11 +50,15 @@ export const determineBureau = (issue: any): string => {
 
 // Additional utility functions for bureau handling
 export const getAllBureausFromAccount = (account: any): string[] => {
-  if (account?.bureauReporting && Array.isArray(account.bureauReporting) && account.bureauReporting.length > 0) {
+  if (!account) {
+    return ['Experian', 'Equifax', 'TransUnion']; // Default if account is null
+  }
+  
+  if (account.bureauReporting && Array.isArray(account.bureauReporting) && account.bureauReporting.length > 0) {
     return account.bureauReporting;
   }
   
-  if (account?.bureau) {
+  if (account.bureau) {
     return [account.bureau];
   }
   
@@ -55,6 +67,10 @@ export const getAllBureausFromAccount = (account: any): string[] => {
 };
 
 export const formatBureauName = (bureau: string): string => {
+  if (!bureau) {
+    return 'Experian'; // Default if bureau is null or undefined
+  }
+  
   const bureauMap: Record<string, string> = {
     'experian': 'Experian',
     'equifax': 'Equifax',

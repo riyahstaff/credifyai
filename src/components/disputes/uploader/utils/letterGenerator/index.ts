@@ -5,5 +5,11 @@
 export { generateDisputeLetters } from './letterGenerator';
 export { storeGeneratedLetters } from './storageUtils';
 export { createEmergencyLetter } from './emergencyLetter';
-export { determineBureau } from './bureauUtils';
+export { 
+  determineBureau,
+  getBureauFromAccount,
+  getAllBureausFromAccount,
+  formatBureauName,
+  getDefaultBureau 
+} from './bureauUtils';
 export type { DisputeIssue, DisputeLetter } from './types';
