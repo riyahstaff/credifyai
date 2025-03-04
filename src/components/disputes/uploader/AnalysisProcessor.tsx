@@ -1,7 +1,7 @@
-
 import { AnalysisProcessorProps, AnalysisHandlerProps } from './types/analysisTypes';
 import { handleAnalysisComplete } from './handlers/analysisHandler';
 import { preloadSampleData } from './utils/sampleDataLoader';
+import { generateDisputeLetters } from './utils/letterGenerator';
 
 export type { AnalysisProcessorProps } from './types/analysisTypes';
 
