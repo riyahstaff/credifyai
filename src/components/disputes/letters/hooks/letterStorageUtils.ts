@@ -17,6 +17,14 @@ export const loadLettersFromStorage = (): {
   console.log("[loadLettersFromStorage] Generated letters JSON exists:", !!generatedLettersJSON);
   console.log("[loadLettersFromStorage] Pending letter JSON exists:", !!pendingLetterJSON);
   
+  if (generatedLettersJSON) {
+    console.log("[loadLettersFromStorage] Generated letters JSON content:", generatedLettersJSON.substring(0, 100) + "...");
+  }
+  
+  if (pendingLetterJSON) {
+    console.log("[loadLettersFromStorage] Pending letter JSON content:", pendingLetterJSON.substring(0, 100) + "...");
+  }
+  
   let letters: Letter[] = [];
   let selectedLetter: Letter | null = null;
   let foundLetters = false;
@@ -71,6 +79,7 @@ export const loadLettersFromStorage = (): {
  * Formats a letter from storage to match the Letter interface
  */
 export const formatLetterFromStorage = (letter: any, index: number): Letter => {
+  // Ensure letter has all required fields
   return {
     id: letter.id || Date.now() + index,
     title: letter.title || `${letter.errorType || 'Dispute'} (${letter.accountName || 'Account'})`,
@@ -80,6 +89,7 @@ export const formatLetterFromStorage = (letter: any, index: number): Letter => {
     }),
     status: letter.status || 'draft',
     bureaus: letter.bureaus || [letter.bureau || 'Unknown'],
+    // Ensure content is available in both fields for compatibility
     content: letter.letterContent || letter.content || '',
     letterContent: letter.content || letter.letterContent || '',
     accountName: letter.accountName || 'Unknown Account',

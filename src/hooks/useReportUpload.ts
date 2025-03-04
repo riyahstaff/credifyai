@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditReportAccount } from '@/utils/creditReportParser';
@@ -58,15 +57,29 @@ export const useReportUpload = () => {
     analysisCompleted
   );
 
-  // Add the letter generation effect
+  // Add the letter generation effect with stronger navigation logic
   useEffect(() => {
-    if (letterGenerated && sessionStorage.getItem('pendingDisputeLetter')) {
-      console.log("Letter has been generated, navigating to dispute letters page");
-      const timer = setTimeout(() => {
-        navigate('/dispute-letters');
-      }, 1000);
+    if (letterGenerated) {
+      console.log("Letter has been generated, checking storage before navigation");
       
-      return () => clearTimeout(timer);
+      // Verify that we have letters in storage
+      const pendingLetter = sessionStorage.getItem('pendingDisputeLetter');
+      const generatedLetters = sessionStorage.getItem('generatedDisputeLetters');
+      
+      if (pendingLetter || generatedLetters) {
+        console.log("Letters found in storage, navigating to dispute letters page");
+        // Set flag to force reload on letters page
+        sessionStorage.setItem('forceLettersReload', 'true');
+        
+        const timer = setTimeout(() => {
+          console.log("Executing navigation to dispute-letters");
+          navigate('/dispute-letters');
+        }, 1000);
+        
+        return () => clearTimeout(timer);
+      } else {
+        console.error("Letter generated flag is true but no letters found in storage");
+      }
     }
   }, [letterGenerated, navigate]);
 
