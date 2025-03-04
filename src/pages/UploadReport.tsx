@@ -105,7 +105,7 @@ const UploadReport = () => {
     try {
       console.log("Starting dispute generation with extra verification");
       
-      // Call the original handler
+      // Call the original handler and explicitly type the return value
       const result = await handleGenerateDispute(selectedIssue);
       
       // Verify result and ensure storage

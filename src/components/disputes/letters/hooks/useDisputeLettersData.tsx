@@ -1,8 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { getUserDisputeLetters, saveDisputeLetter } from '@/lib/supabase/disputeLetters';
 import { Letter, getSampleLetters } from './sampleLettersData';
 import { 
@@ -10,6 +8,8 @@ import {
   saveLettersToStorage, 
   addLetterToStorage 
 } from './letterStorageUtils';
+
+export { Letter }; // Export the Letter interface for backward compatibility
 
 export const useDisputeLettersData = (testMode: boolean = false) => {
   const { toast } = useToast();
