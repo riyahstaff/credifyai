@@ -1,29 +1,45 @@
-/**
- * Determine which bureau to send the dispute to based on the issue
- */
-import { DisputeIssue } from './types';
 
-export function determineBureau(issue: DisputeIssue): string {
-  // If the issue specifies a bureau, use that
-  if (issue.bureau) {
-    return issue.bureau;
+// Safe access to the bureau property which might not exist on some CreditReportAccount objects
+export const getBureauFromAccount = (account: any): string => {
+  if (account?.bureau) {
+    return account.bureau;
   }
   
-  // If the account specifies a bureau, use that
-  if (issue.account?.bureau) {
-    return issue.account.bureau;
+  // Try to extract from bureauReporting if available
+  if (account?.bureauReporting && Array.isArray(account.bureauReporting) && account.bureauReporting.length > 0) {
+    return account.bureauReporting[0];
   }
   
-  // Otherwise try to determine from the issue description
-  const description = (issue.description || '').toLowerCase();
-  if (description.includes('equifax')) {
-    return 'Equifax';
-  } else if (description.includes('experian')) {
-    return 'Experian';
-  } else if (description.includes('transunion')) {
-    return 'TransUnion';
-  }
-  
-  // Default to Experian if we can't determine
+  // Default to Experian if no bureau info available
   return 'Experian';
-}
+};
+
+// Additional utility functions for bureau handling
+export const getAllBureausFromAccount = (account: any): string[] => {
+  if (account?.bureauReporting && Array.isArray(account.bureauReporting) && account.bureauReporting.length > 0) {
+    return account.bureauReporting;
+  }
+  
+  if (account?.bureau) {
+    return [account.bureau];
+  }
+  
+  // Default to all bureaus if no specific bureau info available
+  return ['Experian', 'Equifax', 'TransUnion'];
+};
+
+export const formatBureauName = (bureau: string): string => {
+  const bureauMap: Record<string, string> = {
+    'experian': 'Experian',
+    'equifax': 'Equifax',
+    'transunion': 'TransUnion',
+    'trans union': 'TransUnion',
+  };
+  
+  const lowerBureau = bureau.toLowerCase();
+  return bureauMap[lowerBureau] || bureau;
+};
+
+export const getDefaultBureau = (): string => {
+  return 'Experian';
+};

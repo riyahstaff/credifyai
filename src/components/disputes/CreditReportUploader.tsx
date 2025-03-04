@@ -112,7 +112,7 @@ const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({
           />
           
           <AccountsSection 
-            accounts={reportData.accounts}
+            accounts={filteredAccounts}
             isExpanded={expandedSections.accounts}
             filteredAccounts={filteredAccounts}
             onToggleSection={() => toggleSection('accounts')}
