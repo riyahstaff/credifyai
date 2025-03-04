@@ -1,15 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
+import { LetterTemplate, DisputeData } from './types';
+import { determineBureau } from './utils/bureauUtils';
+import { loadStoredData, saveAccountToStorage, saveReportToStorage } from './utils/storageUtils';
+import { processDisputeData } from './utils/letterUtils';
 import { generateFallbackInquiryDisputeLetter } from '@/utils/creditReport/disputeLetters/fallbackTemplates/inquiryLetter';
-
-interface LetterTemplate {
-  id: string;
-  name: string;
-  content: string;
-  createdAt: Date;
-}
 
 export function useDisputeGeneratorState(testMode: boolean = false) {
   const { toast } = useToast();
@@ -24,85 +20,42 @@ export function useDisputeGeneratorState(testMode: boolean = false) {
       console.log("DisputeGenerator: Test mode is active");
     }
     
-    const storedReportData = sessionStorage.getItem('creditReportData');
-    const storedSelectedAccount = sessionStorage.getItem('selectedAccount');
+    const { reportData, selectedAccount, selectedBureau } = loadStoredData();
     
-    if (storedReportData) {
-      try {
-        const parsedData = JSON.parse(storedReportData);
-        setReportData(parsedData);
-        
-        toast({
-          title: "Credit report loaded",
-          description: `Loaded credit report with ${parsedData.accounts?.length || 0} accounts.`,
-        });
-        
-        if (parsedData.accounts?.length > 0 && !storedSelectedAccount) {
-          const firstAccount = parsedData.accounts[0];
-          setSelectedAccount(firstAccount);
-          sessionStorage.setItem('selectedAccount', JSON.stringify(firstAccount));
-          
-          if (firstAccount.bureau) {
-            setSelectedBureau(determineBureau(firstAccount.bureau));
-          } else {
-            setSelectedBureau('Experian');
-          }
-        }
-      } catch (error) {
-        console.error("Error parsing stored credit report data:", error);
-      }
+    if (reportData) {
+      setReportData(reportData);
+      toast({
+        title: "Credit report loaded",
+        description: `Loaded credit report with ${reportData.accounts?.length || 0} accounts.`,
+      });
     }
     
-    if (storedSelectedAccount) {
-      try {
-        const parsedAccount = JSON.parse(storedSelectedAccount);
-        setSelectedAccount(parsedAccount);
-        
-        if (parsedAccount.bureau) {
-          setSelectedBureau(determineBureau(parsedAccount.bureau));
-        } else {
-          setSelectedBureau('Experian');
-        }
-      } catch (error) {
-        console.error("Error parsing stored selected account:", error);
-      }
+    if (selectedAccount) {
+      setSelectedAccount(selectedAccount);
+      setSelectedBureau(selectedBureau || 'Experian');
     }
   }, [toast, testMode]);
   
-  const determineBureau = (bureauString: string): string => {
-    const lowerBureau = bureauString.toLowerCase();
-    if (lowerBureau.includes('experian')) {
-      return 'Experian';
-    } else if (lowerBureau.includes('equifax')) {
-      return 'Equifax';
-    } else if (lowerBureau.includes('transunion')) {
-      return 'TransUnion';
-    }
-    return 'Experian'; // Default
-  };
-  
   const handleReportProcessed = (data: CreditReportData) => {
     setReportData(data);
-    sessionStorage.setItem('creditReportData', JSON.stringify(data));
+    saveReportToStorage(data);
     
     if (data.accounts && data.accounts.length > 0) {
       const firstAccount = data.accounts[0];
       setSelectedAccount(firstAccount);
-      sessionStorage.setItem('selectedAccount', JSON.stringify(firstAccount));
+      saveAccountToStorage(firstAccount);
       
       if (firstAccount.bureau) {
         setSelectedBureau(determineBureau(firstAccount.bureau));
       } else {
         setSelectedBureau('Experian');
       }
-      
-      console.log("First account loaded:", firstAccount);
     }
   };
   
   const handleAccountSelected = (account: CreditReportAccount) => {
     setSelectedAccount(account);
-    sessionStorage.setItem('selectedAccount', JSON.stringify(account));
+    saveAccountToStorage(account);
     
     console.log("Account selected:", account);
     
@@ -145,102 +98,19 @@ export function useDisputeGeneratorState(testMode: boolean = false) {
     setSelectedTemplate(template);
   };
   
-  const handleDisputeGenerated = (disputeData: any) => {
-    if (testMode) {
-      disputeData.generatedInTestMode = true;
-    }
-    
-    console.log("Dispute generated:", disputeData, "Test mode:", testMode);
-    
-    // Check if this is an inquiry dispute
-    const isInquiryDispute = 
-      disputeData.errorType.toLowerCase().includes('inquiry') || 
+  const handleDisputeGenerated = (disputeData: DisputeData) => {
+    const processedData = processDisputeData(disputeData, testMode);
+    const isInquiryDispute = disputeData.errorType.toLowerCase().includes('inquiry') || 
       (selectedAccount && selectedAccount.accountType === 'Inquiry');
     
-    // Process the letter content to ensure it has all specific account details
     let letterContent = disputeData.letterContent;
     
-    // If this is an inquiry dispute, use the specialized template
     if (isInquiryDispute && (!letterContent || letterContent.length < 100)) {
       letterContent = generateFallbackInquiryDisputeLetter();
     }
     
-    // Get the user's name from localStorage or use placeholder
-    const userName = localStorage.getItem('userName') || '[YOUR NAME]';
-    const userAddress = localStorage.getItem('userAddress') || '[YOUR ADDRESS]';
-    const userCity = localStorage.getItem('userCity') || '[CITY]';
-    const userState = localStorage.getItem('userState') || '[STATE]';
-    const userZip = localStorage.getItem('userZip') || '[ZIP]';
-    
-    // Pass all accounts to the letter generator
-    if (reportData && reportData.accounts && reportData.accounts.length > 0) {
-      // Extract all account information into the letter
-      console.log(`Including ${reportData.accounts.length} accounts from credit report in dispute letter`);
-      
-      // Add a section for each account in the credit report
-      const accountsForLetter = reportData.accounts.map(account => ({
-        accountName: account.accountName,
-        accountNumber: account.accountNumber || '',
-        balance: account.currentBalance || account.balance,
-        openDate: account.dateOpened || account.openDate,
-        reportedDate: account.dateReported || account.lastReportedDate,
-        status: account.paymentStatus
-      }));
-      
-      // Update the dispute data to include all accounts
-      disputeData.accounts = accountsForLetter;
-    }
-    
-    // Replace any placeholder with the actual account details
-    letterContent = letterContent
-      .replace(/\[ACCOUNT NUMBER\]/g, disputeData.accountNumber || 'Unknown')
-      .replace(/\[COMPANY NAME\]/g, disputeData.accountName)
-      .replace(/\[DATE OF INQUIRY\]/g, selectedAccount?.dateReported || selectedAccount?.lastReportedDate || 'Unknown Date')
-      .replace(/Your credit report/gi, "My credit report")
-      .replace(/\[YOUR NAME\]/g, userName)
-      .replace(/\[YOUR ADDRESS\]/g, userAddress)
-      .replace(/\[CITY, STATE ZIP\]/g, `${userCity}, ${userState} ${userZip}`);
-    
-    // Ensure the DISPUTED ITEMS section is present
-    if (!letterContent.includes("DISPUTED ITEM(S):") && disputeData.accountName) {
-      letterContent += `\n\nDISPUTED ITEM(S):\n- Account Name: ${disputeData.accountName}\n- Account Number: ${disputeData.accountNumber || 'Unknown'}\n`;
-      
-      // Add additional account details if available
-      if (disputeData.actualAccountInfo) {
-        const info = disputeData.actualAccountInfo;
-        if (info.openDate) letterContent += `- Date Opened/Reported: ${info.openDate}\n`;
-        if (info.reportedDate) letterContent += `- Last Reported: ${info.reportedDate}\n`;
-        if (info.status) letterContent += `- Status: ${info.status}\n`;
-      }
-    }
-    
-    // Update enclosures section to only include ID and SSN card
-    if (letterContent.includes("Enclosures:")) {
-      const enclosurePattern = /Enclosures:[\s\S]*?(?=\n\n|\Z)/;
-      letterContent = letterContent.replace(enclosurePattern, 
-        `Enclosures:\n- Copy of Driver's License\n- Copy of Social Security Card`
-      );
-    }
-    
-    // Save the updated letter content
-    disputeData.letterContent = letterContent;
     setGeneratedLetter(letterContent);
     sessionStorage.setItem('autoGeneratedLetter', 'true');
-    
-    // Also store the dispute data with all accounts in session storage
-    try {
-      const existingLetterData = sessionStorage.getItem('pendingDisputeLetter');
-      if (existingLetterData) {
-        const parsedLetter = JSON.parse(existingLetterData);
-        // Add accounts from the report if they weren't included
-        if (!parsedLetter.accounts && reportData?.accounts) {
-          parsedLetter.accounts = reportData.accounts;
-          sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(parsedLetter));
-        }
-      }
-    } catch (error) {
-      console.error("Error updating letter data with accounts:", error);
-    }
   };
   
   const handleLetterReset = () => {
