@@ -85,6 +85,7 @@ export const useReportUpload = () => {
         // Try to set letterGenerated to false to allow the user to try again
         setLetterGenerated(false);
         
+        // Fix: Properly call the toast function instead of treating toast object as a function
         toast({
           title: "Letter Storage Error",
           description: "Letters were generated but couldn't be saved. Please try again.",
