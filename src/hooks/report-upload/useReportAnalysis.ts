@@ -11,7 +11,7 @@ export const useReportAnalysis = () => {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
-  const toast = useToast();
+  const { toast } = useToast();
 
   const analyzeReport = async (uploadedFile: File) => {
     setAnalyzing(true);

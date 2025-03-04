@@ -1,6 +1,5 @@
 
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
 import { useReportUploadState } from './report-upload/useReportUploadState';
 import { useReportStorage } from './report-upload/useReportStorage';

@@ -5,9 +5,8 @@ import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
 
 const Login = () => {
   const { user, signIn } = useAuth();
