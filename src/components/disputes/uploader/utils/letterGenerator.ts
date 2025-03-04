@@ -56,13 +56,19 @@ export const generateDisputeLetters = async (
         zip: localStorage.getItem('userZip') || "[ZIP]"
       };
       
+      // Create a fully compliant RecommendedDispute object with all required properties
       const letterContent = await generateDisputeLetterForDiscrepancy(
         {
+          id: `issue-${Date.now()}-${index}`,
+          type: issue.type,
+          title: issue.title,
+          impact: issue.impact === 'Critical Impact' ? 'High' : 
+                 issue.impact === 'High Impact' ? 'High' : 'Medium',
           accountName: accountName,
           accountNumber: accountNumber,
+          bureau: bureau,
           reason: issue.title,
           description: issue.description,
-          bureau: bureau,
           legalBasis: issue.laws.map(law => {
             const [lawName, section] = law.split(' § ');
             return {
@@ -71,7 +77,9 @@ export const generateDisputeLetters = async (
               title: law,
               text: `According to ${law}, consumer reporting agencies must ensure accurate reporting.`
             };
-          })
+          }),
+          severity: issue.impact === 'Critical Impact' ? 'high' : 
+                   issue.impact === 'High Impact' ? 'high' : 'medium'
         },
         userInfo,
         reportData
