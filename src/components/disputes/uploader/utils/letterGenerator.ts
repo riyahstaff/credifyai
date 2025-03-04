@@ -30,7 +30,9 @@ export const generateDisputeLetters = async (
   
   const selectedIssues = [...priorityIssues, ...mediumIssues];
   
+  // If no specific issues were selected but we have issues, take the first one
   if (selectedIssues.length === 0 && issues.length > 0) {
+    console.log("No priority issues found, using first available issue");
     selectedIssues.push(issues[0]);
   }
   
@@ -58,11 +60,16 @@ export const generateDisputeLetters = async (
         {},
         {
           testMode: false,
-          accounts: accounts, // Pass accounts directly to the options object
-          // Replace fullReportData with reportData to match the expected type
-          // reportData isn't expected in the options object, so we handle that in manualLetterGenerator if needed
+          accounts: accounts
         }
       );
+      
+      if (!letterContent || letterContent.trim().length < 10) {
+        console.error(`Empty or invalid letter content generated for ${issue.title}`);
+        return null;
+      }
+      
+      console.log(`Successfully generated letter for ${issue.title} (${letterContent.length} chars)`);
       
       return {
         bureau: bureau,
@@ -85,7 +92,7 @@ export const generateDisputeLetters = async (
   // Store the letters
   if (validLetters.length > 0) {
     const stored = storeGeneratedLetters(validLetters);
-    console.log(`Letters stored successfully: ${stored}`);
+    console.log(`Letters stored successfully: ${stored} - ${validLetters.length} letters`);
     return validLetters;
   } else {
     console.warn("No valid letters were generated");

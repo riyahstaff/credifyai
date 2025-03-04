@@ -49,6 +49,14 @@ const DisputeLetters = () => {
           description: `${letterCount} dispute ${letterCount === 1 ? 'letter has' : 'letters have'} been generated based on your credit report analysis${testMode ? ' in test mode' : ''}.`,
           duration: 5000,
         });
+      } else {
+        // If the flag is true but no letters were found, show an error
+        toast({
+          title: "Letter Generation Issue",
+          description: "There was a problem generating dispute letters. Please try again or contact support.",
+          variant: "destructive",
+          duration: 5000,
+        });
       }
     }
   }, [toast, testMode]);

@@ -46,11 +46,32 @@ const ReportAnalysisResults: React.FC<ReportAnalysisResultsProps> = ({
       // This triggers the dispute generation pipeline
       onGenerateDispute();
       
-      // Navigate to the dispute letters page
+      // Navigate to the dispute letters page after a short delay
       setTimeout(() => {
-        navigate(APP_ROUTES.CREATE_DISPUTE);
-      }, 1000);
+        navigate('/dispute-letters');
+      }, 2000);
+    } else {
+      toast({
+        title: "Error generating letters",
+        description: "No report data available. Please try uploading your report again.",
+        variant: "destructive"
+      });
     }
+  };
+  
+  const handleSingleIssueDispute = (account?: CreditReportAccount) => {
+    console.log("Generating dispute for specific issue with account:", account);
+    onGenerateDispute(account);
+    
+    toast({
+      title: "Generating letter",
+      description: "Creating dispute letter for selected issue",
+    });
+    
+    // Navigate to the dispute letters page after a short delay
+    setTimeout(() => {
+      navigate('/dispute-letters');
+    }, 2000);
   };
   
   return (
@@ -92,7 +113,7 @@ const ReportAnalysisResults: React.FC<ReportAnalysisResultsProps> = ({
               impactColor={issue.impactColor}
               account={issue.account}
               laws={issue.laws}
-              onGenerateDispute={() => onGenerateDispute(issue.account)}
+              onGenerateDispute={() => handleSingleIssueDispute(issue.account)}
             />
           ))
         ) : (
