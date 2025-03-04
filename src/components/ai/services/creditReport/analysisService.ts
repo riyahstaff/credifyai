@@ -1,52 +1,34 @@
 
 import { CreditReportData } from '@/utils/creditReportParser';
 
-/**
- * Analyzes a credit report and returns report data and issues found
- */
-export const analyzeCreditReport = async (fileContent: string): Promise<{
-  reportData: CreditReportData;
-  issues: Array<{
-    type: string;
-    title: string;
-    description: string;
-    impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
-    impactColor: string;
-    account?: any;
-    laws: string[];
-  }>;
+// This is a placeholder implementation that would normally contain the real analysis logic
+export const analyzeCreditReport = async (fileContent: string): Promise<{ 
+  reportData: CreditReportData | null; 
+  issues: any[];
 }> => {
   try {
-    console.log("Starting credit report analysis in analysis service");
+    console.log("Analyzing credit report content...");
     
-    // For now, this is a placeholder implementation
-    // In a real implementation, this would parse the file content and analyze it
-    
-    // Return mock data for now
+    // In a real implementation, this would parse and analyze the report content
+    // For now, return a basic structure to make the types work
     return {
       reportData: {
-        bureaus: {
-          experian: true,
-          equifax: false,
-          transunion: false
+        bureaus: [],
+        personalInfo: {
+          name: "",
+          addresses: [],
+          phoneNumbers: [],
+          employments: [],
+          dateOfBirth: "",
         },
         accounts: [],
         inquiries: [],
-        publicRecords: []
+        publicRecords: [],
       },
-      issues: [
-        {
-          type: "account_error",
-          title: "Account Error",
-          description: "There is an error with this account",
-          impact: "High Impact",
-          impactColor: "red",
-          laws: ["FCRA"]
-        }
-      ]
+      issues: [],
     };
   } catch (error) {
     console.error("Error in analyzeCreditReport:", error);
-    throw error;
+    return { reportData: null, issues: [] };
   }
 };
