@@ -38,8 +38,9 @@ const DisputeLetters = () => {
       
       // Wait a bit to ensure storage operations complete
       setTimeout(() => {
+        console.log("[DisputeLetters] Executing forced page reload");
         window.location.reload();
-      }, 300);
+      }, 500);
       return;
     }
     

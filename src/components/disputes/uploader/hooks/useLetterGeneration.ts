@@ -37,18 +37,29 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
         if (generatedLetters && generatedLetters.length > 0) {
           console.log(`Successfully generated ${generatedLetters.length} dispute letters`);
           
-          const stored = storeGeneratedLetters(generatedLetters);
+          // Ensure each letter has content in both fields
+          const normalizedLetters = generatedLetters.map(letter => ({
+            ...letter,
+            content: letter.content || letter.letterContent || '',
+            letterContent: letter.letterContent || letter.content || ''
+          }));
+          
+          const stored = storeGeneratedLetters(normalizedLetters);
           
           if (stored) {
             toast({
               title: "Letters Generated",
-              description: `${generatedLetters.length} dispute letters have been created and are ready for review.`,
+              description: `${normalizedLetters.length} dispute letters have been created and are ready for review.`,
             });
             
-            // Add a delay before navigation to ensure storage operations complete
+            // Set flag to force reload on letters page
+            sessionStorage.setItem('forceLettersReload', 'true');
+            
+            // Add a longer delay before navigation to ensure storage operations complete
             setTimeout(() => {
+              console.log("Navigating to dispute letters page after generation");
               forceNavigateToLetters(navigate);
-            }, 300);
+            }, 1000);
           } else {
             throw new Error("Failed to store generated letters");
           }
@@ -57,6 +68,11 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
           
           const fallbackLetter = createFallbackLetter();
           const letters = [fallbackLetter];
+          
+          // Ensure the fallback letter has content in both fields
+          letters[0].content = letters[0].letterContent || letters[0].content;
+          letters[0].letterContent = letters[0].content || letters[0].letterContent;
+          
           const stored = storeGeneratedLetters(letters);
           
           if (stored) {
@@ -65,10 +81,14 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
               description: "We've created a basic dispute letter for you to review and customize.",
             });
             
+            // Set flag to force reload on letters page
+            sessionStorage.setItem('forceLettersReload', 'true');
+            
             // Add a delay before navigation to ensure storage operations complete
             setTimeout(() => {
+              console.log("Navigating to dispute letters page after fallback letter creation");
               forceNavigateToLetters(navigate);
-            }, 300);
+            }, 1000);
           } else {
             throw new Error("Failed to store fallback letter");
           }
@@ -118,7 +138,14 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
         if (generatedLetters && generatedLetters.length > 0) {
           console.log("Successfully generated letter for selected issue:", generatedLetters);
           
-          const stored = storeGeneratedLetters(generatedLetters);
+          // Ensure each letter has content in both fields
+          const normalizedLetters = generatedLetters.map(letter => ({
+            ...letter,
+            content: letter.content || letter.letterContent || '',
+            letterContent: letter.letterContent || letter.content || ''
+          }));
+          
+          const stored = storeGeneratedLetters(normalizedLetters);
           
           if (stored) {
             toast({
@@ -126,10 +153,14 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
               description: "Your dispute letter is ready for review.",
             });
             
+            // Set flag to force reload on letters page
+            sessionStorage.setItem('forceLettersReload', 'true');
+            
             // Add a delay before navigation to ensure storage operations complete
             setTimeout(() => {
+              console.log("Navigating to dispute letters page after single issue generation");
               forceNavigateToLetters(navigate);
-            }, 300);
+            }, 1000);
           } else {
             throw new Error("Failed to store generated letter");
           }
