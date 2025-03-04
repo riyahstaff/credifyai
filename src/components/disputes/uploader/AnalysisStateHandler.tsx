@@ -5,6 +5,7 @@ import AnalyzingReport from './AnalyzingReport';
 import ReportAnalysisResults from './ReportAnalysisResults';
 import UploadConfirmation from './UploadConfirmation';
 import ReportPreview from './ReportPreview';
+import { useNavigate } from 'react-router-dom';
 
 interface AnalysisStateHandlerProps {
   fileUploaded: boolean;
@@ -49,6 +50,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
 }) => {
   const [testMode, setTestMode] = useState(false);
   const [showReportPreview, setShowReportPreview] = useState(false);
+  const navigate = useNavigate();
   
   // Log important state changes for debugging
   useEffect(() => {
@@ -60,7 +62,15 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
       issuesCount: issues.length,
       testMode
     });
-  }, [fileUploaded, analyzing, analyzed, letterGenerated, issues, testMode]);
+    
+    // If analysis is complete and letters are generated, navigate to the letters page
+    if (analyzed && letterGenerated && sessionStorage.getItem('pendingDisputeLetter')) {
+      console.log("Analysis complete with letters generated, redirecting to dispute-letters page");
+      setTimeout(() => {
+        navigate('/dispute-letters');
+      }, 1000);
+    }
+  }, [fileUploaded, analyzing, analyzed, letterGenerated, issues, testMode, navigate]);
   
   // Check URL for test mode
   useEffect(() => {

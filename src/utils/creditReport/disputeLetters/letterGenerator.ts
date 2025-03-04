@@ -55,18 +55,17 @@ DISPUTED ITEM(S):
   // Extract accounts from the credit report data if available
   let accountsSectionContent = "";
   if (creditReportData && creditReportData.accounts && creditReportData.accounts.length > 0) {
-    creditReportData.accounts.forEach((account: any, index: number) => {
+    accountsSectionContent = creditReportData.accounts.map((account: any, index: number) => {
       const accountName = account.accountName || 'UNKNOWN CREDITOR';
       const accountNumber = account.accountNumber || 'Unknown';
       const maskedNumber = accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 'xxxxxxxx####';
       
-      accountsSectionContent += `
+      return `
 Alleging Creditor#${index + 1} and Account #${index + 1} as is reported on my credit report:
 ${accountName.toUpperCase()}
 ACCOUNT- ${maskedNumber}
-Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant
-`;
-    });
+Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant`;
+    }).join('\n');
   } else if (discrepancy.accountName) {
     // If no accounts from report, at least include the disputed account
     accountsSectionContent = `
@@ -76,6 +75,10 @@ ACCOUNT- ${accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, acco
 Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant
 `;
   }
+
+  // Try to use a credit report number from the report data, or generate a placeholder
+  const creditReportNumber = creditReportData?.reportNumber || 
+                            ('CR' + Math.floor(Math.random() * 10000000));
 
   // Try to find a relevant sample dispute letter to use as a template
   try {
@@ -111,15 +114,19 @@ Here as follows are items in potential error requiring immediate annulment of th
         );
       }
       
-      // Add the Re: section if it's not already there
-      if (!enhancedLetter.includes("Re: My certified letter")) {
+      // Move the Re: section to correct position
+      if (enhancedLetter.includes("Re: My certified letter")) {
+        // Remove existing Re: section
+        enhancedLetter = enhancedLetter.replace(/Re: My certified letter.*?(?=\n\n)/s, '');
+        
+        // Add it back in the correct location, right after date and before bureau address
         enhancedLetter = enhancedLetter.replace(
-          /\[DATE\]\n\n/,
+          new RegExp(`${currentDate}\\s*\\n\\n${discrepancy.bureau}`),
           `${currentDate}
 
 Re: My certified letter in notice of an official consumer declaration of complaint for your thus far NOT proven true, NOT proven correct, NOT proven complete, NOT proven timely, or NOT proven compliant mis-information, to include likely the deficient of proven metro 2 compliant data field formatted reporting as MANDATED! I am enacting my consumer and or civil rights to compel you here and now to absolutely and permanently remove any and all aspects of untrue, inaccurate, not complete, not timely, not proven mine, not proven my responsibility, and or not proven adequately and entirely compliant allegations of credit information.
 
-`
+${discrepancy.bureau}`
         );
       }
       
@@ -168,15 +175,12 @@ Re: My certified letter in notice of an official consumer declaration of complai
     citationsText += ", ";
   }
   
-  // Generate credit report number
-  const creditReportNumber = 'CR' + Math.floor(Math.random() * 10000000);
-  
   // Generate an enhanced letter with more detailed legal language
   let letterContent = `
-Credit Report #: ${creditReportNumber} Today is ${currentDate}
 ${userInfo.name}
 ${userInfo.address}
 ${userInfo.city}, ${userInfo.state} ${userInfo.zip}
+${currentDate}
 
 Re: My certified letter in notice of an official consumer declaration of complaint for your thus far NOT proven true, NOT proven correct, NOT proven complete, NOT proven timely, or NOT proven compliant mis-information, to include likely the deficient of proven metro 2 compliant data field formatted reporting as MANDATED! I am enacting my consumer and or civil rights to compel you here and now to absolutely and permanently remove any and all aspects of untrue, inaccurate, not complete, not timely, not proven mine, not proven my responsibility, and or not proven adequately and entirely compliant allegations of credit information.
 
@@ -185,7 +189,7 @@ ${bureauAddress}
 
 To Whom It May Concern:
 
-I received a copy of my credit report and found the following item(s) to be errors, or are deficient of proof of not being untrue, incorrect, incomplete, untimely, not mine, not my responsibility, or else wise not compliant, to include to metro 2 reporting standards.
+I received a copy of my credit report (Credit Report #: ${creditReportNumber}) and found the following item(s) to be errors, or are deficient of proof of not being untrue, incorrect, incomplete, untimely, not mine, not my responsibility, or else wise not compliant, to include to metro 2 reporting standards.
 
 Here as follows are items in potential error requiring immediate annulment of the retainment and or reporting:${accountsSectionContent}
 
