@@ -6,6 +6,7 @@ import AnalysisSummary from './results/AnalysisSummary';
 import IssuesList from './results/IssuesList';
 import ActionButtons from './results/ActionButtons';
 import { useLetterGeneration } from './hooks/useLetterGeneration';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReportAnalysisResultsProps {
   issues: Array<{
@@ -28,14 +29,31 @@ const ReportAnalysisResults: React.FC<ReportAnalysisResultsProps> = ({
   onResetUpload,
   onGenerateDispute
 }) => {
+  const { toast } = useToast();
   const { handleGenerateAllLetters, handleSingleIssueDispute } = useLetterGeneration(reportData);
   
   const handleAllLettersGeneration = () => {
+    toast({
+      title: "Generating all dispute letters",
+      description: "Please wait while all dispute letters are being generated...",
+    });
     handleGenerateAllLetters(issues);
   };
   
   const handleSingleIssue = (issueIndex: number, account?: CreditReportAccount) => {
+    toast({
+      title: "Generating dispute letter",
+      description: "Please wait while your dispute letter is being generated...",
+    });
+    console.log(`Handling single issue dispute for index ${issueIndex}${account ? ' with account info' : ''}`);
     handleSingleIssueDispute(issueIndex, issues, account);
+    
+    // Also call the onGenerateDispute from parent component to ensure multiple navigation methods are attempted
+    if (account) {
+      onGenerateDispute(account);
+    } else {
+      onGenerateDispute();
+    }
   };
   
   return (

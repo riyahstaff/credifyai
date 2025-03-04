@@ -37,17 +37,14 @@ export const useReportNavigation = () => {
     // Set flag to force reload on letters page
     sessionStorage.setItem('forceLettersReload', 'true');
     
-    // Add a small delay to ensure storage operations complete
-    setTimeout(() => {
-      console.log("Executing navigation to /dispute-letters");
-      // Use window.location for a full page navigation
-      window.location.href = '/dispute-letters';
-    }, 300);
+    // Force navigation by updating the window location
+    // This is more reliable than using React Router for this critical navigation
+    window.location.href = '/dispute-letters';
   };
 
   return {
     navigateToDisputeLetters,
     navigate,
-    toast // Return the actual toast function, not the entire hook result
+    toast
   };
 };

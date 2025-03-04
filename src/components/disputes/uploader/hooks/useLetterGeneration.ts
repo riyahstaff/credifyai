@@ -55,10 +55,13 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
             // Set flag to force reload on letters page
             sessionStorage.setItem('forceLettersReload', 'true');
             
-            // Add a longer delay before navigation to ensure storage operations complete
+            // Trigger navigation in multiple ways for redundancy
+            console.log("ANALYSIS_COMPLETE_READY_FOR_NAVIGATION");
+            
+            // Use window.location for the most reliable navigation
             setTimeout(() => {
-              console.log("Navigating to dispute letters page after generation");
-              forceNavigateToLetters(navigate);
+              console.log("Forcing navigation to dispute letters page");
+              window.location.href = '/dispute-letters';
             }, 1000);
           } else {
             throw new Error("Failed to store generated letters");
@@ -84,10 +87,13 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
             // Set flag to force reload on letters page
             sessionStorage.setItem('forceLettersReload', 'true');
             
-            // Add a delay before navigation to ensure storage operations complete
+            // Trigger navigation in multiple ways for redundancy
+            console.log("ANALYSIS_COMPLETE_READY_FOR_NAVIGATION");
+            
+            // Use window.location for the most reliable navigation
             setTimeout(() => {
-              console.log("Navigating to dispute letters page after fallback letter creation");
-              forceNavigateToLetters(navigate);
+              console.log("Forcing navigation to dispute letters page");
+              window.location.href = '/dispute-letters';
             }, 1000);
           } else {
             throw new Error("Failed to store fallback letter");
@@ -106,7 +112,7 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
   };
 
   const handleSingleIssueDispute = async (issueIndex: number, issues: Array<any>, account?: CreditReportAccount) => {
-    console.log(`Generating dispute for issue #${issueIndex} with account:`, account);
+    console.log(`Generating dispute for issue #${issueIndex} with account:`, account || "No account provided");
     
     toast({
       title: "Generating letter",
@@ -156,10 +162,13 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
             // Set flag to force reload on letters page
             sessionStorage.setItem('forceLettersReload', 'true');
             
-            // Add a delay before navigation to ensure storage operations complete
+            // Logging to trigger any navigation hooks
+            console.log("ANALYSIS_COMPLETE_READY_FOR_NAVIGATION");
+            
+            // Use window.location for the most reliable navigation
             setTimeout(() => {
-              console.log("Navigating to dispute letters page after single issue generation");
-              forceNavigateToLetters(navigate);
+              console.log("Forcing navigation to dispute letters page");
+              window.location.href = '/dispute-letters';
             }, 1000);
           } else {
             throw new Error("Failed to store generated letter");

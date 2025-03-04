@@ -35,6 +35,11 @@ const CreditReportIssue: React.FC<CreditReportIssueProps> = ({
     }
   };
 
+  const handleGenerateClick = () => {
+    console.log("Generate dispute clicked for:", title, "Account:", account);
+    onGenerateDispute();
+  };
+
   return (
     <div className="bg-white dark:bg-credify-navy/40 border border-gray-100 dark:border-gray-700/30 rounded-lg p-5">
       <div className="flex items-start justify-between">
@@ -71,7 +76,7 @@ const CreditReportIssue: React.FC<CreditReportIssueProps> = ({
       
       <div className="flex justify-end mt-4">
         <button 
-          onClick={onGenerateDispute}
+          onClick={handleGenerateClick}
           className="text-credify-teal hover:text-credify-teal-dark dark:hover:text-credify-teal-light font-medium text-sm flex items-center gap-1"
         >
           Generate Dispute Letter
