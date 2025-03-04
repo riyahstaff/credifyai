@@ -48,12 +48,14 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
     laws: ['FCRA § 623 (Responsibilities of furnishers of information)']
   });
   
+  const rawText = data.rawText || "";
+  
   // Look for inquiries in raw text - more aggressively now
-  if (data.rawText.toLowerCase().includes('inquiry') || 
-      data.rawText.toLowerCase().includes('inquiries') ||
-      data.rawText.toLowerCase().includes('credit check') ||
-      data.rawText.toLowerCase().includes('pull') ||
-      data.rawText.toLowerCase().includes('request')) {
+  if (rawText.toLowerCase().includes('inquiry') || 
+      rawText.toLowerCase().includes('inquiries') ||
+      rawText.toLowerCase().includes('credit check') ||
+      rawText.toLowerCase().includes('pull') ||
+      rawText.toLowerCase().includes('request')) {
     issues.push({
       type: 'inquiry',
       title: 'Credit Inquiries Detected',
@@ -65,13 +67,13 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
   }
   
   // Look for late payments in raw text
-  if (data.rawText.toLowerCase().includes('late') || 
-      data.rawText.toLowerCase().includes('30 day') || 
-      data.rawText.toLowerCase().includes('60 day') || 
-      data.rawText.toLowerCase().includes('90 day') ||
-      data.rawText.toLowerCase().includes('delinquent') ||
-      data.rawText.toLowerCase().includes('past due') ||
-      data.rawText.toLowerCase().includes('overdue')) {
+  if (rawText.toLowerCase().includes('late') || 
+      rawText.toLowerCase().includes('30 day') || 
+      rawText.toLowerCase().includes('60 day') || 
+      rawText.toLowerCase().includes('90 day') ||
+      rawText.toLowerCase().includes('delinquent') ||
+      rawText.toLowerCase().includes('past due') ||
+      rawText.toLowerCase().includes('overdue')) {
     issues.push({
       type: 'payment',
       title: 'Late Payment Records Detected',
@@ -93,9 +95,9 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
   });
   
   // Look for potential name variations or misspellings - more aggressively
-  if (data.rawText.toLowerCase().includes('also known as') || 
-      data.rawText.toLowerCase().includes('aka') ||
-      data.rawText.toLowerCase().includes('aliases') ||
+  if (rawText.toLowerCase().includes('also known as') || 
+      rawText.toLowerCase().includes('aka') ||
+      rawText.toLowerCase().includes('aliases') ||
       data.personalInfo) {  // If we have any personal info at all
     issues.push({
       type: 'name',
@@ -108,13 +110,13 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
   }
   
   // Look for student loans
-  if (data.rawText.toLowerCase().includes('student loan') || 
-      data.rawText.toLowerCase().includes('dept of ed') || 
-      data.rawText.toLowerCase().includes('department of education') ||
-      data.rawText.toLowerCase().includes('navient') ||
-      data.rawText.toLowerCase().includes('nelnet') ||
-      data.rawText.toLowerCase().includes('great lakes') ||
-      data.rawText.toLowerCase().includes('sallie mae')) {
+  if (rawText.toLowerCase().includes('student loan') || 
+      rawText.toLowerCase().includes('dept of ed') || 
+      rawText.toLowerCase().includes('department of education') ||
+      rawText.toLowerCase().includes('navient') ||
+      rawText.toLowerCase().includes('nelnet') ||
+      rawText.toLowerCase().includes('great lakes') ||
+      rawText.toLowerCase().includes('sallie mae')) {
     issues.push({
       type: 'student_loan',
       title: 'Student Loan Accounts Detected',
@@ -126,12 +128,12 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
   }
   
   // Look for collections - more aggressively
-  if (data.rawText.toLowerCase().includes('collection') || 
-      data.rawText.toLowerCase().includes('collections') ||
-      data.rawText.toLowerCase().includes('charged off') ||
-      data.rawText.toLowerCase().includes('charge-off') ||
-      data.rawText.toLowerCase().includes('debt') ||
-      data.rawText.toLowerCase().includes('recover')) {
+  if (rawText.toLowerCase().includes('collection') || 
+      rawText.toLowerCase().includes('collections') ||
+      rawText.toLowerCase().includes('charged off') ||
+      rawText.toLowerCase().includes('charge-off') ||
+      rawText.toLowerCase().includes('debt') ||
+      rawText.toLowerCase().includes('recover')) {
     issues.push({
       type: 'collection',
       title: 'Collection Accounts Detected',

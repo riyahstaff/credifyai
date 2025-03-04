@@ -11,7 +11,7 @@ export const useReportAnalysis = () => {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
-  const { toast } = useToast();
+  const toast = useToast();
 
   const analyzeReport = async (uploadedFile: File) => {
     setAnalyzing(true);
@@ -30,6 +30,23 @@ export const useReportAnalysis = () => {
     });
   };
 
+  // Add these methods that are expected by the useReportUpload hook
+  const onAnalysisComplete = () => {
+    setAnalyzed(true);
+    setAnalyzing(false);
+  };
+
+  const startAnalysis = () => {
+    if (reportData) {
+      setAnalyzing(true);
+      // Simulate analysis completion after a delay
+      setTimeout(() => {
+        setAnalyzing(false);
+        setAnalyzed(true);
+      }, 2000);
+    }
+  };
+
   return {
     reportData,
     issues,
@@ -37,6 +54,8 @@ export const useReportAnalysis = () => {
     analysisError,
     analyzing,
     analyzed,
-    analyzeReport
+    analyzeReport,
+    onAnalysisComplete,
+    startAnalysis
   };
 };

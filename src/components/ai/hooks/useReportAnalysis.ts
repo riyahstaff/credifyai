@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { CreditReportData } from '@/utils/creditReportParser';
-import { processCreditReport, loadSampleReports, getSuccessfulDisputePhrases } from '@/utils/creditReportParser';
+import { parseCreditReport, loadSampleReports, getSuccessfulDisputePhrases } from '@/utils/creditReportParser';
 import { MessageType } from '../types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -39,7 +39,18 @@ export const useReportAnalysis = () => {
     try {
       // Process the report
       console.log("Starting credit report processing...");
-      const data = await processCreditReport(file);
+      const fileContent = await readFileAsText(file);
+      const data = parseCreditReport(fileContent) || {
+        bureaus: {
+          experian: false,
+          equifax: false,
+          transunion: false
+        },
+        accounts: [],
+        inquiries: [],
+        publicRecords: [],
+        rawText: fileContent
+      };
       console.log("Credit report processing complete.");
       setReportData(data);
       return data;
@@ -64,6 +75,22 @@ export const useReportAnalysis = () => {
     } finally {
       setIsProcessingFile(false);
     }
+  };
+
+  // Helper function to read file content
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        if (e.target?.result) {
+          resolve(e.target.result as string);
+        } else {
+          reject(new Error("Could not read file"));
+        }
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsText(file);
+    });
   };
 
   return {

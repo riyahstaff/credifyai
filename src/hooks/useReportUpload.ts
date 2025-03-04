@@ -1,7 +1,7 @@
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditReportAccount } from '@/utils/creditReportParser';
+import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
 import { useReportUploadState } from './report-upload/useReportUploadState';
 import { useReportStorage } from './report-upload/useReportStorage';
 import { useReportNavigation } from './report-upload/useReportNavigation';
@@ -45,18 +45,10 @@ export const useReportUpload = () => {
   } = useReportNavigation();
 
   const {
+    analyzeReport,
     onAnalysisComplete,
     startAnalysis
-  } = useReportAnalysis(
-    uploadedFile,
-    setReportData,
-    setIssues,
-    setLetterGenerated,
-    setAnalysisError,
-    setAnalyzing,
-    setAnalyzed,
-    analysisCompleted
-  );
+  } = useReportAnalysis();
 
   // Add the letter generation effect
   useEffect(() => {
@@ -75,6 +67,13 @@ export const useReportUpload = () => {
     if (reportData) {
       storeForDispute(reportData, account);
       navigateToDisputeLetters();
+    }
+  };
+
+  // Start analysis when a file is uploaded
+  const initiateAnalysis = () => {
+    if (uploadedFile) {
+      analyzeReport(uploadedFile);
     }
   };
 

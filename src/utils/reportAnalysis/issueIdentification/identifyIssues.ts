@@ -31,11 +31,13 @@ export const identifyIssues = (data: CreditReportData): Array<{
     laws: string[];
   }> = [];
   
+  const hasRawText = !!data.rawText;
+  
   console.log("Starting issue identification with data:", {
-    hasRawText: !!data.rawText,
+    hasRawText,
     accountsLength: data.accounts?.length || 0,
     hasPersonalInfo: !!data.personalInfo,
-    rawTextSample: data.rawText ? data.rawText.substring(0, 100) + '...' : 'none'
+    rawTextSample: hasRawText ? data.rawText!.substring(0, 100) + '...' : 'none'
   });
   
   // MANDATORY ISSUES - ALWAYS add these critical issues
@@ -94,8 +96,8 @@ export const identifyIssues = (data: CreditReportData): Array<{
   
   // Now process the actual report content
   // ALWAYS check for common credit report patterns regardless of structure
-  if (data.rawText) {
-    const lowerText = data.rawText.toLowerCase();
+  if (hasRawText) {
+    const lowerText = data.rawText!.toLowerCase();
     
     // Force identification of collections
     if (lowerText.includes('collection') || lowerText.includes('charged off') || lowerText.includes('charge-off') || lowerText.includes('charged-off')) {
@@ -124,7 +126,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
     }
     
     // Try to identify issues based on raw text analysis
-    console.log("Examining raw text for potential issues, length:", data.rawText.length);
+    console.log("Examining raw text for potential issues, length:", data.rawText!.length);
     const textIssues = identifyTextIssues(data);
     issues.push(...textIssues);
     console.log(`Found ${textIssues.length} text-based issues`);

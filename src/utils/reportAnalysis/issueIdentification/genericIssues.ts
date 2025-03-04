@@ -4,7 +4,7 @@
  * Functions for identifying generic credit report issues
  */
 
-import { CreditReportAccount, CreditReportData } from '@/utils/creditReportParser';
+import { CreditReportAccount } from '@/utils/creditReportParser';
 
 /**
  * Add personal information issues
