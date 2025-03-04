@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
+import { generateFallbackInquiryDisputeLetter } from '@/utils/creditReport/disputeLetters/fallbackTemplates/inquiryLetter';
 
 interface LetterTemplate {
   id: string;
@@ -151,20 +152,47 @@ export function useDisputeGeneratorState(testMode: boolean = false) {
     
     console.log("Dispute generated:", disputeData, "Test mode:", testMode);
     
+    // Check if this is an inquiry dispute
+    const isInquiryDispute = 
+      disputeData.errorType.toLowerCase().includes('inquiry') || 
+      (selectedAccount && selectedAccount.accountType === 'Inquiry');
+    
     // Process the letter content to ensure it has all specific account details
     let letterContent = disputeData.letterContent;
     
-    // Replace any [ACCOUNT NUMBER] placeholders with the actual account number
-    if (disputeData.accountNumber) {
-      letterContent = letterContent.replace(/\[ACCOUNT NUMBER\]/g, disputeData.accountNumber);
+    // If this is an inquiry dispute, use the specialized template
+    if (isInquiryDispute && (!letterContent || letterContent.length < 100)) {
+      letterContent = generateFallbackInquiryDisputeLetter();
     }
     
-    // Ensure "Your credit report" is changed to "My credit report"
-    letterContent = letterContent.replace(/Your credit report/gi, "My credit report");
+    // Get the user's name from localStorage or use placeholder
+    const userName = localStorage.getItem('userName') || '[YOUR NAME]';
+    const userAddress = localStorage.getItem('userAddress') || '[YOUR ADDRESS]';
+    const userCity = localStorage.getItem('userCity') || '[CITY]';
+    const userState = localStorage.getItem('userState') || '[STATE]';
+    const userZip = localStorage.getItem('userZip') || '[ZIP]';
+    
+    // Replace any placeholder with the actual account details
+    letterContent = letterContent
+      .replace(/\[ACCOUNT NUMBER\]/g, disputeData.accountNumber || 'Unknown')
+      .replace(/\[COMPANY NAME\]/g, disputeData.accountName)
+      .replace(/\[DATE OF INQUIRY\]/g, selectedAccount?.dateReported || selectedAccount?.lastReportedDate || 'Unknown Date')
+      .replace(/Your credit report/gi, "My credit report")
+      .replace(/\[YOUR NAME\]/g, userName)
+      .replace(/\[YOUR ADDRESS\]/g, userAddress)
+      .replace(/\[CITY, STATE ZIP\]/g, `${userCity}, ${userState} ${userZip}`);
     
     // Ensure the DISPUTED ITEMS section is present
     if (!letterContent.includes("DISPUTED ITEM(S):") && disputeData.accountName) {
       letterContent += `\n\nDISPUTED ITEM(S):\n- Account Name: ${disputeData.accountName}\n- Account Number: ${disputeData.accountNumber || 'Unknown'}\n`;
+      
+      // Add additional account details if available
+      if (disputeData.actualAccountInfo) {
+        const info = disputeData.actualAccountInfo;
+        if (info.openDate) letterContent += `- Date Opened/Reported: ${info.openDate}\n`;
+        if (info.reportedDate) letterContent += `- Last Reported: ${info.reportedDate}\n`;
+        if (info.status) letterContent += `- Status: ${info.status}\n`;
+      }
     }
     
     // Update enclosures section to only include ID and SSN card
