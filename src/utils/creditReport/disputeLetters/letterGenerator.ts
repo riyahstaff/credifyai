@@ -83,8 +83,9 @@ Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be
   // Try to find a relevant sample dispute letter to use as a template
   try {
     const sampleLetter = await findSampleDispute(discrepancy.reason, discrepancy.bureau);
+    
     if (sampleLetter) {
-      console.log("Found sample dispute letter for this type of dispute");
+      console.log("Found sample dispute letter for this type of dispute from Supabase");
       // Extract key phrases from the sample letter to enhance our letter
       let enhancedLetter = sampleLetter.content
         .replace(/\[FULL_NAME\]|\[YOUR_NAME\]|\[NAME\]/g, userInfo.name || '[YOUR NAME]')
@@ -142,7 +143,7 @@ ${discrepancy.bureau}`
       return enhancedLetter;
     }
   } catch (error) {
-    console.error("Error finding sample dispute letter:", error);
+    console.error("Error finding sample dispute letter from Supabase:", error);
     // Continue with regular template if there's an error
   }
   

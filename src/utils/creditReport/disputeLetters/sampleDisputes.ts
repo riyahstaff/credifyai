@@ -14,7 +14,7 @@ export const findSampleDispute = async (disputeType: string, bureau?: string): P
     console.log(`Searching for sample letters matching: ${disputeType} for ${bureau || 'any bureau'}`);
     
     if (!sampleLetters || sampleLetters.length === 0) {
-      console.warn("No sample letters available");
+      console.warn("No sample letters available from Supabase or fallbacks");
       return null;
     }
     
@@ -74,7 +74,7 @@ export const findSampleDispute = async (disputeType: string, bureau?: string): P
       return anyMatch;
     }
     
-    console.log("No matching sample dispute letter found");
+    console.log("No matching sample dispute letter found in Supabase or fallbacks");
     return null;
   } catch (error) {
     console.error("Error finding sample dispute letter:", error);

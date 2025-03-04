@@ -1,3 +1,4 @@
+
 /**
  * Sample dispute letters loading functionality
  */
@@ -29,9 +30,9 @@ export const loadSampleDisputeLetters = async (): Promise<SampleDisputeLetter[]>
   }
   
   try {
-    console.log("Loading sample dispute letters from storage");
+    console.log("Loading sample dispute letters from Supabase storage");
     const sampleFiles = await listSampleDisputeLetters();
-    console.log(`Found ${sampleFiles.length} sample letter files`);
+    console.log(`Found ${sampleFiles.length} sample letter files in Supabase storage`);
     
     const letters: SampleDisputeLetter[] = [];
     
@@ -55,16 +56,17 @@ export const loadSampleDisputeLetters = async (): Promise<SampleDisputeLetter[]>
             legalCitations
           });
           
-          console.log(`Loaded sample letter: ${disputeType} for ${bureau}`);
+          console.log(`Loaded sample letter from Supabase: ${disputeType} for ${bureau}`);
         }
       } catch (error) {
-        console.error(`Error loading sample letter ${file.name}:`, error);
+        console.error(`Error loading sample letter ${file.name} from Supabase:`, error);
       }
     }
     
     // Add some fallback sample letters if none were loaded or to supplement the collection
-    if (letters.length === 0 || !letters.some(l => l.disputeType.includes('inquiry'))) {
-      console.log('Adding fallback inquiry dispute sample');
+    if (letters.length === 0) {
+      console.log('No sample letters found in Supabase, adding fallback samples');
+      
       letters.push({
         content: generateFallbackInquiryDisputeLetter(),
         disputeType: 'inquiry',
@@ -73,10 +75,7 @@ export const loadSampleDisputeLetters = async (): Promise<SampleDisputeLetter[]>
         effectiveLanguage: ['I did not authorize this inquiry'],
         legalCitations: ['FCRA Section 604', 'FCRA Section 611']
       });
-    }
-    
-    if (letters.length === 0 || !letters.some(l => l.disputeType.includes('late_payment'))) {
-      console.log('Adding fallback late payment dispute sample');
+      
       letters.push({
         content: generateFallbackLatePaymentDisputeLetter(),
         disputeType: 'late_payment',
@@ -85,10 +84,7 @@ export const loadSampleDisputeLetters = async (): Promise<SampleDisputeLetter[]>
         effectiveLanguage: ['This payment was made on time'],
         legalCitations: ['FCRA Section 623']
       });
-    }
-    
-    if (letters.length === 0 || !letters.some(l => l.disputeType.includes('personal_information'))) {
-      console.log('Adding fallback personal information dispute sample');
+      
       letters.push({
         content: generateFallbackPersonalInfoDisputeLetter(),
         disputeType: 'personal_information',
@@ -97,10 +93,7 @@ export const loadSampleDisputeLetters = async (): Promise<SampleDisputeLetter[]>
         effectiveLanguage: ['My personal information is incorrect'],
         legalCitations: ['FCRA Section 611']
       });
-    }
-    
-    if (letters.length === 0 || !letters.some(l => l.disputeType.includes('collection'))) {
-      console.log('Adding fallback collection dispute sample');
+      
       letters.push({
         content: generateFallbackCollectionDisputeLetter(),
         disputeType: 'collection',
@@ -109,10 +102,7 @@ export const loadSampleDisputeLetters = async (): Promise<SampleDisputeLetter[]>
         effectiveLanguage: ['This collection account is invalid'],
         legalCitations: ['FCRA Section 623', 'FDCPA Section 809']
       });
-    }
-    
-    if (letters.length === 0 || !letters.some(l => l.disputeType.includes('bankruptcy'))) {
-      console.log('Adding fallback bankruptcy dispute sample');
+      
       letters.push({
         content: generateFallbackBankruptcyDisputeLetter(),
         disputeType: 'bankruptcy',
@@ -121,10 +111,7 @@ export const loadSampleDisputeLetters = async (): Promise<SampleDisputeLetter[]>
         effectiveLanguage: ['This bankruptcy information is inaccurate'],
         legalCitations: ['FCRA Section 605', 'FCRA Section 611']
       });
-    }
-    
-    if (letters.length === 0 || !letters.some(l => l.disputeType.includes('balance'))) {
-      console.log('Adding fallback incorrect balance dispute sample');
+      
       letters.push({
         content: generateFallbackIncorrectBalanceDisputeLetter(),
         disputeType: 'incorrect_balance',
@@ -136,10 +123,10 @@ export const loadSampleDisputeLetters = async (): Promise<SampleDisputeLetter[]>
     }
     
     sampleDisputeLettersCache = letters;
-    console.log(`Loaded ${letters.length} sample dispute letters (including fallbacks)`);
+    console.log(`Loaded ${letters.length} sample dispute letters (including any fallbacks)`);
     return letters;
   } catch (error) {
-    console.error('Error loading sample dispute letters:', error);
+    console.error('Error loading sample dispute letters from Supabase:', error);
     return [];
   }
 };

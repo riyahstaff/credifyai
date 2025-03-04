@@ -1,4 +1,3 @@
-
 import { supabase } from './client';
 import { 
   SAMPLE_LETTERS_BUCKET, 
@@ -18,7 +17,7 @@ export async function listSampleDisputeLetters() {
       .list();
       
     if (error) {
-      console.error('Error fetching sample dispute letters:', error);
+      console.error('Error fetching sample dispute letters from Supabase:', error);
       return [];
     }
     
@@ -42,7 +41,7 @@ export async function downloadSampleDisputeLetter(fileName: string): Promise<str
       .download(fileName);
       
     if (error || !data) {
-      console.error('Error downloading sample dispute letter:', error);
+      console.error('Error downloading sample dispute letter from Supabase:', error);
       return null;
     }
     
@@ -67,7 +66,7 @@ export async function downloadLegalTemplate(templateName: string): Promise<strin
       .download(`${templateName}.txt`);
       
     if (error || !data) {
-      console.error('Error downloading legal template:', error);
+      console.error('Error downloading legal template from Supabase:', error);
       return null;
     }
     
@@ -152,7 +151,7 @@ export async function getSuccessfulDisputeExamples(disputeType: string): Promise
       .list(path);
       
     if (error || !data) {
-      console.error(`Error listing successful dispute examples for ${disputeType}:`, error);
+      console.error(`Error listing successful dispute examples for ${disputeType} from Supabase:`, error);
       return [];
     }
     
@@ -172,7 +171,7 @@ export async function getSuccessfulDisputeExamples(disputeType: string): Promise
     
     return examples;
   } catch (error) {
-    console.error(`Error getting successful dispute examples for ${disputeType}:`, error);
+    console.error(`Error getting successful dispute examples for ${disputeType} from Supabase:`, error);
     return [];
   }
 }

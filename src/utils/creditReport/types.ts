@@ -1,4 +1,3 @@
-
 /**
  * Core types for credit report data and functionality
  */
@@ -149,8 +148,8 @@ export interface RecommendedDispute {
 export interface SampleDisputeLetter {
   content: string;
   disputeType: string;
-  bureau: string;
-  successfulOutcome: boolean;
+  bureau?: string;
+  successfulOutcome?: boolean;
   effectiveLanguage?: string[];
   legalCitations?: string[];
 }

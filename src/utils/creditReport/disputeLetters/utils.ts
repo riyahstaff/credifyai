@@ -1,44 +1,38 @@
 
 /**
- * Utility functions for sample dispute letters
+ * Utility functions for working with sample dispute letters
  */
 
 /**
- * Determine dispute type from file name
+ * Determine the dispute type from a filename
  */
 export const determineDisputeTypeFromFileName = (fileName: string): string => {
   const lowerName = fileName.toLowerCase();
   
-  if (lowerName.includes('late_payment') || lowerName.includes('latepayment')) {
+  if (lowerName.includes('late_payment') || lowerName.includes('late-payment')) {
     return 'late_payment';
-  } else if (lowerName.includes('inquiry') || lowerName.includes('hardpull')) {
+  } else if (lowerName.includes('not_mine') || lowerName.includes('not-mine') || lowerName.includes('identity_theft')) {
+    return 'not_mine';
+  } else if (lowerName.includes('inquiry') || lowerName.includes('hard_pull')) {
     return 'inquiry';
-  } else if (lowerName.includes('account') && (lowerName.includes('not') || lowerName.includes('fraud'))) {
-    return 'not_my_account';
-  } else if (lowerName.includes('identity') || lowerName.includes('fraud')) {
-    return 'identity_theft';
-  } else if (lowerName.includes('collection') || lowerName.includes('collect')) {
-    return 'collection';
   } else if (lowerName.includes('balance')) {
-    return 'incorrect_balance';
-  } else if (lowerName.includes('bankruptcy') || lowerName.includes('bankrupt')) {
+    return 'balance';
+  } else if (lowerName.includes('collection')) {
+    return 'collection';
+  } else if (lowerName.includes('bankruptcy')) {
     return 'bankruptcy';
-  } else if (lowerName.includes('personal') || lowerName.includes('info')) {
+  } else if (lowerName.includes('personal_info')) {
     return 'personal_information';
-  } else if (lowerName.includes('status') || lowerName.includes('account_status')) {
+  } else if (lowerName.includes('account_status')) {
     return 'account_status';
-  } else {
-    // Default case - extract from file name
-    const parts = lowerName.split('_');
-    if (parts.length > 1) {
-      return parts[0]; // Use first part of filename
-    }
-    return 'general_dispute';
   }
+  
+  // If no specific type found, return a generic type
+  return 'general_dispute';
 };
 
 /**
- * Determine bureau from file name
+ * Determine the bureau from a filename
  */
 export const determineBureauFromFileName = (fileName: string): string => {
   const lowerName = fileName.toLowerCase();
@@ -49,56 +43,55 @@ export const determineBureauFromFileName = (fileName: string): string => {
     return 'Equifax';
   } else if (lowerName.includes('transunion')) {
     return 'TransUnion';
-  } else if (lowerName.includes('all')) {
-    return 'all';
-  } else {
-    return 'all'; // Default to all bureaus
   }
+  
+  // If no specific bureau found, return all
+  return 'all';
 };
 
 /**
- * Extract key components from letter content
+ * Extract key components from a dispute letter
  */
 export const extractKeyComponentsFromLetter = (content: string): { 
-  effectiveLanguage: string[],
+  effectiveLanguage: string[], 
   legalCitations: string[] 
 } => {
   const effectiveLanguage: string[] = [];
   const legalCitations: string[] = [];
   
-  // Look for FCRA and other citations
-  const lawRegex = /(FCRA|FDCPA|FACTA|ECOA|FCBA)(?:\s+Section|\s+§)?\s+(\d+[a-z]?(?:\(\d+\))?)/gi;
-  let match;
-  while ((match = lawRegex.exec(content)) !== null) {
-    legalCitations.push(`${match[1]} Section ${match[2]}`);
-  }
-  
-  // Extract effective language - look for key dispute paragraphs
-  const paragraphs = content.split(/\n\s*\n/);
-  
-  for (const paragraph of paragraphs) {
-    // Skip headers, signatures and placeholder text
-    if (paragraph.includes('[YOUR') || 
-        paragraph.includes('Sincerely,') || 
-        paragraph.includes('To Whom It May Concern') ||
-        paragraph.includes('Enclosure') ||
-        paragraph.length < 30 ||
-        /^\s*[A-Z0-9\s]+\s*$/.test(paragraph)) { // Skip all-caps headers
-      continue;
-    }
+  // Extract effective language paragraphs (3-15 word sentences that sound assertive)
+  const paragraphs = content.split('\n');
+  paragraphs.forEach(paragraph => {
+    const trimmed = paragraph.trim();
+    const wordCount = trimmed.split(/\s+/).length;
     
-    // Look for paragraphs that likely contain dispute language
-    if ((paragraph.includes('dispute') || 
-         paragraph.includes('inaccurate') || 
-         paragraph.includes('incorrect') || 
-         paragraph.includes('investigation') ||
-         paragraph.includes('not') ||
-         paragraph.includes('error')) && 
-        paragraph.length > 30 && 
-        paragraph.length < 600) {
-      effectiveLanguage.push(paragraph.trim());
+    if (wordCount >= 10 && wordCount <= 30 && 
+        (trimmed.includes('request') || 
+         trimmed.includes('dispute') || 
+         trimmed.includes('demand') || 
+         trimmed.includes('require') ||
+         trimmed.includes('incorrect') ||
+         trimmed.includes('inaccurate'))) {
+      effectiveLanguage.push(trimmed);
     }
+  });
+  
+  // Extract legal citations (looking for common patterns)
+  const fcraPattern = /FCRA\s+(?:Section|§)\s+(\d+[a-z]?)/gi;
+  const fdcpaPattern = /FDCPA\s+(?:Section|§)\s+(\d+[a-z]?)/gi;
+  
+  let match;
+  while ((match = fcraPattern.exec(content)) !== null) {
+    legalCitations.push(`FCRA Section ${match[1]}`);
   }
   
-  return { effectiveLanguage, legalCitations };
+  while ((match = fdcpaPattern.exec(content)) !== null) {
+    legalCitations.push(`FDCPA Section ${match[1]}`);
+  }
+  
+  // Deduplicate arrays
+  return {
+    effectiveLanguage: [...new Set(effectiveLanguage)],
+    legalCitations: [...new Set(legalCitations)]
+  };
 };
