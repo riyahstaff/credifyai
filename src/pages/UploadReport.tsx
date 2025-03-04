@@ -114,7 +114,7 @@ const UploadReport = () => {
       // Call the original handler and get the result
       const result = await handleGenerateDispute(selectedIssue);
       
-      // Properly type-check the result
+      // Only continue if result is a proper object
       if (result && typeof result === 'object' && 'disputeData' in result) {
         console.log("Dispute generation successful, storing letter");
         storeLetterInStorage(result.disputeData);
@@ -137,7 +137,7 @@ const UploadReport = () => {
         
         return { success: true, disputeData: result.disputeData };
       } else {
-        console.error("Dispute generation returned invalid result");
+        console.error("Dispute generation returned invalid result:", result);
         toast({
           title: "Generation Failed",
           description: "There was a problem generating your dispute letter. Please try again.",

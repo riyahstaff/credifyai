@@ -3,10 +3,10 @@ import { DisputeData } from '../types';
 
 export const processDisputeData = (disputeData: DisputeData, testMode: boolean = false) => {
   if (testMode) {
-    // Create a properly typed copy with the test mode flag
+    // Add a test mode flag as an additional property
     disputeData = { 
       ...disputeData, 
-      testMode: true // Using a property that's allowed by [key: string]: any
+      testMode: true // Using the [key: string]: any from the interface
     };
   }
   

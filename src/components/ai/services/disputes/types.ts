@@ -5,10 +5,11 @@ import { RecommendedDispute } from '@/utils/creditReport/types';
 export type DisputeType = {
   bureau: string;
   accountName: string;
-  accountNumber: string;  // Made required to match other interfaces
+  accountNumber: string;
   errorType: string;
   explanation: string;
-  letterContent?: string; // Added to match updated DisputeData interface
+  letterContent: string; // Make letterContent required to match DisputeData
+  [key: string]: any; // Allow additional properties
 };
 
 export interface SamplePhrases {

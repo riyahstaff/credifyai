@@ -22,7 +22,7 @@ export interface DisputeData {
   accountNumber: string;
   errorType: string;
   explanation: string;
-  letterContent?: string;
+  letterContent: string; // Make letterContent a required property
   actualAccountInfo: {
     name: string;
     number: string;

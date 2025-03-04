@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -11,15 +10,14 @@ import {
   addLetterToStorage 
 } from './letterStorageUtils';
 
-// Import the AuthContext
-import { useContext } from 'react';
-import { AuthContext } from '@/contexts/AuthContext';
+// Import the useAuth hook instead of AuthContext
+import { useAuth } from '@/contexts/AuthContext';
 
 export type { Letter }; // Export the Letter type properly
 
 export const useDisputeLettersData = (testMode: boolean = false) => {
   const { toast } = useToast();
-  const { user } = useContext(AuthContext); // Using AuthContext instead of useAuth hook
+  const { user } = useAuth(); // Using useAuth hook which is correctly exported
   const [letters, setLetters] = useState<Letter[]>([]);
   const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null);
   const [isLoading, setIsLoading] = useState(true);
