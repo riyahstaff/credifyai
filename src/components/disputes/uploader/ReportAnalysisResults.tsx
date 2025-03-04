@@ -7,6 +7,7 @@ import IssuesList from './results/IssuesList';
 import ActionButtons from './results/ActionButtons';
 import { useLetterGeneration } from './hooks/useLetterGeneration';
 import { useToast } from '@/hooks/use-toast';
+import { useReportNavigation } from '@/hooks/report-upload/useReportNavigation';
 
 interface ReportAnalysisResultsProps {
   issues: Array<{
@@ -30,6 +31,7 @@ const ReportAnalysisResults: React.FC<ReportAnalysisResultsProps> = ({
   onGenerateDispute
 }) => {
   const { toast } = useToast();
+  const { navigateToDisputeLetters } = useReportNavigation();
   const { handleGenerateAllLetters, handleSingleIssueDispute } = useLetterGeneration(reportData);
   
   const handleAllLettersGeneration = () => {
@@ -38,6 +40,11 @@ const ReportAnalysisResults: React.FC<ReportAnalysisResultsProps> = ({
       description: "Please wait while all dispute letters are being generated...",
     });
     handleGenerateAllLetters(issues);
+    
+    // Force navigation after a short delay
+    setTimeout(() => {
+      navigateToDisputeLetters();
+    }, 1000);
   };
   
   const handleSingleIssue = (issueIndex: number, account?: CreditReportAccount) => {
@@ -46,6 +53,11 @@ const ReportAnalysisResults: React.FC<ReportAnalysisResultsProps> = ({
       description: "Please wait while your dispute letter is being generated...",
     });
     console.log(`Handling single issue dispute for index ${issueIndex}${account ? ' with account info' : ''}`);
+    
+    // Create a detailed dispute with explicit fields for the letter generator
+    const issue = issues[issueIndex];
+    
+    // Generate the letter with complete context
     handleSingleIssueDispute(issueIndex, issues, account);
     
     // Also call the onGenerateDispute from parent component to ensure multiple navigation methods are attempted
@@ -54,6 +66,12 @@ const ReportAnalysisResults: React.FC<ReportAnalysisResultsProps> = ({
     } else {
       onGenerateDispute();
     }
+    
+    // Force navigation after letter generation with a short delay
+    setTimeout(() => {
+      console.log("Forcing navigation to dispute letters page after single issue generation");
+      navigateToDisputeLetters();
+    }, 1000);
   };
   
   return (

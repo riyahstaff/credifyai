@@ -37,6 +37,23 @@ const CreditReportIssue: React.FC<CreditReportIssueProps> = ({
 
   const handleGenerateClick = () => {
     console.log("Generate dispute clicked for:", title, "Account:", account);
+    // Set details in session storage to ensure proper letter generation
+    if (account) {
+      try {
+        sessionStorage.setItem('currentDisputeDetails', JSON.stringify({
+          title,
+          description,
+          impact,
+          accountName: account.accountName || "Unknown Account",
+          accountNumber: account.accountNumber || "",
+          laws
+        }));
+        console.log("Stored dispute details in session storage for letter generation");
+      } catch (e) {
+        console.error("Error storing dispute details:", e);
+      }
+    }
+    
     onGenerateDispute();
   };
 
