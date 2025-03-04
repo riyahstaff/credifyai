@@ -1,4 +1,3 @@
-
 import { CreditReportAccount } from '@/utils/creditReportParser';
 import { generateManualDisputeLetter } from '@/components/ai/services/disputes/manualLetterGenerator';
 import { generateDisputeLetterForDiscrepancy } from '@/utils/creditReport/disputeLetters';
@@ -69,7 +68,8 @@ export const generateDisputeLetters = async (
             return {
               law: lawName,
               section: section,
-              title: law
+              title: law,
+              text: `According to ${law}, consumer reporting agencies must ensure accurate reporting.`
             };
           })
         },
@@ -334,7 +334,9 @@ Enclosures:
     letterContent: content,
     content: content,
     status: 'draft',
-    createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    createdAt: new Date().toLocaleDateString('en-US', { 
+      month: 'short', day: 'numeric', year: 'numeric' 
+    }),
     bureaus: ["Experian"],
     laws: ["FCRA § 611", "FCRA § 623"],
     timestamp: new Date().toISOString()
