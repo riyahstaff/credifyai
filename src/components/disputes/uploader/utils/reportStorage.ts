@@ -28,7 +28,8 @@ export const storeReportData = (enhancedData: CreditReportData): boolean => {
           accountName: account.accountName,
           accountNumber: account.accountNumber,
           accountType: account.accountType,
-          bureau: account.bureau
+          // Only include bureau if it exists
+          ...(account.bureau ? { bureau: account.bureau } : {})
         }))
       };
       sessionStorage.setItem('creditReportData', JSON.stringify(minimalData));

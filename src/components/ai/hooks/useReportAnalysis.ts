@@ -17,11 +17,11 @@ export const useReportAnalysis = () => {
     const loadSamples = async () => {
       try {
         // Load sample reports
-        await loadSampleReports();
+        const reports = loadSampleReports();
         setSampleReportsLoaded(true);
         
         // Load successful dispute phrases
-        const phrases = await getSuccessfulDisputePhrases();
+        const phrases = getSuccessfulDisputePhrases();
         setSamplePhrases(phrases);
         
         console.log("Sample reports and phrases loaded successfully");
@@ -40,17 +40,7 @@ export const useReportAnalysis = () => {
       // Process the report
       console.log("Starting credit report processing...");
       const fileContent = await readFileAsText(file);
-      const data = parseCreditReport(fileContent) || {
-        bureaus: {
-          experian: false,
-          equifax: false,
-          transunion: false
-        },
-        accounts: [],
-        inquiries: [],
-        publicRecords: [],
-        rawText: fileContent
-      };
+      const data = await parseCreditReport(fileContent);
       console.log("Credit report processing complete.");
       setReportData(data);
       return data;

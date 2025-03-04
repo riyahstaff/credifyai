@@ -31,6 +31,11 @@ export interface CreditReportAccount {
   balance: string;
   paymentHistory: any;
   bureauReporting: string[];
+  // Additional properties needed by other parts of the app
+  bureau?: string;
+  paymentStatus?: string;
+  remarks?: string[];
+  currentBalance?: string;
   // Add other fields as needed
 }
 
@@ -62,19 +67,33 @@ export const parseCreditReport = async (fileContent: string): Promise<CreditRepo
 // Additional functions that are needed
 export const processCreditReport = parseCreditReport; // Alias for backward compatibility
 
-export const loadSampleReports = (): { [key: string]: string } => {
+export const loadSampleReports = (): Record<string, string> => {
   return {
     "sample1": "This is a sample credit report content",
     "sample2": "This is another sample credit report content"
   };
 };
 
-export const getSuccessfulDisputePhrases = (): string[] => {
-  return [
-    "dispute resolved in your favor",
-    "item deleted",
-    "item updated",
-    "item corrected",
-    "dispute completed"
-  ];
+export const getSuccessfulDisputePhrases = (): Record<string, string[]> => {
+  return {
+    balanceDisputes: [
+      "dispute resolved in your favor",
+      "item deleted",
+      "item updated",
+      "item corrected",
+      "dispute completed"
+    ],
+    latePaymentDisputes: [
+      "payment history updated",
+      "late payment removed"
+    ],
+    accountOwnershipDisputes: [
+      "account removed",
+      "not your account"
+    ],
+    general: [
+      "dispute resolved",
+      "investigation complete"
+    ]
+  };
 };

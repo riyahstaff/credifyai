@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { processCreditReport, CreditReportData, CreditReportAccount } from '@/utils/creditReport';
+import { processCreditReport, CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
 import { formatFileSize } from '@/utils/fileUtils';
 
 // Import new component files
