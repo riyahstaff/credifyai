@@ -1,4 +1,3 @@
-
 /**
  * Credit Report Parser - Main Parser
  * This module handles parsing text content from credit reports into structured data
@@ -9,7 +8,7 @@ import { extractAccounts } from './accounts';
 import { extractInquiries } from './extractInquiries';
 import { extractPublicRecords } from './extractPublicRecords';
 import { generateAnalysisResults } from './analysisGenerator';
-import { convertReportToHtml } from '../formatters/htmlFormatter';
+import { convertReportToHtml } from '../formatters';
 
 /**
  * Parse text content from a credit report into structured data

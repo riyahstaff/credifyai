@@ -46,7 +46,7 @@ export const extractAndFormatHtml = async (file: File): Promise<string> => {
     } else {
       // For text files, first get the text then convert to HTML
       const text = await file.text();
-      const { convertReportToHtml } = await import('./creditReport/formatters/htmlFormatter');
+      const { convertReportToHtml } = await import('./creditReport/formatters');
       return convertReportToHtml(text, false);
     }
   } catch (error) {

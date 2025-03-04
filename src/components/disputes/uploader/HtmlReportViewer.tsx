@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { convertReportToHtml, getReportStyles } from '@/utils/creditReport/formatters/htmlFormatter';
+import { convertReportToHtml, getReportStyles } from '@/utils/creditReport/formatters';
 
 interface HtmlReportViewerProps {
   reportText: string;
@@ -35,4 +35,3 @@ const HtmlReportViewer: React.FC<HtmlReportViewerProps> = ({
 };
 
 export default HtmlReportViewer;
-
