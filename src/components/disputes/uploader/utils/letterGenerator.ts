@@ -1,4 +1,3 @@
-
 import { CreditReportAccount } from '@/utils/creditReportParser';
 import { generateManualDisputeLetter } from '@/components/ai/services/disputes/manualLetterGenerator';
 import { generateDisputeLetterForDiscrepancy } from '@/utils/creditReport/disputeLetters';
@@ -137,8 +136,9 @@ export const generateDisputeLetters = async (
             accountNumber: accountNumber,
             errorType: issue.title,
             explanation: issue.description,
-            accounts: accounts, // Include all accounts from the report
-            reportData: reportData // Pass the entire report data
+            accounts: accounts,
+            reportData: reportData,
+            letterContent: "" // Add empty letterContent that will be populated by generateManualDisputeLetter
           };
           
           const letterContent = await generateManualDisputeLetter(
