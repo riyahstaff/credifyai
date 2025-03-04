@@ -27,7 +27,7 @@ export const determineBureau = (issue: any): string => {
   }
   
   // If issue specifically targets a bureau by name in the title or description
-  const issueText = `${issue.title} ${issue.description}`.toLowerCase();
+  const issueText = `${issue.title || ''} ${issue.description || ''}`.toLowerCase();
   if (issueText.includes('experian')) {
     return 'Experian';
   } else if (issueText.includes('equifax')) {
