@@ -1,3 +1,4 @@
+
 import { CreditReportAccount, CreditReportData } from '@/utils/creditReportParser';
 import { verifyLetterStorage, forceNavigateToLetters } from './bureauUtils';
 import { NavigateFunction } from 'react-router-dom';
@@ -136,7 +137,7 @@ export const handleLetterGenerationError = (
   
   const errorFallbackLetter = createFallbackLetter(true);
   const letters = [errorFallbackLetter];
-  storeGeneratedLetters(letters);
+  const stored = storeGeneratedLetters(letters);
   
   toastFn({
     title: "Error Recovery",
@@ -144,5 +145,8 @@ export const handleLetterGenerationError = (
     variant: "destructive",
   });
   
-  forceNavigateToLetters(navigate);
+  // Add a delay before navigation to ensure storage operations complete
+  setTimeout(() => {
+    forceNavigateToLetters(navigate);
+  }, 300);
 };
