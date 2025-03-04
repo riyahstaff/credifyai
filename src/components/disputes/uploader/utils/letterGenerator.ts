@@ -1,6 +1,7 @@
 import { CreditReportAccount } from '@/utils/creditReportParser';
 import { generateManualDisputeLetter } from '@/components/ai/services/disputes/manualLetterGenerator';
 import { generateDisputeLetterForDiscrepancy } from '@/utils/creditReport/disputeLetters';
+import { determineBureau } from './bureauUtils';
 
 export const generateDisputeLetters = async (
   issues: Array<{
@@ -349,34 +350,6 @@ Enclosures:
     laws: ["FCRA § 611", "FCRA § 623"],
     timestamp: new Date().toISOString()
   };
-}
-
-/**
- * Determine which bureau to send the dispute to based on the issue
- */
-function determineBureau(issue: any): string {
-  // If the issue specifies a bureau, use that
-  if (issue.bureau) {
-    return issue.bureau;
-  }
-  
-  // If the account specifies a bureau, use that
-  if (issue.account?.bureau) {
-    return issue.account.bureau;
-  }
-  
-  // Otherwise try to determine from the issue description
-  const description = (issue.description || '').toLowerCase();
-  if (description.includes('equifax')) {
-    return 'Equifax';
-  } else if (description.includes('experian')) {
-    return 'Experian';
-  } else if (description.includes('transunion')) {
-    return 'TransUnion';
-  }
-  
-  // Default to Experian if we can't determine
-  return 'Experian';
 }
 
 /**

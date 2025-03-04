@@ -64,56 +64,68 @@ export const findSampleDispute = async (disputeType: string, bureau?: string): P
   );
   
   if (anyMatch) {
-    console.log("Found basic match for dispute type");
+    console.log("Found any match for dispute type");
     return anyMatch;
   }
   
-  console.log("No suitable sample letters found");
+  console.log("No matching sample dispute letter found");
   return null;
 };
 
 /**
- * Find semantic matches for dispute type based on related terms
+ * Find semantically similar dispute types
+ * This is a basic implementation that looks for related terms
  */
 function findSemanticMatches(disputeType: string, letters: SampleDisputeLetter[]): SampleDisputeLetter[] {
-  const lowerDisputeType = disputeType.toLowerCase();
-  
-  // Create a map of dispute types and their related terms
   const relatedTerms: Record<string, string[]> = {
-    'late payment': ['late', 'payment history', 'delinquent', 'past due', '30 day', '60 day', '90 day'],
-    'not my account': ['not mine', 'fraud', 'identity theft', 'unknown account', 'unauthorized', 'never opened'],
-    'incorrect balance': ['balance', 'amount', 'incorrect amount', 'wrong balance', 'paid off', 'payoff', 'not owed'],
-    'incorrect status': ['status', 'open', 'closed', 'collection', 'charged off', 'transferred'],
-    'collection': ['collection', 'debt collector', 'third-party', 'charge off', 'charged off'],
-    'inquiry': ['inquiry', 'hard pull', 'credit check', 'hard inquiry', 'unauthorized inquiry'],
-    'bankruptcy': ['bankruptcy', 'chapter 7', 'chapter 13', 'dismissed', 'discharged'],
-    'personal information': ['address', 'name', 'personal', 'employment', 'employer', 'phone number', 'ssn']
+    'late payment': ['late', 'payment', 'delinquent', 'missed payment', 'past due'],
+    'not mine': ['not mine', 'identity theft', 'fraud', 'account ownership', 'unauthorized'],
+    'balance': ['balance', 'amount', 'incorrect balance', 'wrong balance'],
+    'inquiries': ['inquiry', 'inquiries', 'credit check', 'hard pull', 'unauthorized inquiry'],
+    'account status': ['status', 'open', 'closed', 'incorrect status', 'account standing'],
+    'personal information': ['address', 'name', 'personal', 'identity', 'information'],
+    'collection': ['collection', 'debt', 'collector', 'collections agency'],
+    'bankruptcy': ['bankruptcy', 'chapter 7', 'chapter 13', 'discharged'],
   };
   
-  // Check if any related terms match the dispute type
-  const matchedCategories: string[] = [];
+  // Convert dispute type to lowercase
+  const lowerDisputeType = disputeType.toLowerCase();
+  
+  // Find which category this dispute belongs to
+  let matchingCategories: string[] = [];
+  
   for (const [category, terms] of Object.entries(relatedTerms)) {
     if (terms.some(term => lowerDisputeType.includes(term))) {
-      matchedCategories.push(category);
+      matchingCategories.push(category);
     }
   }
   
-  // Look for sample letters that match any of the matched categories
-  const matches: SampleDisputeLetter[] = [];
-  for (const category of matchedCategories) {
-    const categoryMatches = letters.filter(letter => 
-      letter.disputeType.toLowerCase().includes(category) || 
-      relatedTerms[category].some(term => letter.disputeType.toLowerCase().includes(term))
-    );
+  // If no categories matched, return empty array
+  if (matchingCategories.length === 0) {
+    return [];
+  }
+  
+  // Find letters that match any of the identified categories
+  const semanticMatches: SampleDisputeLetter[] = [];
+  
+  for (const letter of letters) {
+    const lowerLetterType = letter.disputeType.toLowerCase();
     
-    // Prioritize successful outcomes
-    const successfulMatches = categoryMatches.filter(letter => letter.successfulOutcome);
-    if (successfulMatches.length > 0) {
-      matches.push(...successfulMatches);
-    } else {
-      matches.push(...categoryMatches);
+    for (const category of matchingCategories) {
+      const terms = relatedTerms[category];
+      
+      if (terms.some(term => lowerLetterType.includes(term))) {
+        semanticMatches.push(letter);
+        break; // Don't add the same letter multiple times
+      }
     }
   }
   
-  return matches;
+  // Prioritize successful outcome letters
+  return semanticMatches.sort((a, b) => {
+    // Sort successful letters to the front
+    if (a.successfulOutcome === true && b.successfulOutcome !== true) return -1;
+    if (a.successfulOutcome !== true && b.successfulOutcome === true) return 1;
+    return 0;
+  });
 }
