@@ -1,8 +1,7 @@
-
 import { CreditReportAccount, CreditReportData } from '@/utils/creditReportParser';
 import { verifyLetterStorage, forceNavigateToLetters } from './bureauUtils';
 import { NavigateFunction } from 'react-router-dom';
-import { Toast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 /**
  * Stores generated letters in session storage
@@ -128,7 +127,7 @@ Sincerely,
 /**
  * Handles errors in letter generation by creating a fallback letter
  */
-export const handleLetterGenerationError = (error: any, toast: Toast, navigate: NavigateFunction) => {
+export const handleLetterGenerationError = (error: any, toast: typeof toast, navigate: NavigateFunction) => {
   console.error("Error generating letter:", error);
   
   const errorFallbackLetter = createFallbackLetter(true);
