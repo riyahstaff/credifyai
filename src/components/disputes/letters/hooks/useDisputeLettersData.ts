@@ -16,6 +16,7 @@ interface Letter {
   errorType?: string;
   letterContent?: string; // Property added for compatibility
   laws?: string[]; // Added the missing laws property
+  resolvedAt?: string; // Added the missing resolvedAt property
 }
 
 export function useDisputeLettersData(testMode: boolean = false) {
