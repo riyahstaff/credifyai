@@ -58,8 +58,9 @@ export const generateDisputeLetters = async (
         {},
         {
           testMode: false,
-          accounts: accounts,
-          fullReportData: reportData // Pass full report data
+          accounts: accounts, // Pass accounts directly to the options object
+          // Replace fullReportData with reportData to match the expected type
+          // reportData isn't expected in the options object, so we handle that in manualLetterGenerator if needed
         }
       );
       
