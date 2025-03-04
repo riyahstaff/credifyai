@@ -14,7 +14,8 @@ interface Letter {
   accountName?: string;
   accountNumber?: string;
   errorType?: string;
-  letterContent?: string; // Added this property to fix TypeScript error
+  letterContent?: string; // Property added for compatibility
+  laws?: string[]; // Added the missing laws property
 }
 
 export function useDisputeLettersData(testMode: boolean = false) {
