@@ -2,16 +2,18 @@
 import React, { useEffect } from 'react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
-import { APP_ROUTES } from '@/lib/supabase';
 import ReportUploadInfo from '@/components/disputes/uploader/ReportUploadInfo';
 import UploadReportHeader from '@/components/disputes/uploader/UploadReportHeader';
 import UploadReportContent from '@/components/disputes/uploader/UploadReportContent';
 import { useReportUpload } from '@/hooks/useReportUpload';
 import { Button } from '@/components/ui/button';
-import { ArrowLeftCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { verifyLetterStorage, forceNavigateToLetters } from '@/components/disputes/uploader/utils/bureauUtils';
+import { 
+  verifyLetterStorage, 
+  forceNavigateToLetters, 
+  storeLetterInStorage 
+} from '@/components/disputes/uploader/utils/bureauUtils';
 
 const UploadReport = () => {
   const navigate = useNavigate();
@@ -53,14 +55,27 @@ const UploadReport = () => {
       
       if (hasLetters) {
         console.log("Letters found in storage after generation, preparing to navigate");
+        toast({
+          title: "Dispute Letter Generated",
+          description: "Your dispute letter has been created successfully. Navigating to letters page...",
+          duration: 3000,
+        });
+        
         const timer = setTimeout(() => {
           forceNavigateToLetters(navigate);
-        }, 800);
+        }, 1500);
         
         return () => clearTimeout(timer);
+      } else {
+        console.error("Letter generated flag is true but no letters found in storage");
+        toast({
+          title: "Letter Generation Issue",
+          description: "Your letter was generated but we couldn't find it in storage. Please try again.",
+          variant: "destructive",
+        });
       }
     }
-  }, [letterGenerated, navigate]);
+  }, [letterGenerated, navigate, toast]);
 
   const handleContinueToLetters = () => {
     // Make sure the auto generated flag is set before navigating
@@ -83,8 +98,53 @@ const UploadReport = () => {
   };
 
   // Check if there are pending letters
-  const hasPendingLetters = sessionStorage.getItem('pendingDisputeLetter') !== null || 
-                            sessionStorage.getItem('generatedDisputeLetters') !== null;
+  const hasPendingLetters = verifyLetterStorage();
+
+  // Custom dispute generation handler with extra verification
+  const handleDisputeGeneration = async (selectedIssue: any) => {
+    try {
+      console.log("Starting dispute generation with extra verification");
+      
+      // Call the original handler
+      const result = await handleGenerateDispute(selectedIssue);
+      
+      // Verify result and ensure storage
+      if (result && result.disputeData) {
+        console.log("Dispute generation successful, storing letter");
+        storeLetterInStorage(result.disputeData);
+        
+        // Set a timeout before navigating to ensure storage is complete
+        setTimeout(() => {
+          const hasLetters = verifyLetterStorage();
+          if (hasLetters) {
+            console.log("Letter verified in storage, navigating to dispute letters page");
+            forceNavigateToLetters(navigate);
+          } else {
+            console.error("Failed to verify letter in storage after generation");
+            toast({
+              title: "Storage Error",
+              description: "We had trouble saving your letter. Please try again.",
+              variant: "destructive",
+            });
+          }
+        }, 1000);
+      } else {
+        console.error("Dispute generation returned invalid result");
+        toast({
+          title: "Generation Failed",
+          description: "There was a problem generating your dispute letter. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error in enhanced dispute generation:", error);
+      toast({
+        title: "Generation Error",
+        description: "An error occurred while generating your dispute letter.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -137,7 +197,7 @@ const UploadReport = () => {
               analysisError={analysisError}
               onResetUpload={resetUpload}
               onStartAnalysis={startAnalysis}
-              onGenerateDispute={handleGenerateDispute}
+              onGenerateDispute={handleDisputeGeneration} // Use enhanced handler
               onAnalysisComplete={onAnalysisComplete}
               onFileSelected={handleFile}
             />
