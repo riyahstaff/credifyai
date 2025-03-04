@@ -40,9 +40,19 @@ export interface CreditReportAccount {
 }
 
 // Placeholder implementation for functions used elsewhere
-export const parseCreditReport = async (fileContent: string): Promise<CreditReportData> => {
+export const parseCreditReport = async (fileContent: string | File): Promise<CreditReportData> => {
   // This is a placeholder that would normally contain real implementation
-  console.log("Parsing credit report content", fileContent.slice(0, 100) + "...");
+  let content: string;
+  
+  // Handle both string and File input
+  if (typeof fileContent === 'string') {
+    content = fileContent;
+  } else {
+    // Read content from file
+    content = await fileContent.text();
+  }
+  
+  console.log("Parsing credit report content", content.slice(0, 100) + "...");
   
   return {
     bureaus: {
@@ -60,7 +70,7 @@ export const parseCreditReport = async (fileContent: string): Promise<CreditRepo
     accounts: [],
     inquiries: [],
     publicRecords: [],
-    rawText: fileContent,
+    rawText: content,
   };
 };
 

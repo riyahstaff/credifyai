@@ -103,7 +103,7 @@ export const handleAnalysisComplete = async ({
               toast.toast({
                 title: "Letter Generation Issue",
                 description: letterError,
-                variant: "default", // Changed from "warning" to "default"
+                variant: "default", 
               });
             }
             
@@ -113,7 +113,7 @@ export const handleAnalysisComplete = async ({
             toast.toast({
               title: "Letter Generation Failed",
               description: letterGenError.message || "Failed to generate dispute letters",
-              variant: "default", // Changed from "warning" to "default"
+              variant: "default", 
             });
           }
           

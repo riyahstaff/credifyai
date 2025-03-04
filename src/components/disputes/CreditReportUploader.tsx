@@ -41,6 +41,7 @@ const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({
     setIsUploading(true);
     
     try {
+      // Pass the file directly to processCreditReport which now accepts File objects
       const data = await processCreditReport(file);
       setReportData(data);
       onReportProcessed(data);
