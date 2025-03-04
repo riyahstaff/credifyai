@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditReportAccount } from '@/utils/creditReportParser';
@@ -85,7 +84,7 @@ export const useReportUpload = () => {
         // Try to set letterGenerated to false to allow the user to try again
         setLetterGenerated(false);
         
-        // Fix: Properly call the toast function instead of treating toast object as a function
+        // Use the toast function correctly as a function call with an object parameter
         toast({
           title: "Letter Storage Error",
           description: "Letters were generated but couldn't be saved. Please try again.",
@@ -113,7 +112,7 @@ export const useReportUpload = () => {
     }
   };
 
-  // Add debug logging for state changes
+  // Debug logging for state changes
   console.log("UploadReport state:", { 
     fileUploaded, 
     analyzing, 

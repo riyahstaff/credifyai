@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export const useReportNavigation = () => {
   const navigate = useNavigate();
-  const toast = useToast();
+  const { toast } = useToast(); // Destructure to get the toast function
   
   // Set up navigation listener for analysis completion
   useEffect(() => {
@@ -38,6 +38,6 @@ export const useReportNavigation = () => {
   return {
     navigateToDisputeLetters,
     navigate,
-    toast
+    toast // Return the actual toast function, not the entire hook result
   };
 };
