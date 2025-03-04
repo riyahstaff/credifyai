@@ -71,12 +71,12 @@ export const handleAnalysisComplete = async ({
       
       // Generate dispute letters - always generate at least one letter
       console.log(`Generating dispute letters for ${detectedIssues.length} issues`);
-      let generatedLetters = await generateDisputeLetters(detectedIssues);
+      let generatedLetters = await generateDisputeLetters(detectedIssues, enhancedData);
       
       // If no letters were generated, force generation of a fallback letter
       if (!generatedLetters || generatedLetters.length === 0) {
         console.warn("No letters generated, creating fallback letter");
-        generatedLetters = [createFallbackLetter()];
+        generatedLetters = [createFallbackLetter(enhancedData)];
       }
       
       // Store the generated letters
@@ -134,13 +134,17 @@ export const handleAnalysisComplete = async ({
 /**
  * Create a fallback dispute letter when no issues can be processed
  */
-const createFallbackLetter = () => {
+const createFallbackLetter = (reportData?: any) => {
+  // Include accounts from the report if available
+  const accounts = reportData?.accounts || [];
+  
   return {
     bureau: "Experian",
     accountName: "All Accounts",
     accountNumber: "",
     errorType: "General Dispute",
     explanation: "I am disputing all information in my credit report that may be inaccurate or incomplete under my rights provided by the Fair Credit Reporting Act.",
+    accounts: accounts,
     letterContent: `
 [YOUR NAME]
 [YOUR ADDRESS]

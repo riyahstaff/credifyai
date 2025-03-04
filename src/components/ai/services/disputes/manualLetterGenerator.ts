@@ -5,7 +5,7 @@ import { getSampleDisputeLanguage } from '@/utils/creditReport/disputeLetters';
 export const generateManualDisputeLetter = async (
   dispute: DisputeType,
   samplePhrases: Record<string, string[]> = {},
-  options?: { testMode?: boolean; creditReportNumber?: string }
+  options?: { testMode?: boolean; creditReportNumber?: string; accounts?: Array<any> }
 ): Promise<string> => {
   // Log if we're generating in test mode
   if (options?.testMode) {
@@ -74,14 +74,30 @@ export const generateManualDisputeLetter = async (
     "[TEST MODE - NOT FOR ACTUAL SUBMISSION]\n\n" : 
     "";
   
-  // Create the account section in the format requested
-  const accountNumber = dispute.accountNumber || 'Unknown'; // Handle undefined accountNumber
-  const accountSection = `
-Alleging Creditor and Account as is reported on my credit report:
-${dispute.accountName.toUpperCase()}
-ACCOUNT- ${accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 'xxxxxxxx####'}
-Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant
-`;
+  // Create the accounts section in the format requested
+  let accountsSection = "";
+  
+  // If we have a single account from the dispute data
+  if (dispute.accountName) {
+    const accountNumber = dispute.accountNumber || 'Unknown';
+    accountsSection += `\nAlleging Creditor and Account as is reported on my credit report:\n${dispute.accountName.toUpperCase()}\nACCOUNT- ${accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 'xxxxxxxx####'}\nNotation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant\n`;
+  }
+  
+  // If we have multiple accounts from the credit report
+  if (options?.accounts && options.accounts.length > 0) {
+    options.accounts.forEach((account, index) => {
+      const accountName = account.accountName || account.name || 'UNKNOWN CREDITOR';
+      const accountNumber = account.accountNumber || account.number || 'Unknown';
+      const maskedNumber = accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 'xxxxxxxx####';
+      
+      accountsSection += `\nAlleging Creditor#${index + 1} and Account #${index + 1} as is reported on my credit report:\n${accountName.toUpperCase()}\nACCOUNT- ${maskedNumber}\nNotation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant\n`;
+    });
+  }
+  
+  // If no accounts provided, create at least one placeholder
+  if (accountsSection === "") {
+    accountsSection = `\nAlleging Creditor and Account as is reported on my credit report:\n${dispute.accountName.toUpperCase()}\nACCOUNT- ${'xxxxxxxx####'}\nNotation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant\n`;
+  }
 
   return `${testModeHeader}Credit Report #: ${creditReportNumber} Today is ${currentDate}
 My First and My Last name is: [YOUR NAME]
@@ -99,8 +115,7 @@ To Whom It May Concern:
 
 I received a copy of my credit report and found the following item(s) to be errors, or are deficient of proof of not being untrue, incorrect, incomplete, untimely, not mine, not my responsibility, or else wise not compliant, to include to metro 2 reporting standards.
 
-Here as follows are items in potential error requiring immediate annulment of the retainment and or reporting:
-${accountSection}
+Here as follows are items in potential error requiring immediate annulment of the retainment and or reporting:${accountsSection}
 
 The federal and my state laws require full compliance to any and all standards of exacting and perfect reporting in its entirety, and should I be compelled to direct a consumer request for a lawful potential resolution via civil and or criminal courts, undoubtedly the court and its ruling magistrate would requisite irrefutable evidence to every single and each any and or all of the aspects of mandated reporting of which you are obligated, to include full proof in testimonial certificate to your precise metro 2 reporting.
 

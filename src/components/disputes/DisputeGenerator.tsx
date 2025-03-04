@@ -62,6 +62,11 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
       };
     }
     
+    // Add all accounts from the credit report
+    if (reportData && reportData.accounts && reportData.accounts.length > 0) {
+      disputeData.allAccounts = reportData.accounts;
+    }
+    
     handleDisputeGenerated(disputeData);
     onGenerateDispute(disputeData);
   };
