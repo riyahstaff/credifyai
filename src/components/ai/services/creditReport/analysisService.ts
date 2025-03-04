@@ -13,7 +13,11 @@ export const analyzeCreditReport = async (fileContent: string): Promise<{
     // For now, return a basic structure to make the types work
     return {
       reportData: {
-        bureaus: [],
+        bureaus: {
+          experian: false,
+          equifax: false,
+          transunion: false
+        },
         personalInfo: {
           name: "",
           addresses: [],
