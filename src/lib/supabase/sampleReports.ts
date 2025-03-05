@@ -1,6 +1,6 @@
 
 import { supabase } from './client';
-import { SAMPLE_REPORTS_BUCKET } from './constants';
+import { SAMPLE_LETTERS_BUCKET, SAMPLE_REPORTS_BUCKET } from './constants';
 
 /**
  * Fetch a list of all sample credit reports available in Supabase storage

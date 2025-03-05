@@ -13,19 +13,14 @@ import {
  */
 export async function fetchLegalReference(referenceType: keyof typeof LEGAL_REFERENCES): Promise<string | null> {
   try {
-    const fileName = LEGAL_REFERENCES[referenceType];
+    const referenceText = LEGAL_REFERENCES[referenceType];
     
-    const { data, error } = await supabase
-      .storage
-      .from(LEGAL_TEMPLATES_BUCKET)
-      .download(fileName);
-      
-    if (error || !data) {
-      console.error(`Error downloading legal reference ${referenceType}:`, error);
+    if (!referenceText) {
+      console.error(`Legal reference ${referenceType} not found`);
       return null;
     }
     
-    return await data.text();
+    return referenceText;
   } catch (error) {
     console.error(`Error in fetchLegalReference for ${referenceType}:`, error);
     return null;
@@ -33,18 +28,32 @@ export async function fetchLegalReference(referenceType: keyof typeof LEGAL_REFE
 }
 
 /**
- * Fetch a specific dispute letter template based on dispute type
- * @param disputeType The type of dispute
+ * Fetch a specific dispute letter template based on dispute type categories
+ * @param disputeCategory The category of dispute (general, account, inquiry, collection)
+ * @param disputeType The specific type within the category
  * @returns The template content or null if retrieval failed
  */
-export async function fetchDisputeTemplate(disputeType: keyof typeof DISPUTE_TEMPLATES): Promise<string | null> {
+export async function fetchDisputeTemplate(
+  disputeCategory: keyof typeof DISPUTE_TEMPLATES,
+  disputeType: string
+): Promise<string | null> {
   try {
-    const fileName = DISPUTE_TEMPLATES[disputeType];
+    if (!DISPUTE_TEMPLATES[disputeCategory]) {
+      console.error(`Dispute category ${disputeCategory} not found`);
+      return null;
+    }
+    
+    const templateName = DISPUTE_TEMPLATES[disputeCategory][disputeType as keyof typeof DISPUTE_TEMPLATES[typeof disputeCategory]];
+    
+    if (!templateName) {
+      console.error(`Dispute template ${disputeType} not found in category ${disputeCategory}`);
+      return null;
+    }
     
     const { data, error } = await supabase
       .storage
       .from(LEGAL_TEMPLATES_BUCKET)
-      .download(fileName);
+      .download(templateName);
       
     if (error || !data) {
       console.error(`Error downloading dispute template ${disputeType}:`, error);
@@ -66,13 +75,13 @@ export async function fetchDisputeTemplate(disputeType: keyof typeof DISPUTE_TEM
 export async function getRelevantFCRASections(disputeType: string): Promise<string> {
   // Fixed type mapping to use arrays of valid keys of LEGAL_REFERENCES
   const fcraMapping: Record<string, Array<keyof typeof LEGAL_REFERENCES>> = {
-    'not_my_account': ['ACCURACY_REQUIREMENTS', 'INVESTIGATION_PROCEDURES'],
-    'identity_theft': ['ACCURACY_REQUIREMENTS', 'INVESTIGATION_PROCEDURES'],
-    'incorrect_balance': ['ACCURACY_REQUIREMENTS', 'FURNISHER_RESPONSIBILITIES'],
-    'incorrect_payment_history': ['ACCURACY_REQUIREMENTS', 'FURNISHER_RESPONSIBILITIES'],
-    'account_closed': ['ACCURACY_REQUIREMENTS', 'FURNISHER_RESPONSIBILITIES'],
-    'incorrect_status': ['ACCURACY_REQUIREMENTS', 'FURNISHER_RESPONSIBILITIES'],
-    'default': ['DISPUTE_RIGHTS', 'INVESTIGATION_PROCEDURES']
+    'not_my_account': ['fcra_section_611', 'fcra_section_623'],
+    'identity_theft': ['fcra_section_611', 'fcra_section_623'],
+    'incorrect_balance': ['fcra_section_611', 'fcra_section_623'],
+    'incorrect_payment_history': ['fcra_section_611', 'fcra_section_623'],
+    'account_closed': ['fcra_section_611', 'fcra_section_623'],
+    'incorrect_status': ['fcra_section_611', 'fcra_section_623'],
+    'default': ['fcra_section_611', 'fcra_section_609']
   };
   
   const normalizedType = disputeType.toLowerCase().replace(/\s+/g, '_');

@@ -1,7 +1,7 @@
-
 import { fetchDisputeTemplate } from './legalTemplates';
 import { getRelevantFCRASections } from './legalTemplates';
 import { getSuccessfulDisputeExamples } from './disputeLetters';
+import { DISPUTE_TEMPLATES } from './constants';
 
 /**
  * Enhanced function to generate comprehensive dispute letters using templates and FCRA provisions
@@ -27,25 +27,34 @@ export async function generateEnhancedDisputeLetter(
   }
 ): Promise<string> {
   try {
-    // Normalize dispute type to match our template keys
-    let templateType: keyof typeof import('./constants').DISPUTE_TEMPLATES = 'GENERAL_DISPUTE';
+    // Determine the dispute category and type based on the input
+    let disputeCategory: keyof typeof DISPUTE_TEMPLATES = 'general';
+    let templateType = 'GENERAL_DISPUTE';
     
     const normalizedDispute = disputeType.toLowerCase();
     if (normalizedDispute.includes('not') && normalizedDispute.includes('mine')) {
+      disputeCategory = 'account';
       templateType = 'NOT_MY_ACCOUNT';
     } else if (normalizedDispute.includes('identity') || normalizedDispute.includes('fraud')) {
+      disputeCategory = 'account';
       templateType = 'IDENTITY_THEFT';
     } else if (normalizedDispute.includes('balance')) {
+      disputeCategory = 'account';
       templateType = 'INCORRECT_BALANCE';
     } else if (normalizedDispute.includes('payment') || normalizedDispute.includes('late')) {
+      disputeCategory = 'account';
       templateType = 'INCORRECT_PAYMENT_HISTORY';
     } else if (normalizedDispute.includes('status')) {
+      disputeCategory = 'account';
       templateType = 'INCORRECT_STATUS';
     } else if (normalizedDispute.includes('closed')) {
+      disputeCategory = 'account';
       templateType = 'ACCOUNT_CLOSED';
     } else if (normalizedDispute.includes('inquiry')) {
+      disputeCategory = 'inquiry';
       templateType = 'UNAUTHORIZED_INQUIRY';
     } else if (normalizedDispute.includes('collection')) {
+      disputeCategory = 'collection';
       templateType = 'COLLECTION_DISPUTE';
     }
     
@@ -97,7 +106,7 @@ ${accountDetails.accountName.toUpperCase()}
 ACCOUNT- ${accountDetails.accountNumber ? 'xxxxxxxx' + accountDetails.accountNumber.substring(Math.max(0, accountDetails.accountNumber.length - 4)) : 'xxxxxxxx####'}
 Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant
 `;
-    
+
     // Generate the final letter
     return `Credit Report #: ${creditReportNumber} Today is ${currentDate}
 My First and My Last name is: ${userInfo.name || '[YOUR NAME]'}

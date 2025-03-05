@@ -2,6 +2,7 @@
 // Storage bucket names
 export const SAMPLE_LETTERS_BUCKET = 'sample_letters';
 export const LEGAL_TEMPLATES_BUCKET = 'legal_templates';
+export const SAMPLE_REPORTS_BUCKET = 'sample_reports'; // Adding missing bucket name
 
 // Define dispute templates
 export const DISPUTE_TEMPLATES = {
@@ -26,7 +27,7 @@ export const DISPUTE_TEMPLATES = {
 
 // Define legal references for disputes
 export const LEGAL_REFERENCES = {
-  fcra_section_611: `Under the Fair Credit Reporting Act (FCRA) § 611 [15 USC § 1681i], credit reporting agencies must conduct a reasonable investigation into any item disputed by a consumer. This investigation must be free of charge and completed within 30 days (45 days in certain circumstances).`,
+  fcra_section_611: `Under the Fair Credit Reporting Act (FCRA) § 611 [15 USC § 1681i], credit reporting agencies must conduct a reasonable investigation into any item disputed by a consumer. This investigation must be free of charge and completed within a 30 day period (45 days in certain circumstances).`,
   
   fcra_section_623: `Under the FCRA § 623 [15 USC § 1681s-2], furnishers of information to credit reporting agencies have a duty to provide accurate information and to investigate consumer disputes about the accuracy of information they provide.`,
   
