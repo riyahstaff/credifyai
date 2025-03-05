@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth'; // Updated import
@@ -18,7 +17,7 @@ const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRoutePr
   const searchParams = new URLSearchParams(location.search);
   const testMode = searchParams.get('testMode') === 'true';
   
-  // If in test mode, bypass subscription requirement
+  // In test mode, we bypass subscription requirement completely
   const hasRequiredAccess = 
     !requiresSubscription || 
     profile?.has_subscription || 
@@ -64,11 +63,23 @@ const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRoutePr
     return <Navigate to={`/login${testMode ? '?testMode=true' : ''}`} state={{ from: location }} replace />;
   }
 
+  // Critical change: Handle test mode more reliably for subscription requirements
   if (requiresSubscription && !hasRequiredAccess) {
+    // We need to check if this is a test mode access attempt before redirecting
+    // This prevents possible redirect loops when test mode is active
+    if (testMode) {
+      console.log("Test mode active - forcing subscription bypass");
+      
+      // In test mode, we automatically give access to premium features
+      return <>{children}</>;
+    }
+    
     // Store the current path so we can return after subscription
     sessionStorage.setItem('returnToAfterSubscription', location.pathname + location.search);
+    
     // User does not have subscription, redirect to subscription page
-    return <Navigate to="/subscription" state={{ from: location }} replace />;
+    // Keep the test mode parameter if it exists
+    return <Navigate to={`/subscription${testMode ? '?testMode=true' : ''}`} state={{ from: location }} replace />;
   }
 
   // User is authenticated and has access, render the protected route

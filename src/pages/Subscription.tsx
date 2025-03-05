@@ -19,6 +19,7 @@ const Subscription = () => {
   const { user, profile, updateSubscriptionStatus } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
+  const [isAutoActivating, setIsAutoActivating] = useState(false);
   
   // Check if we're in test mode
   const searchParams = new URLSearchParams(location.search);
@@ -29,19 +30,24 @@ const Subscription = () => {
     const returnPath = sessionStorage.getItem('returnToAfterSubscription');
     if (returnPath) {
       setRedirectPath(returnPath);
+      console.log("Subscription page - return path detected:", returnPath);
     }
     
     console.log("Subscription page - testMode:", testMode);
     
     // If in test mode, simulate having a subscription already
-    if (testMode && user) {
+    if (testMode && user && !isAutoActivating) {
       console.log("In test mode with user - activating test subscription");
-      setTimeout(() => {
-        // Auto-activate in test mode after a short delay
+      setIsAutoActivating(true);
+      
+      // Auto-activate in test mode after a short delay
+      const timer = setTimeout(() => {
         handleSubscribe('premium');
       }, 500);
+      
+      return () => clearTimeout(timer);
     }
-  }, [testMode, user]);
+  }, [testMode, user, isAutoActivating]);
 
   const handleSubscribe = async (plan: string) => {
     try {
@@ -59,21 +65,28 @@ const Subscription = () => {
           await updateSubscriptionStatus(true);
         }
         
+        // Set flag in session storage to indicate we have test mode subscription
+        sessionStorage.setItem('testModeSubscription', 'true');
+        
         // Redirect after a short delay
         setTimeout(() => {
-          // Clear the redirect path from session storage
-          sessionStorage.removeItem('returnToAfterSubscription');
+          // Determine where to redirect
+          let targetPath = '/dispute-letters';
           
-          // Navigate to the redirect path with test mode param or default to dispute letters
           if (redirectPath) {
-            const newPath = redirectPath + 
-              (redirectPath.includes('?') ? '&' : '?') + 
-              'testMode=true';
-            console.log("Redirecting to:", newPath);
-            navigate(newPath);
-          } else {
-            navigate('/dispute-letters?testMode=true');
+            // Use stored path if available
+            targetPath = redirectPath;
+            // Clear it from storage
+            sessionStorage.removeItem('returnToAfterSubscription');
           }
+          
+          // Add testMode param if not already present
+          if (!targetPath.includes('testMode=true')) {
+            targetPath += (targetPath.includes('?') ? '&' : '?') + 'testMode=true';
+          }
+          
+          console.log("Test mode subscription activated - Redirecting to:", targetPath);
+          navigate(targetPath);
         }, 1000);
         
         return;
@@ -162,7 +175,8 @@ const Subscription = () => {
             <div className="text-center mb-12 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-amber-800">
                 <strong>Test Mode Active:</strong> You can click any plan to get instant access without actual payment.
-                {!isProcessing && <span className="block mt-2">Auto-activating test subscription in a moment...</span>}
+                {!isProcessing && !isAutoActivating && <span className="block mt-2">Auto-activating test subscription in a moment...</span>}
+                {isAutoActivating && <span className="block mt-2">Auto-activation in progress...</span>}
               </p>
             </div>
           )}

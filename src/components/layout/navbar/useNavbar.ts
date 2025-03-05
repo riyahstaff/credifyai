@@ -16,6 +16,9 @@ export const useNavbar = () => {
   // Check if we're in test mode
   const searchParams = new URLSearchParams(location.search);
   const testMode = searchParams.get('testMode') === 'true';
+  
+  // Check if we have a test mode subscription
+  const hasTestSubscription = sessionStorage.getItem('testModeSubscription') === 'true';
 
   // Setup scroll listener
   useEffect(() => {
@@ -36,8 +39,9 @@ export const useNavbar = () => {
   useEffect(() => {
     if (testMode) {
       console.log(`Navbar detected test mode: ${testMode}`);
+      console.log(`Test subscription status: ${hasTestSubscription ? 'active' : 'inactive'}`);
     }
-  }, [testMode]);
+  }, [testMode, hasTestSubscription]);
 
   // Add testMode parameter to nav links if in test mode
   const navLinks: NavLinkType[] = [
@@ -56,6 +60,8 @@ export const useNavbar = () => {
   };
   
   const handleLogout = async () => {
+    // Clear test mode subscription flag on logout
+    sessionStorage.removeItem('testModeSubscription');
     await signOut();
     navigate('/');
   };
@@ -65,6 +71,7 @@ export const useNavbar = () => {
     const currentPath = location.pathname;
     if (testMode) {
       // Turn off test mode
+      sessionStorage.removeItem('testModeSubscription');
       navigate(currentPath);
       toast({
         title: "Test Mode Disabled",
@@ -84,7 +91,9 @@ export const useNavbar = () => {
 
   // Check if current route requires subscription
   const isPremiumRoute = location.pathname === '/dispute-letters';
-  const hasSubscription = profile?.has_subscription === true;
+  
+  // In test mode, consider the user subscribed if they have the test subscription flag
+  const hasSubscription = profile?.has_subscription === true || (testMode && hasTestSubscription);
 
   return {
     user,
