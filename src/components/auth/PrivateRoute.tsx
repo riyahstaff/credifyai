@@ -52,6 +52,8 @@ const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRoutePr
   }
 
   if (requiresSubscription && !hasRequiredAccess) {
+    // Store the current path so we can return after subscription
+    sessionStorage.setItem('returnToAfterSubscription', location.pathname + location.search);
     // User does not have subscription, redirect to subscription page
     return <Navigate to="/subscription" state={{ from: location }} replace />;
   }

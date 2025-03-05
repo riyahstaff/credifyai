@@ -1,5 +1,6 @@
 
 import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import ReportUploadInfo from '@/components/disputes/uploader/ReportUploadInfo';
@@ -15,7 +16,13 @@ import PendingLettersNotification from '@/components/disputes/uploader/PendingLe
 
 const UploadReport = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  
+  // Check if we're in test mode
+  const searchParams = new URLSearchParams(location.search);
+  const testMode = searchParams.get('testMode') === 'true';
+  
   const {
     fileUploaded,
     analyzing,
@@ -43,6 +50,11 @@ const UploadReport = () => {
     handleStartNewReport
   } = useLetterManagement();
 
+  // Log test mode status
+  useEffect(() => {
+    console.log("UploadReport: Test mode is", testMode ? "active" : "inactive");
+  }, [testMode]);
+
   // Check for existing letters on load
   useEffect(() => {
     const hasLetters = verifyLetterStorage();
@@ -67,7 +79,7 @@ const UploadReport = () => {
         });
         
         const timer = setTimeout(() => {
-          forceNavigateToLetters(navigate);
+          forceNavigateToLetters(navigate, testMode);
         }, 1500);
         
         return () => clearTimeout(timer);
@@ -80,7 +92,7 @@ const UploadReport = () => {
         });
       }
     }
-  }, [letterGenerated, navigate, toast]);
+  }, [letterGenerated, navigate, toast, testMode]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -91,10 +103,19 @@ const UploadReport = () => {
           <div className="max-w-4xl mx-auto">
             <UploadReportHeader />
             
+            {testMode && (
+              <div className="mb-8 p-4 bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/30 rounded-lg">
+                <p className="text-amber-800 dark:text-amber-300">
+                  <strong>Test Mode Active:</strong> You have full access to premium features for testing.
+                </p>
+              </div>
+            )}
+            
             <PendingLettersNotification 
               hasPendingLetters={hasPendingLetters && !fileUploaded}
               onContinueToLetters={handleContinueToLetters}
               onStartNewReport={handleStartNewReport}
+              testMode={testMode}
             />
             
             <UploadReportContent
@@ -113,6 +134,7 @@ const UploadReport = () => {
               onGenerateDispute={handleDisputeGeneration}
               onAnalysisComplete={onAnalysisComplete}
               onFileSelected={handleFile}
+              testMode={testMode}
             />
             
             <ReportUploadInfo />
