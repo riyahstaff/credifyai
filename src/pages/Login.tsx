@@ -5,7 +5,7 @@ import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import LoginForm from '@/components/auth/LoginForm';
+import { LoginForm } from '@/components/auth';
 import AuthErrorAlert from '@/components/auth/AuthErrorAlert';
 import TestModeAlert from '@/components/auth/TestModeAlert';
 
