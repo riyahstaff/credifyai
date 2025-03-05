@@ -1,6 +1,5 @@
-
 import { CreditReportAccount, CreditReportData } from '@/utils/creditReportParser';
-import { storeGeneratedLetters } from '@/components/disputes/uploader/utils/letterGenerator';
+import { storeGeneratedLetters } from '@/components/disputes/uploader/utils/disputeLetterHelpers';
 
 export const useReportStorage = () => {
   // Check for pending letters

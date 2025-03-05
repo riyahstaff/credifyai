@@ -1,12 +1,12 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { processCreditReport } from '@/utils/creditReportParser';
 import { identifyIssues } from '@/utils/reportAnalysis';
 import { AnalysisHandlerProps } from '../types/analysisTypes';
 import { ensureMinimumIssues } from '../utils/issueGenerator';
-import { generateDisputeLetters, storeGeneratedLetters } from '../utils/letterGenerator';
+import { generateDisputeLetters } from '../utils/letterGenerator';
 import { storeReportData } from '../utils/reportStorage';
 import { createFallbackLetter } from './fallbackLetterCreator';
+import { storeGeneratedLetters } from '../utils/disputeLetterHelpers';
 
 /**
  * Main handler function for processing credit report analysis

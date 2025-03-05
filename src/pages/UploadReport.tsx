@@ -36,7 +36,8 @@ const UploadReport = () => {
     resetUpload,
     startAnalysis,
     onAnalysisComplete,
-    handleFile
+    handleFile,
+    handleGenerateDispute
   } = useReportUpload();
 
   const {

@@ -1,14 +1,161 @@
 
-// In letterGenerator.ts, update line 57 to correctly call determineBureau with a string
-// This is specifically fixing the TypeScript error
+import { CreditReportAccount, CreditReportData } from '@/utils/creditReportParser';
+import { determineBureau, getBureauAddress } from './bureauUtils';
 
-// Original code:
-// const bureau = determineBureau(issue);
+/**
+ * Generate dispute letters for credit report issues
+ */
+export const generateDisputeLetters = async (issues: Array<any>, reportData: CreditReportData | null): Promise<any[]> => {
+  try {
+    console.log(`Generating dispute letters for ${issues.length} issues`);
+    
+    // Create a letter for each issue
+    const letters = issues.map((issue, index) => {
+      // Determine bureau from issue data
+      const bureauSource = issue.account?.bureau || 
+        (issue.account?.accountName || '') || 
+        issue.title || 
+        'Experian';
+        
+      const bureau = determineBureau(bureauSource);
+      const bureauAddress = getBureauAddress(bureau);
+      
+      // Generate a unique ID for the letter
+      const letterId = Date.now() + index;
+      
+      // Determine account information from issue or defaults
+      const accountName = issue.account?.accountName || 'Multiple Accounts';
+      const accountNumber = issue.account?.accountNumber || '';
+      
+      // Create basic letter structure
+      return {
+        id: letterId,
+        title: `Dispute for ${accountName}`,
+        bureau: bureau,
+        recipient: bureau,
+        accountName: accountName,
+        accountNumber: accountNumber,
+        errorType: issue.type || 'Credit Error',
+        content: generateDisputeContent(issue, bureau, bureauAddress),
+        letterContent: generateDisputeContent(issue, bureau, bureauAddress),
+        status: 'draft',
+        createdAt: new Date().toLocaleDateString('en-US', { 
+          month: 'short', day: 'numeric', year: 'numeric' 
+        }),
+        bureaus: [bureau],
+        laws: issue.laws || ["FCRA § 611"],
+        timestamp: new Date().toISOString()
+      };
+    });
+    
+    console.log(`Generated ${letters.length} dispute letters`);
+    
+    // Store the letters
+    const stored = storeGeneratedLetters(letters);
+    
+    if (stored) {
+      return letters;
+    } else {
+      throw new Error("Failed to store generated letters");
+    }
+  } catch (error) {
+    console.error("Error generating dispute letters:", error);
+    return [];
+  }
+};
 
-// Fixed code:
-const bureauSource = issue.account?.bureau || 
-  (issue.account?.accountName || '') || 
-  issue.title || 
-  'Experian';
+/**
+ * Generate content for a dispute letter
+ */
+const generateDisputeContent = (issue: any, bureau: string, bureauAddress: string): string => {
+  // Format date
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
   
-const bureau = determineBureau(bureauSource);
+  // Get account details
+  const accountName = issue.account?.accountName || 'Multiple Accounts';
+  const accountNumber = issue.account?.accountNumber 
+    ? `Account Number: ${issue.account.accountNumber}` 
+    : '';
+  
+  // Create the letter content
+  return `
+[CURRENT DATE]
+
+${bureau}
+${bureauAddress}
+
+RE: Dispute of Inaccurate Credit Information
+
+To Whom It May Concern:
+
+I am writing to dispute the following information in my credit report. The item I wish to dispute is:
+
+Account: ${accountName}
+${accountNumber}
+Reason for Dispute: ${issue.title || 'Inaccurate Information'}
+
+${issue.description || 'This information is inaccurate and should be investigated or removed.'}
+
+Under the Fair Credit Reporting Act, Section 611, you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified.
+
+Please complete your investigation within 30 days as required by law and send me an updated copy of my credit report reflecting these changes.
+
+Sincerely,
+[YOUR NAME]
+
+Enclosures:
+- Copy of credit report with disputed item(s) highlighted
+- Supporting documentation
+  `;
+};
+
+/**
+ * Store generated letters in session storage
+ */
+export const storeGeneratedLetters = (letters: any[]): boolean => {
+  try {
+    // Format letters to ensure they have all required fields
+    const formattedLetters = letters.map(letter => {
+      if (letter.content && !letter.letterContent) {
+        letter.letterContent = letter.content;
+      } else if (letter.letterContent && !letter.content) {
+        letter.content = letter.letterContent;
+      }
+      
+      if (!letter.bureaus && letter.bureau) {
+        letter.bureaus = [letter.bureau];
+      }
+      
+      if (!letter.status) {
+        letter.status = 'draft';
+      }
+      
+      if (!letter.createdAt) {
+        letter.createdAt = new Date().toLocaleDateString('en-US', { 
+          month: 'short', day: 'numeric', year: 'numeric' 
+        });
+      }
+      
+      return letter;
+    });
+    
+    console.log(`Storing ${formattedLetters.length} formatted letters:`, formattedLetters);
+    sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(formattedLetters));
+    
+    if (formattedLetters.length > 0) {
+      sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(formattedLetters[0]));
+    }
+    
+    sessionStorage.setItem('autoGeneratedLetter', 'true');
+    sessionStorage.setItem('forceLettersReload', 'true');
+    
+    return true;
+  } catch (error) {
+    console.error("Error storing letters:", error);
+    return false;
+  }
+};
