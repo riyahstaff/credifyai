@@ -30,6 +30,7 @@ interface AnalysisStateHandlerProps {
   onStartAnalysis: () => void;
   onGenerateDispute: (account?: CreditReportAccount) => void;
   onAnalysisComplete: () => void;
+  testMode?: boolean; // Add testMode as an optional prop
 }
 
 const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
@@ -46,9 +47,9 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
   onResetUpload,
   onStartAnalysis,
   onGenerateDispute,
-  onAnalysisComplete
+  onAnalysisComplete,
+  testMode // Now accepts testMode prop
 }) => {
-  const [testMode, setTestMode] = useState(false);
   const [showReportPreview, setShowReportPreview] = useState(false);
   const navigate = useNavigate();
   
@@ -71,13 +72,6 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
       }, 1000);
     }
   }, [fileUploaded, analyzing, analyzed, letterGenerated, issues, testMode, navigate]);
-  
-  // Check URL for test mode
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const isTestMode = searchParams.get('testMode') === 'true';
-    setTestMode(isTestMode);
-  }, []);
   
   // Check the state and render appropriate component
   if (analyzing) {
