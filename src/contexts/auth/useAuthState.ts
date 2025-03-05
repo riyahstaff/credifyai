@@ -33,7 +33,12 @@ export function useAuthState(): [
   };
 
   useEffect(() => {
-    const initAuth = async () => {
+    let isActive = true;
+    const retryDelay = 1000;
+    
+    const initAuth = async (retry = 0) => {
+      if (!isActive) return;
+      
       console.log("Initializing auth");
       setState(prev => ({ ...prev, isLoading: true }));
       
@@ -43,27 +48,43 @@ export function useAuthState(): [
         if (error) {
           console.warn("Session error, but not logging out:", error);
           setState(prev => ({ ...prev, sessionError: error as Error }));
-          // Don't reset session here to prevent logout on temporary errors
+          
+          // Retry with exponential backoff if this is a timeout error
+          if (retry < 3 && error.message.includes('timeout')) {
+            console.log(`Retrying auth initialization in ${retryDelay * (retry + 1)}ms`);
+            setTimeout(() => initAuth(retry + 1), retryDelay * (retry + 1));
+          }
         } else {
           const session = data?.session;
+          if (!isActive) return;
+          
           setState(prev => ({ 
             ...prev, 
             session,
-            user: session?.user ?? null
+            user: session?.user ?? null,
+            sessionError: null  // Clear any previous errors
           }));
           
           if (session?.user) {
             const profile = await fetchUserProfile(session.user.id);
+            if (!isActive) return;
             setState(prev => ({ ...prev, profile }));
           }
         }
       } catch (error) {
         console.error('Error getting session:', error);
         setState(prev => ({ ...prev, sessionError: error as Error }));
-        // Don't reset session here, just log the error
+        
+        // Retry on network errors or timeouts
+        if (retry < 3) {
+          console.log(`Retrying auth initialization in ${retryDelay * (retry + 1)}ms`);
+          setTimeout(() => initAuth(retry + 1), retryDelay * (retry + 1));
+        }
       } finally {
-        console.log("Auth initialization complete");
-        setState(prev => ({ ...prev, isLoading: false }));
+        if (isActive) {
+          console.log("Auth initialization complete");
+          setState(prev => ({ ...prev, isLoading: false }));
+        }
       }
     };
 
@@ -72,6 +93,8 @@ export function useAuthState(): [
     try {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (_event, session) => {
+          if (!isActive) return;
+          
           console.log("Auth state changed, new session:", !!session);
           
           if (_event === 'SIGNED_OUT') {
@@ -87,11 +110,13 @@ export function useAuthState(): [
               ...prev,
               session,
               user: session?.user ?? null,
-              isLoading: false
+              isLoading: false,
+              sessionError: null  // Clear any previous errors
             }));
             
             if (session?.user) {
               const profile = await fetchUserProfile(session.user.id);
+              if (!isActive) return;
               setState(prev => ({ ...prev, profile }));
             }
           }
@@ -99,12 +124,17 @@ export function useAuthState(): [
       );
 
       return () => {
+        isActive = false;
         subscription.unsubscribe();
       };
     } catch (error) {
       console.error('Error setting up auth subscription:', error);
-      setState(prev => ({ ...prev, isLoading: false }));
-      return () => {};
+      if (isActive) {
+        setState(prev => ({ ...prev, isLoading: false }));
+      }
+      return () => {
+        isActive = false;
+      };
     }
   }, []);
 

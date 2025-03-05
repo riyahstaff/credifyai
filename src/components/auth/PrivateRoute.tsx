@@ -28,11 +28,24 @@ const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRoutePr
     // If the user is logged out but we previously had a session
     // this might be due to a session timeout or error
     if (!isLoading && !user && sessionStorage.getItem('had_previous_session') === 'true') {
-      handleAuthError(navigate, new Error('Session expired'), location.pathname);
-    }
-    
-    // Track that we've had a session
-    if (user) {
+      console.log('Session expired, handling auth error');
+      
+      // Don't immediately redirect on first error - may be a temporary network issue
+      const errorCount = parseInt(sessionStorage.getItem('auth_error_count') || '0', 10);
+      if (errorCount > 2) {
+        // Only force logout after multiple errors
+        handleAuthError(navigate, new Error('Session expired'), location.pathname);
+        // Reset error count after redirecting
+        sessionStorage.setItem('auth_error_count', '0');
+      } else {
+        // Increment error count
+        sessionStorage.setItem('auth_error_count', (errorCount + 1).toString());
+        console.warn(`Auth error detected (${errorCount + 1}/3), waiting for recovery`);
+      }
+    } else if (user) {
+      // Reset error count when user is logged in
+      sessionStorage.setItem('auth_error_count', '0');
+      // Track that we've had a session
       sessionStorage.setItem('had_previous_session', 'true');
     }
   }, [user, isLoading, navigate, location.pathname]);

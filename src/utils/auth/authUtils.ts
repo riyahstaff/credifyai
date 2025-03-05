@@ -91,7 +91,7 @@ export const signOutUser = async () => {
 /**
  * Get the current session with a timeout for mobile performance
  */
-export const getSessionWithTimeout = async (timeoutMs = 5000) => {
+export const getSessionWithTimeout = async (timeoutMs = 8000) => {
   try {
     // Use longer timeout to prevent premature timeouts
     const sessionPromise = supabase.auth.getSession();
@@ -107,8 +107,13 @@ export const getSessionWithTimeout = async (timeoutMs = 5000) => {
       timeoutPromise.then(() => {
         console.warn("Session fetch timed out, continuing with cached session");
         // Instead of returning null, try to get from localStorage as fallback
-        const cachedSession = localStorage.getItem('supabase.auth.token');
-        return cachedSession ? { data: { session: JSON.parse(cachedSession) } } : { data: { session: null } };
+        try {
+          const cachedSession = localStorage.getItem('sb-frfeyttlztydgwahjjsw-auth-token');
+          return cachedSession ? { data: { session: JSON.parse(cachedSession) } } : { data: { session: null } };
+        } catch (err) {
+          console.warn('Failed to get cached session', err);
+          return { data: { session: null } };
+        }
       })
     ]);
     
@@ -116,6 +121,6 @@ export const getSessionWithTimeout = async (timeoutMs = 5000) => {
   } catch (error) {
     console.error('Error getting session:', error);
     // Don't immediately fail - give a chance to recover
-    return { data: { session: null }, error: null };
+    return { data: { session: null }, error };
   }
 };

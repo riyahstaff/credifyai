@@ -32,7 +32,16 @@ const Subscription = () => {
     }
     
     console.log("Subscription page - testMode:", testMode);
-  }, [testMode]);
+    
+    // If in test mode, simulate having a subscription already
+    if (testMode && user) {
+      console.log("In test mode with user - activating test subscription");
+      setTimeout(() => {
+        // Auto-activate in test mode after a short delay
+        handleSubscribe('premium');
+      }, 500);
+    }
+  }, [testMode, user]);
 
   const handleSubscribe = async (plan: string) => {
     try {
@@ -57,7 +66,11 @@ const Subscription = () => {
           
           // Navigate to the redirect path with test mode param or default to dispute letters
           if (redirectPath) {
-            navigate(redirectPath + (redirectPath.includes('?') ? '&' : '?') + 'testMode=true');
+            const newPath = redirectPath + 
+              (redirectPath.includes('?') ? '&' : '?') + 
+              'testMode=true';
+            console.log("Redirecting to:", newPath);
+            navigate(newPath);
           } else {
             navigate('/dispute-letters?testMode=true');
           }
@@ -149,6 +162,7 @@ const Subscription = () => {
             <div className="text-center mb-12 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-amber-800">
                 <strong>Test Mode Active:</strong> You can click any plan to get instant access without actual payment.
+                {!isProcessing && <span className="block mt-2">Auto-activating test subscription in a moment...</span>}
               </p>
             </div>
           )}

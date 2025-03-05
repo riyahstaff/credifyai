@@ -51,7 +51,7 @@ const DisputeLetters = () => {
         const letterObj = JSON.parse(pendingLetter);
         // Verify that the letter has real content, not just a placeholder
         // More lenient check that doesn't cause redirect to login
-        if (letterObj.content && letterObj.content.length > 0) {
+        if (letterObj && letterObj.content && letterObj.content.length > 0) {
           validLetters = true;
           console.log("[DisputeLetters] Letter content found, length:", letterObj.content.length);
           
