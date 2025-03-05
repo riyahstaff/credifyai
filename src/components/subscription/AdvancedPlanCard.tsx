@@ -18,9 +18,9 @@ const AdvancedPlanCard: React.FC<AdvancedPlanCardProps> = ({ onSubscribe, isProc
         <span className="inline-block bg-credify-teal/20 text-credify-teal px-3 py-1 rounded-full text-sm font-medium mb-2">
           Best Value
         </span>
-        <h3 className="text-xl font-bold">Advanced Plan</h3>
+        <h3 className="text-xl font-bold">Advanced Access</h3>
         <div className="mt-2">
-          <span className="text-3xl font-bold">$39.99</span>
+          <span className="text-3xl font-bold">$49.98</span>
           <span className="text-white/70">/month</span>
         </div>
       </div>
@@ -28,23 +28,23 @@ const AdvancedPlanCard: React.FC<AdvancedPlanCardProps> = ({ onSubscribe, isProc
       <ul className="space-y-3 mb-8 flex-grow relative z-10">
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-white/80">Everything in Premium</span>
+          <span className="text-white/80">All Premium features including AI dispute letter generator</span>
         </li>
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-white/80">Priority dispute processing</span>
+          <span className="text-white/80">Data furnisher disputes for Innovis, Lexis Nexis, CoreLogic, and more</span>
         </li>
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-white/80">1-on-1 credit strategy call</span>
+          <span className="text-white/80">Advanced Metro 2 compliance analysis with CDIA standards</span>
         </li>
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-white/80">Custom legal argument creation</span>
+          <span className="text-white/80">Credit freeze automation across all reporting agencies</span>
         </li>
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-white/80">Priority email & chat support</span>
+          <span className="text-white/80">e-OSCAR platform dispute preparation assistance</span>
         </li>
       </ul>
       
