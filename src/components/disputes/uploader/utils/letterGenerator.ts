@@ -54,7 +54,12 @@ export const generateDisputeLetters = async (
       console.log(`Generating dispute letter for: ${issue.title} - ${issue.account?.accountName || 'General Issue'}`);
       
       // Make sure we always have a bureau
-      const bureau = determineBureau(issue);
+      const bureauSource = issue.account?.bureau || 
+        (issue.account?.accountName || '') || 
+        issue.title || 
+        'Experian';
+        
+      const bureau = determineBureau(bureauSource);
       console.log(`Bureau determined for issue: ${bureau}`);
       
       const accountName = issue.account?.accountName || issue.title;

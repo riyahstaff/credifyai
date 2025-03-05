@@ -29,6 +29,7 @@ interface UploadReportContentProps {
   onGenerateDispute: (account?: CreditReportAccount) => void;
   onAnalysisComplete: () => void;
   onFileSelected: (file: File) => void;
+  testMode?: boolean; // Add testMode as an optional prop
 }
 
 const UploadReportContent: React.FC<UploadReportContentProps> = ({
@@ -46,7 +47,8 @@ const UploadReportContent: React.FC<UploadReportContentProps> = ({
   onStartAnalysis,
   onGenerateDispute,
   onAnalysisComplete,
-  onFileSelected
+  onFileSelected,
+  testMode // Now accepts testMode prop
 }) => {
   return (
     <div className="bg-white dark:bg-credify-navy/20 rounded-xl shadow-soft border border-gray-100 dark:border-gray-700/30 p-6 md:p-8 mb-8">
@@ -69,6 +71,7 @@ const UploadReportContent: React.FC<UploadReportContentProps> = ({
           onStartAnalysis={onStartAnalysis}
           onGenerateDispute={onGenerateDispute}
           onAnalysisComplete={onAnalysisComplete}
+          testMode={testMode}
         />
       )}
       
