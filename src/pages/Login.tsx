@@ -16,6 +16,7 @@ const Login = () => {
   
   const searchParams = new URLSearchParams(location.search);
   const testMode = searchParams.get('testMode') === 'true';
+  const authError = searchParams.get('authError');
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,6 +27,15 @@ const Login = () => {
   useEffect(() => {
     console.log("Login page - testMode:", testMode, "Current path:", location.pathname, "Search:", location.search);
     
+    if (authError) {
+      toast({
+        title: "Authentication Error",
+        description: "Your session expired. Please login again to continue.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
+    
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://frfeyttlztydgwahjjsw.supabase.co';
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZyZmV5dHRsenR5ZGd3YWhqanN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA3MTM5NTIsImV4cCI6MjA1NjI4OTk1Mn0.oQ60NfU_HD9wyqDoGrx763wfIvFWg5CpMixKYvOW1QY';
     
@@ -34,15 +44,16 @@ const Login = () => {
       supabaseAnonKey !== 'placeholder-key';
     
     setConnectionError(!hasSupabaseCredentials);
-  }, [location.pathname, location.search, testMode]);
+  }, [location.pathname, location.search, testMode, authError, toast]);
   
   useEffect(() => {
     if (user) {
-      const redirectTarget = testMode ? '/dashboard?testMode=true' : '/dashboard';
+      const returnTo = searchParams.get('returnTo');
+      const redirectTarget = returnTo ? returnTo : (testMode ? '/dashboard?testMode=true' : '/dashboard');
       console.log("User logged in, redirecting to:", redirectTarget);
       navigate(redirectTarget);
     }
-  }, [user, navigate, testMode]);
+  }, [user, navigate, testMode, searchParams]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

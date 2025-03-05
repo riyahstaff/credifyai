@@ -1,133 +1,63 @@
 
 import React, { useEffect } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { handleAuthError } from '@/utils/auth/authRedirect';
 
-interface PrivateRouteProps {
+type PrivateRouteProps = {
   children: React.ReactNode;
   requiresSubscription?: boolean;
-}
+};
 
-// Define an interface for components that can accept testMode
-interface TestModeProps {
-  testMode?: boolean;
-}
-
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, requiresSubscription = false }) => {
-  const { user, isLoading, profile } = useAuth();
+const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRouteProps) => {
+  const { user, profile, isLoading } = useAuth();
   const location = useLocation();
-  const { toast } = useToast();
+  const navigate = useNavigate();
   
-  // Check if we're in testing mode via URL parameter
+  // Check if we're in test mode
   const searchParams = new URLSearchParams(location.search);
   const testMode = searchParams.get('testMode') === 'true';
   
-  // Log test mode status
+  // If in test mode, bypass subscription requirement
+  const hasRequiredAccess = 
+    !requiresSubscription || 
+    profile?.has_subscription || 
+    testMode;
+
   useEffect(() => {
-    if (testMode) {
-      console.log(`Test mode active for route: ${location.pathname}${location.search}`);
+    // If the user is logged out but we previously had a session
+    // this might be due to a session timeout or error
+    if (!isLoading && !user && sessionStorage.getItem('had_previous_session') === 'true') {
+      handleAuthError(navigate, new Error('Session expired'), location.pathname);
     }
-  }, [testMode, location]);
-  
-  // Store the current path for potential redirect after subscription
-  useEffect(() => {
-    if (requiresSubscription && user && profile && !profile.has_subscription && !testMode) {
-      // Include testMode in the stored path if it was present
-      const returnPath = testMode ? `${location.pathname}?testMode=true` : location.pathname;
-      sessionStorage.setItem('returnToAfterSubscription', returnPath);
+    
+    // Track that we've had a session
+    if (user) {
+      sessionStorage.setItem('had_previous_session', 'true');
     }
-  }, [requiresSubscription, user, profile, location.pathname, testMode]);
-  
+  }, [user, isLoading, navigate, location.pathname]);
+
   if (isLoading) {
-    // Loading state
+    // Show loading state while checking auth
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="h-12 w-12 border-4 border-credify-teal/30 border-t-credify-teal rounded-full animate-spin"></div>
+        <div className="h-12 w-12 border-4 border-t-credify-teal border-b-credify-teal border-r-transparent border-l-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
-  
+
   if (!user) {
-    // Preserve test mode when redirecting to login
-    const redirectTo = testMode ? `/login?testMode=true&redirect=${encodeURIComponent(location.pathname)}` : '/login';
-    
-    // Notify about redirect
-    if (testMode) {
-      toast({
-        title: "Authentication Required",
-        description: "Redirecting to login with test mode active",
-        duration: 3000,
-      });
-    }
-    
-    // Redirect to login if not authenticated
-    return <Navigate to={redirectTo} replace />;
+    // User is not logged in, redirect to login
+    return <Navigate to={`/login${testMode ? '?testMode=true' : ''}`} state={{ from: location }} replace />;
   }
 
-  // Check if this route requires subscription (bypass if in test mode)
-  if (requiresSubscription && profile && !testMode) {
-    // Check if user has an active subscription
-    const hasActiveSubscription = profile.has_subscription === true;
-    
-    if (!hasActiveSubscription) {
-      // Redirect to subscription page if no active subscription
-      return <Navigate to="/subscription" replace />;
-    }
+  if (requiresSubscription && !hasRequiredAccess) {
+    // User does not have subscription, redirect to subscription page
+    return <Navigate to="/subscription" state={{ from: location }} replace />;
   }
-  
-  // If test mode is active and this is a premium route, notify
-  useEffect(() => {
-    if (testMode && requiresSubscription) {
-      toast({
-        title: "Test Mode Active",
-        description: "Premium features unlocked for testing",
-        duration: 3000,
-      });
-    }
-  }, [testMode, requiresSubscription, toast]);
-  
-  // Define a list of components that accept the testMode prop
-  const testModeCompatibleComponents = [
-    'DisputeLettersPage',
-    'DisputeGenerator',
-    'UploadReport',
-    'CreditReportUploader',
-    'DisputeResult',
-    'AiAssistantPrompt'
-  ];
-  
-  // We need to update this method to properly handle children that don't accept testMode prop
-  const childrenWithProps = React.Children.map(children, child => {
-    if (React.isValidElement(child)) {
-      // Get the component's display name or function name
-      const childType = child.type;
-      let componentName = '';
-      
-      // Check if it's a function or class component and extract name safely
-      if (childType !== null) {
-        if (typeof childType === 'function') {
-          componentName = childType.name || '';
-        } else if (typeof childType === 'object') {
-          // For forwardRef, memo, etc.
-          const objType = childType as object;
-          if ('displayName' in objType) {
-            componentName = (objType as { displayName?: string }).displayName || '';
-          }
-        }
-      }
-      
-      // Only pass testMode to components that are in our compatible list
-      if (componentName && testModeCompatibleComponents.includes(componentName)) {
-        // Use type assertion to tell TypeScript this component accepts testMode
-        return React.cloneElement(child as React.ReactElement<TestModeProps>, { testMode });
-      }
-    }
-    return child;
-  });
-  
-  // Render children if authenticated and subscription requirements are met (or bypassed in test mode)
-  return <>{childrenWithProps}</>;
+
+  // User is authenticated and has access, render the protected route
+  return <>{children}</>;
 };
 
 export default PrivateRoute;

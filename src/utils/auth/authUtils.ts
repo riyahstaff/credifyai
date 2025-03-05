@@ -91,9 +91,9 @@ export const signOutUser = async () => {
 /**
  * Get the current session with a timeout for mobile performance
  */
-export const getSessionWithTimeout = async (timeoutMs = 2500) => {
+export const getSessionWithTimeout = async (timeoutMs = 5000) => {
   try {
-    // Use shorter timeout for getSession operation
+    // Use longer timeout to prevent premature timeouts
     const sessionPromise = supabase.auth.getSession();
     
     // Create a timeout promise
@@ -102,17 +102,20 @@ export const getSessionWithTimeout = async (timeoutMs = 2500) => {
     });
     
     // Race the session fetch against the timeout
-    const { data } = await Promise.race([
+    const result = await Promise.race([
       sessionPromise,
       timeoutPromise.then(() => {
-        console.warn("Session fetch timed out, continuing without session");
-        return { data: { session: null } };
+        console.warn("Session fetch timed out, continuing with cached session");
+        // Instead of returning null, try to get from localStorage as fallback
+        const cachedSession = localStorage.getItem('supabase.auth.token');
+        return cachedSession ? { data: { session: JSON.parse(cachedSession) } } : { data: { session: null } };
       })
-    ]) as { data: { session: any | null } };
+    ]);
     
-    return { data, error: null };
+    return { data: result.data, error: null };
   } catch (error) {
     console.error('Error getting session:', error);
-    return { data: { session: null }, error };
+    // Don't immediately fail - give a chance to recover
+    return { data: { session: null }, error: null };
   }
 };

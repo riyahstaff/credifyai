@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, Profile, UserSession } from '@/lib/supabase/client';
@@ -46,6 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionError, setSessionError] = useState<Error | null>(null);
   const { toast } = useToast();
 
   const updateSubscriptionStatus = async (hasSubscription: boolean) => {
@@ -86,19 +88,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       try {
         const { data, error } = await getSessionWithTimeout();
-        const session = data?.session;
         
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          const profile = await fetchUserProfile(session.user.id);
-          setProfile(profile);
+        if (error) {
+          console.warn("Session error, but not logging out:", error);
+          setSessionError(error as Error);
+          // Don't reset session here to prevent logout on temporary errors
+        } else {
+          const session = data?.session;
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            const profile = await fetchUserProfile(session.user.id);
+            setProfile(profile);
+          }
         }
       } catch (error) {
         console.error('Error getting session:', error);
-        setSession(null);
-        setUser(null);
+        setSessionError(error as Error);
+        // Don't reset session here, just log the error
       } finally {
         console.log("Auth initialization complete");
         setIsLoading(false);
@@ -111,14 +119,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (_event, session) => {
           console.log("Auth state changed, new session:", !!session);
-          setSession(session);
-          setUser(session?.user ?? null);
           
-          if (session?.user) {
-            const profile = await fetchUserProfile(session.user.id);
-            setProfile(profile);
-          } else {
+          if (_event === 'SIGNED_OUT') {
+            setSession(null);
+            setUser(null);
             setProfile(null);
+          } else {
+            setSession(session);
+            setUser(session?.user ?? null);
+            
+            if (session?.user) {
+              const profile = await fetchUserProfile(session.user.id);
+              setProfile(profile);
+            }
           }
           
           setIsLoading(false);
