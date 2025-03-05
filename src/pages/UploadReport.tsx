@@ -44,7 +44,7 @@ const UploadReport = () => {
     letterGenerated,
     handleDisputeGeneration,
     handleContinueToLetters
-  } = useDisputeGeneration();
+  } = useDisputeGeneration(testMode);
 
   const {
     hasPendingLetters,

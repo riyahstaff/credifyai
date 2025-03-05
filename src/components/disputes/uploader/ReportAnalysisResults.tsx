@@ -60,7 +60,7 @@ const ReportAnalysisResults: React.FC<ReportAnalysisResultsProps> = ({
     // Generate the letter with complete context
     handleSingleIssueDispute(issueIndex, issues, account);
     
-    // Also call the onGenerateDispute from parent component to ensure multiple navigation methods are attempted
+    // Also call the onGenerateDispute from parent component - now we only pass the account
     if (account) {
       onGenerateDispute(account);
     } else {

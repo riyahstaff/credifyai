@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { CreditReportAccount, CreditReportData } from '@/utils/creditReportParser';
+import { CreditReportAccount } from '@/utils/creditReportParser';
 import { useReportStorage } from './useReportStorage';
 import { forceNavigateToLetters } from '@/components/disputes/uploader/utils/bureauUtils';
 
@@ -12,8 +12,20 @@ export const useDisputeGeneration = (testMode: boolean = false) => {
   const { toast } = useToast();
   const { storeForDispute } = useReportStorage();
   
-  // Handle dispute generation
-  const handleDisputeGeneration = (reportData: CreditReportData | null, account?: CreditReportAccount) => {
+  // Handle dispute generation - modified to accept only account parameter
+  const handleDisputeGeneration = (account?: CreditReportAccount) => {
+    // Get report data from session storage instead of requiring it as a parameter
+    const reportDataStr = sessionStorage.getItem('creditReportData');
+    let reportData = null;
+    
+    if (reportDataStr) {
+      try {
+        reportData = JSON.parse(reportDataStr);
+      } catch (error) {
+        console.error("Failed to parse report data from session storage:", error);
+      }
+    }
+    
     // Validate we have report data
     if (!reportData) {
       toast({
