@@ -4,7 +4,7 @@
  * Generates properly formatted dispute letters based on credit report issues
  */
 import { CreditReportAccount } from '../types';
-import { determineBureau, getBureauAddress } from '../../components/disputes/uploader/utils/bureauUtils';
+import { determineBureau, getBureauAddress } from '@/components/disputes/uploader/utils/bureauUtils';
 
 /**
  * Generate a properly formatted dispute letter based on identified issues

@@ -9,3 +9,9 @@ export * from './generator';
 
 // Export sample letter functions
 export * from './samples';
+
+// Export fallback templates
+export * from './fallbackTemplates';
+
+// Export utility types
+export * from './types';
