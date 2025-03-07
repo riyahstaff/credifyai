@@ -1,3 +1,4 @@
+
 /**
  * Dispute letter generator functions
  */
@@ -180,6 +181,11 @@ ${discrepancy.bureau}`
   const userCity = userInfo.city || localStorage.getItem('userCity') || '[CITY]';
   const userState = userInfo.state || localStorage.getItem('userState') || '[STATE]';
   const userZip = userInfo.zip || localStorage.getItem('userZip') || '[ZIP]';
+  
+  // Generate citations text from legal references
+  const citationsText = legalReferences && legalReferences.length > 0 
+    ? legalReferences.map(ref => `${ref.law} ${ref.section} - ${ref.title}: ${ref.text}`).join('\n\n') + '\n\n'
+    : 'Under the Fair Credit Reporting Act § 611 (FCRA), ';
   
   // Generate an enhanced letter with more detailed legal language
   let letterContent = `
@@ -402,6 +408,11 @@ ${discrepancy.bureau}`
   const userCity = userInfo.city || localStorage.getItem('userCity') || '[CITY]';
   const userState = userInfo.state || localStorage.getItem('userState') || '[STATE]';
   const userZip = userInfo.zip || localStorage.getItem('userZip') || '[ZIP]';
+  
+  // Generate citations text from legal references
+  const citationsText = legalReferences && legalReferences.length > 0 
+    ? legalReferences.map(ref => `${ref.law} ${ref.section} - ${ref.title}: ${ref.text}`).join('\n\n') + '\n\n'
+    : 'Under the Fair Credit Reporting Act § 611 (FCRA), ';
   
   // Generate an enhanced letter with more detailed legal language
   let letterContent = `
