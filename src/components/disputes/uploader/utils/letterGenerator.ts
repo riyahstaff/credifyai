@@ -41,6 +41,8 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
       };
       
       // Generate dispute content with advanced letter format
+      // The error is here - passing too many arguments to generateAdvancedDisputeLetter
+      // Instead of passing reportData as a third argument, we need to modify the call
       const letterContent = await generateAdvancedDisputeLetter({
         bureau,
         accountName,
@@ -49,7 +51,7 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         description: issue.description || 'This information appears inaccurate and should be verified',
         explanation: issue.description || 'This information appears inaccurate and should be verified',
         laws: issue.laws || ["FCRA § 611"]
-      }, userInfo, reportData);
+      }, userInfo);
       
       // Create basic letter structure
       return {
