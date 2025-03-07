@@ -38,61 +38,50 @@ export function useLetterDownload() {
     
     const bureauAddress = bureauAddresses[bureau as keyof typeof bureauAddresses] || `${bureau}\n[BUREAU ADDRESS]`;
     
-    // If this is short or doesn't look like a sample letter format, use the advanced format
-    if (letterContent.length < 300 || (!letterContent.includes("DISPUTED ITEM") && !letterContent.includes("My Personal Tracking Number"))) {
-      letterContent = `Today's Date is: ${currentDate} ${numericDate}\n\n`;
-      letterContent += `Credit Report #: ${creditReportNumber}\n\n`;
+    // Replace all placeholders with actual user information
+    letterContent = letterContent
+      .replace(/\[YOUR NAME\]|\[FULL_NAME\]|\[NAME\]/g, consumerName)
+      .replace(/\[YOUR ADDRESS\]|\[ADDRESS\]/g, consumerAddress)
+      .replace(/\[CITY\]/g, consumerCity)
+      .replace(/\[STATE\]/g, consumerState)
+      .replace(/\[ZIP\]/g, consumerZip)
+      .replace(/\[SSN\]|\[SOCIAL SECURITY NUMBER\]/g, consumerSSN)
+      .replace(/\[DOB\]|\[DATE OF BIRTH\]/g, consumerDOB)
+      .replace(/\[ACCOUNT NUMBER\]/g, accountNumber || 'Unknown')
+      .replace(/\[BUREAU\]/g, bureau)
+      .replace(/\[BUREAU_ADDRESS\]/g, bureauAddress)
+      .replace(/\[CURRENT_DATE\]|\[DATE\]|\[TODAY'S DATE\]/g, currentDate)
+      .replace(/Your credit report/gi, `My credit report from ${bureau}`)
+      .replace(/your credit report/gi, `my credit report from ${bureau}`);
+    
+    // If this is short or doesn't look like a dispute letter, use simple format
+    if (letterContent.length < 300 || (!letterContent.includes("DISPUTED ITEM") && !letterContent.includes("To Whom It May Concern"))) {
+      letterContent = `${currentDate}\n\n`;
       letterContent += `${bureau}\n${bureauAddress}\n\n`;
-      letterContent += `My First and Last Name is and ONLY is ${consumerName}\n`;
-      letterContent += `My Address Street Number, Street Name, City, and State is and only is ${consumerAddress} ${consumerCity} ${consumerState} ${consumerZip}\n\n`;
-      letterContent += `My Personal Tracking Number is ${trackingNumber}\n\n`;
-      
-      letterContent += `RE: declaration of currently described injurious claim(s) unproven yet to be veritably and physically validated! These claims are requested check for requisites and immediately removed from reporting so to ensure lawful compliant reporting!\n\n`;
-      
-      letterContent += `To Whom it Concerns,\n\n`;
-      letterContent += `I have no evidence of your claim, of its factual report-ability, nor of its physically documented and else wise demonstrated verifiable proof of validity and certifiable compliance especially in accordance to the mandatory perfect and unabridged Metro 2 format reporting standard(s).\n\n`;
-      
-      letterContent += `Please Remove from reporting all unfavorable claims of and within this item here now officially challenged for documented confirmation of its certified compliance==>\n\n`;
-      letterContent += `CREDITOR NAME ${accountName.toUpperCase()}\n`;
+      letterContent += `Re: Dispute of Inaccurate Credit Information - Account: ${accountName}\n\n`;
+      letterContent += `To Whom It May Concern,\n\n`;
+      letterContent += `I am writing to dispute the following information in my credit report with ${bureau}:\n\n`;
+      letterContent += `CREDITOR NAME: ${accountName.toUpperCase()}\n`;
       
       if (accountNumber) {
-        letterContent += `ACCOUNT- ${'xxxx'.padEnd(accountNumber.length - 4, 'x')}${accountNumber.slice(-4)}\n`;
+        letterContent += `ACCOUNT NUMBER: ${'xxxx'.padEnd(accountNumber.length - 4, 'x')}${accountNumber.slice(-4)}\n`;
       }
       
-      letterContent += `\nDelete this unconfirmed item lacking certifiable evidence of accuracy and compliance\n`;
-      letterContent += `*****************************************************************************************************\n\n`;
-      
-      letterContent += `The above imaged item claimed, as reported, as displayed, appears to have at least one or more deviations from the requisite adhered to standard(s) for ethical and compliant reporting of such a claim. Per CDIA, any alteration of the standard makes potential questioning of the data claimed itself as its believability is suspect.\n\n`;
-      
-      letterContent += `Note: Per 15 UCS 1681 all claims must meet the minimal criterion of being with a maximum possible accuracy and completion. The CDIA influenced 2011-2020 CRRG states on DNP 3-4 that "Any deviation from these standards jeopardizes the Integrity of the data". Omittance from and or inconsistencies of reporting are clues of likely divergence from at least the minimal necessity for establishing the mandatory adherence to the certifiably compliant Metro 2 formatted reporting standards so remove now or PROVE to ethically retain reportability!\n\n`;
-      
+      letterContent += `\nThis information is inaccurate and requires correction. Under the Fair Credit Reporting Act, you are required to investigate this dispute and correct or remove the disputed information.\n\n`;
+      letterContent += `Please investigate this matter and correct the inaccurate information in my credit report.\n\n`;
       letterContent += `Sincerely,\n\n`;
       letterContent += `${consumerName}\n${consumerAddress}\n${consumerCity}, ${consumerState} ${consumerZip}`;
-    } else {
-      // Just replace placeholders in existing letter
-      letterContent = letterContent
-        .replace(/\[YOUR NAME\]|\[FULL_NAME\]|\[NAME\]/g, consumerName)
-        .replace(/\[YOUR ADDRESS\]|\[ADDRESS\]/g, consumerAddress)
-        .replace(/\[CITY\]/g, consumerCity)
-        .replace(/\[STATE\]/g, consumerState)
-        .replace(/\[ZIP\]/g, consumerZip)
-        .replace(/\[SSN\]|\[SOCIAL SECURITY NUMBER\]/g, consumerSSN)
-        .replace(/\[DOB\]|\[DATE OF BIRTH\]/g, consumerDOB)
-        .replace(/\[ACCOUNT NUMBER\]/g, accountNumber || 'Unknown')
-        .replace(/\[BUREAU\]/g, bureau)
-        .replace(/\[BUREAU_ADDRESS\]/g, bureauAddress)
-        .replace(/\[CURRENT_DATE\]|\[DATE\]|\[TODAY'S DATE\]/g, currentDate)
-        .replace(/Your credit report/gi, `My credit report from ${bureau}`)
-        .replace(/your credit report/gi, `my credit report from ${bureau}`);
     }
+    
+    // Remove the technical KEY explanation section if present
+    letterContent = letterContent.replace(
+      /Please utilize the following KEY to explain markings on the images of below-shown items being contested:.*?(?=\*{5,}|\n\n)/gs,
+      ''
+    );
     
     // Add credit report #, tracking # if not present
     if (!letterContent.includes("Credit Report #")) {
       letterContent = letterContent.replace(bureau, `Credit Report #: ${creditReportNumber}\n\n${bureau}`);
-    }
-    
-    if (!letterContent.includes("Personal Tracking Number") && !letterContent.includes("Tracking")) {
-      letterContent = letterContent.replace("To Whom", `My Personal Tracking Number is ${trackingNumber}\n\nTo Whom`);
     }
     
     // Update enclosures section to match the requested format
@@ -100,15 +89,13 @@ export function useLetterDownload() {
       const enclosurePattern = /Enclosures:[\s\S]*?(?=\n\n|\Z)/;
       letterContent = letterContent.replace(enclosurePattern, 
         `Enclosures:
-- Proof of identification
-- Proof of residence or mailing address
-- Proof of social security number`
+- Copy of Driver's License
+- Copy of Social Security Card`
       );
     } else {
       letterContent += `\n\nEnclosures:
-- Proof of identification
-- Proof of residence or mailing address
-- Proof of social security number`;
+- Copy of Driver's License
+- Copy of Social Security Card`;
     }
     
     // Create file and trigger download
