@@ -1,3 +1,4 @@
+
 import { fetchDisputeTemplate } from './legalTemplates';
 import { getRelevantFCRASections } from './legalTemplates';
 import { getSuccessfulDisputeExamples } from './disputeLetters';
@@ -108,7 +109,7 @@ Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be
 `;
 
     // Generate the final letter
-    return `Credit Report #: ${creditReportNumber} Today is ${currentDate}
+    let letterContent = `Credit Report #: ${creditReportNumber} Today is ${currentDate}
 My First and My Last name is: ${userInfo.name || '[YOUR NAME]'}
 My Street NUMBER and My Street NAME is:
 ${userInfo.address || '[YOUR ADDRESS]'}
@@ -133,75 +134,43 @@ The CRSA enacted ad CDIA implemented Metro 2 COMPLIANCE standards will be among 
 
 To avoid such an unnecessary and obviously troublesome action for you, please compose undoubted certificates of your lawful actions to irrefutably verify and validate all data for this and all allegations of derogatory account and or aspects of adversary reporting to include at a minimum every notation, each and all dates, unmistakable accounting balances, all transactions and the audits of all such activities, any and all lawfully verified and recorded identifications, the minimal five (5) portioned personal identifiers, each and every of the alpha-/ numeric-/ and or alphanumeric source codes, all of the sequential and precisely exact 426 characters of the P-6 segment (aka P-statement), the 386 pieces to confirmation of a collection (if any), the creditor classification codes, each and all pay status, and else wise mandated portions of metro 2 compliant reporting, whether reported or not.
 
-To return to federal and my state's reporting compliance, as REQUIRED BY LAW, please eradicate any and every aspect of adversary and or derogatory reporting UNPROVEN to be in its entirety FULLY TRUE, ACCURATE, COMPLETE, TIMELY, of MY OWNERSHIP, OF MY RESPONSIBILITY, in accordance to each and every obligatory reporting regulation, mentioned here or not! COMPOSE PROOF in testimonial certificate is DEMANDED, anything less will compel me to determine your actions as HOSTILE and WILLFULLY IGNORANT to my consumer and civil rights and willfully derelict to proper reporting, a CLEAR VIOLATION of FEDERAL LAW of with I may indeed seek and be awarded punitive monetary benefits beyond the REQUISITE RESOLUTIONS that I am here and now DEMANDING!
+To return to federal and my state's reporting compliance, as REQUIRED BY LAW, please eradicate any and every aspect of adversary and or derogatory reportings in any and every of your data files for which you will directly or indirectly produce, contain, store, sell, exhibit, or elsewise report.
 
-Specific issues with this account:
-${accountDetails.errorDescription}
+According to the Fair Credit Reporting Act, Section 609 (a)(1)(A), you are required by federal law to verify - through the physical verification of the original signed consumer contract - any and all accounts you post on a credit report.
 
-${additionalLanguage ? `ADDITIONAL INFORMATION:\n${additionalLanguage}\n\n` : ''}
+Under Section 611 of the FCRA, you must:
+1. Conduct a thorough investigation of this disputed information within 30 days (45 days if I submit additional information)
+2. Forward all relevant information to the furnisher of this information
+3. Consider all information I have submitted
+4. Provide me with the results of your investigation and a free copy of my credit report if changes are made
+5. Remove the disputed item if it cannot be properly verified
 
-LEGAL BASIS FOR DISPUTE:
-${fcraSections}
-
-According to the Fair Credit Reporting Act, Section 609 (a)(1)(A), you are required by federal law to verify - through the physical verification of the original signed consumer contract - any and all accounts you post on a credit report. Otherwise, anyone paying for your reporting services could fax, mail or email in even a potentially fraudulent account.
-
-According to the provisions of the Fair Credit Reporting Act § 611(a) [15 USC 1681i(a)], these disputed items must be reinvestigated or deleted from my credit record within 30 days. During the investigation period, these items must be removed from my credit report as the mere reporting of items prior to debt validation constitutes collection activity. I am also requesting the names, addresses and telephone numbers of individuals you contacted during your investigation.
-
-Please notify me that the above items have been deleted pursuant to § 611 (a)(6) [15 USC § 1681j (a) (6)]. I am also requesting an updated copy of my credit report, which should be sent to the address listed below. According to the provisions of § 612 [15 USC § 1681j], there should be no charge for this report. If you have any questions or need additional information, please contact me at address noted below.
-
-The CRSA enacted CDIA Metro 2 compliant reporting format REQUIRES the precise and exact fully complete 426-character P-Segment or Trailing Segment that is to include the minimally five portioned PERSONAL IDENTIFIERS to which databasing of alleged tradeline information occurs. Per CRSA, auto-populating ANY data field input entry and or application of Slash Entries (such as 11111 or 00000, etc) into the Metro 2 system is automatic call for deletion due to any and all repeating entry as NULL and VOID.
-
-By the provisions of the Fair Credit Reporting Act and per the standards of reporting compliance implemented with the CRSA enacted CDIA Metro 2 COMPLIANCE regulations, I demand that these above mentioned derogatory items be investigated and permanently removed from my report. It is my understanding that you will recheck these items with the creditor who has posted them. Please remove any information that the creditor cannot verify. I understand that under 15 U.S.C. Sec. 1681i(a), you must complete this reinvestigation within 30 days of receipt of this letter.
-
-Please send an updated copy of my credit report to the above address. According to the act, there shall be no charge for this updated report. I also request that you please send notices of corrections to anyone who received my credit report in the past six months.
-
-THANK YOU IN ADVANCE for your WILLFUL rectifying of the notated MIS-INFORMATION above indicated,
-My First and My Last name is: ${userInfo.name || '[YOUR NAME]'}
-My Street NUMBER and My Street NAME is:
-${userInfo.address || '[YOUR ADDRESS]'}
-My City and My State is:
-${userInfo.city || '[CITY]'}, ${userInfo.state || '[STATE]'} ${userInfo.zip || '[ZIP]'}
-
-Enclosures:
-- Proof of identification
-- Proof of residence or mailing address
-- Proof of social security number`;
-  } catch (error) {
-    console.error('Error generating enhanced dispute letter:', error);
-    // If there was an error, return a much simpler fallback letter
-    return `
-Credit Report #: CR-${Math.floor(Math.random() * 10000000)} Today is ${new Date().toLocaleDateString()}
-My First and My Last name is: ${userInfo.name || '[YOUR NAME]'}
-My Street NUMBER and My Street NAME is:
-${userInfo.address || '[YOUR ADDRESS]'}
-My City and My State is:
-${userInfo.city || '[CITY]'}, ${userInfo.state || '[STATE]'} ${userInfo.zip || '[ZIP]'}
-
-Re: DISPUTE OF INACCURATE CREDIT INFORMATION
-
-${accountDetails.bureau}
-[BUREAU ADDRESS]
-
-To Whom It May Concern:
-
-I am writing in accordance with my rights under the Fair Credit Reporting Act to dispute the following information in my credit report:
-
-Account Name: ${accountDetails.accountName}
-Account Number: ${accountDetails.accountNumber || '[ACCOUNT NUMBER]'}
-Reason for Dispute: ${disputeType}
-
-This information is inaccurate because: ${accountDetails.errorDescription}
-
-Under Section 611 of the Fair Credit Reporting Act, you are required to investigate this dispute and remove information that cannot be verified.
+Please notify me that the above items have been deleted pursuant to § 611 (a)(6) [15 USC § 1681j (a) (6)]. I am also requesting an updated copy of my credit report, which should be sent to the address listed below. According to the provisions of § 612 [15 USC § 1681j], there should be no charge for this report.
 
 Sincerely,
 
 ${userInfo.name || '[YOUR NAME]'}
 
 Enclosures:
-- Proof of identification
-- Proof of residence or mailing address
-- Proof of social security number
+- Copy of Driver's License
+- Copy of Social Security Card
 `;
+
+    // Remove any KEY explanation section if present
+    letterContent = letterContent.replace(
+      /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+      ''
+    );
+    
+    // Remove any "KEY" section explaining acronyms
+    letterContent = letterContent.replace(
+      /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
+      ''
+    );
+
+    return letterContent;
+  } catch (error) {
+    console.error("Error generating enhanced dispute letter:", error);
+    throw new Error("Failed to generate dispute letter");
   }
 }

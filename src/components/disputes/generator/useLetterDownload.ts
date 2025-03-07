@@ -8,7 +8,7 @@ export function useLetterDownload() {
     if (!letterContent) return;
     
     // Get consumer information from localStorage if available
-    const consumerName = localStorage.getItem('userName') || '[YOUR NAME]';
+    const consumerName = localStorage.getItem('userName') || localStorage.getItem('name') || '[YOUR NAME]';
     const consumerAddress = localStorage.getItem('userAddress') || '[YOUR ADDRESS]';
     const consumerCity = localStorage.getItem('userCity') || '[CITY]';
     const consumerState = localStorage.getItem('userState') || '[STATE]';
@@ -75,7 +75,13 @@ export function useLetterDownload() {
     
     // Remove the technical KEY explanation section if present
     letterContent = letterContent.replace(
-      /Please utilize the following KEY to explain markings on the images of below-shown items being contested:.*?(?=\*{5,}|\n\n)/gs,
+      /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+      ''
+    );
+    
+    // Remove any "KEY" section explaining acronyms
+    letterContent = letterContent.replace(
+      /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
       ''
     );
     

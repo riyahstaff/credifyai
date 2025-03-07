@@ -52,7 +52,7 @@ export const useDisputeLetterGenerator = ({
       if (!disputeData.letterContent) {
         // Get user info from local storage or use placeholder
         const userInfo = {
-          name: localStorage.getItem('userName') || "[YOUR NAME]",
+          name: localStorage.getItem('userName') || localStorage.getItem('name') || "[YOUR NAME]",
           address: localStorage.getItem('userAddress') || "[YOUR ADDRESS]",
           city: localStorage.getItem('userCity') || "[CITY]",
           state: localStorage.getItem('userState') || "[STATE]",
@@ -70,6 +70,14 @@ export const useDisputeLetterGenerator = ({
           },
           userInfo
         );
+        
+        // Remove the KEY explanation if present
+        if (disputeData.letterContent) {
+          disputeData.letterContent = disputeData.letterContent.replace(
+            /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+            ''
+          );
+        }
       }
       
       // Create a new letter from the dispute data
@@ -78,7 +86,7 @@ export const useDisputeLetterGenerator = ({
         title: `${disputeData.errorType} Dispute (${disputeData.accountName})`,
         recipient: disputeData.bureau,
         createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        status: 'draft',
+        status: 'ready', // Changed from 'draft' to 'ready'
         bureaus: [disputeData.bureau],
         laws: ['FCRA § 611', 'FCRA § 623'],
         content: disputeData.letterContent

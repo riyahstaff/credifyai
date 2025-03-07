@@ -6,10 +6,27 @@ export const createFallbackLetter = (reportData?: any) => {
   // Include accounts from the report if available
   const accounts = reportData?.accounts || [];
   
+  // Get user information from localStorage
+  const userName = localStorage.getItem('userName') || localStorage.getItem('name') || "[YOUR NAME]";
+  const userAddress = localStorage.getItem('userAddress') || "[YOUR ADDRESS]";
+  const userCity = localStorage.getItem('userCity') || "[CITY]";
+  const userState = localStorage.getItem('userState') || "[STATE]";
+  const userZip = localStorage.getItem('userZip') || "[ZIP]";
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
   // Format account information
   let accountsSection = '';
   if (accounts && accounts.length > 0) {
-    accountsSection = accounts.map((account: any, index: number) => {
+    const validAccounts = accounts.filter((acc: any) => 
+      acc.accountName && 
+      !acc.accountName.toLowerCase().includes('multiple accounts')
+    );
+    
+    accountsSection = validAccounts.map((account: any, index: number) => {
       const accountName = account.accountName || 'UNKNOWN CREDITOR';
       const accountNumber = account.accountNumber || '';
       const maskedNumber = accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 'xxxxxxxx####';
@@ -30,10 +47,10 @@ Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be
     explanation: "I am disputing all information in my credit report that may be inaccurate or incomplete under my rights provided by the Fair Credit Reporting Act.",
     accounts: accounts,
     letterContent: `
-[YOUR NAME]
-[YOUR ADDRESS]
-[CITY, STATE ZIP]
-[DATE]
+${userName}
+${userAddress}
+${userCity}, ${userState} ${userZip}
+${currentDate}
 
 Re: My certified letter in notice of an official consumer declaration of complaint for your thus far NOT proven true, NOT proven correct, NOT proven complete, NOT proven timely, or NOT proven compliant mis-information, to include likely the deficient of proven metro 2 compliant data field formatted reporting as MANDATED! I am enacting my consumer and or civil rights to compel you here and now to absolutely and permanently remove any and all aspects of untrue, inaccurate, not complete, not timely, not proven mine, not proven my responsibility, and or not proven adequately and entirely compliant allegations of credit information.
 
@@ -58,8 +75,9 @@ Please investigate these matters and correct my credit report accordingly.
 
 Sincerely,
 
-[YOUR NAME]
+${userName}
     `,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    status: 'ready' // Changed from 'draft' to 'ready'
   };
 };

@@ -31,9 +31,9 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
       const accountName = issue.account?.accountName || 'Multiple Accounts';
       const accountNumber = issue.account?.accountNumber || '';
       
-      // Create user info object
+      // Create user info object - Get actual values from localStorage
       const userInfo = {
-        name: localStorage.getItem('userName') || "[YOUR NAME]",
+        name: localStorage.getItem('userName') || localStorage.getItem('name') || "[YOUR NAME]",
         address: localStorage.getItem('userAddress') || "[YOUR ADDRESS]",
         city: localStorage.getItem('userCity') || "[CITY]",
         state: localStorage.getItem('userState') || "[STATE]",
@@ -49,7 +49,7 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         description: issue.description || 'This information appears inaccurate and should be verified',
         explanation: issue.description || 'This information appears inaccurate and should be verified',
         laws: issue.laws || ["FCRA § 611"]
-      }, userInfo);
+      }, userInfo, reportData);
       
       // Create basic letter structure
       return {
@@ -62,7 +62,7 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         errorType: issue.type || 'Credit Error',
         content: letterContent,
         letterContent: letterContent,
-        status: 'draft',
+        status: 'ready', // Changed from 'draft' to 'ready'
         createdAt: new Date().toLocaleDateString('en-US', { 
           month: 'short', day: 'numeric', year: 'numeric' 
         }),
@@ -109,7 +109,7 @@ export const storeGeneratedLetters = (letters: any[]): boolean => {
       }
       
       if (!letter.status) {
-        letter.status = 'draft';
+        letter.status = 'ready'; // Changed from 'draft' to 'ready'
       }
       
       if (!letter.createdAt) {

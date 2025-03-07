@@ -163,6 +163,18 @@ ${discrepancy.bureau}`
         ''
       );
       
+      // Remove any "KEY" section explaining acronyms
+      enhancedLetter = enhancedLetter.replace(
+        /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
+        ''
+      );
+      
+      // Remove metro 2 technical references
+      enhancedLetter = enhancedLetter.replace(
+        /BSCF Base Segment Character Format[\s\S]*?Do Not Attack/g,
+        ''
+      );
+      
       return enhancedLetter;
     }
   } catch (error) {
@@ -397,6 +409,18 @@ ${discrepancy.bureau}`
       // Remove the technical KEY explanation section if present
       enhancedLetter = enhancedLetter.replace(
         /Please utilize the following KEY to explain markings on the images of below-shown items being contested:.*?(?=\*{5,}|\n\n)/gs,
+        ''
+      );
+      
+      // Remove any "KEY" section explaining acronyms
+      enhancedLetter = enhancedLetter.replace(
+        /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
+        ''
+      );
+      
+      // Remove metro 2 technical references
+      enhancedLetter = enhancedLetter.replace(
+        /BSCF Base Segment Character Format[\s\S]*?Do Not Attack/g,
         ''
       );
       

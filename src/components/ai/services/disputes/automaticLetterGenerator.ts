@@ -23,7 +23,7 @@ export const generateAutomaticDisputeLetter = async (
     
     // Create user info with defaults if profile properties are missing
     const userInfo = {
-      name: profile?.full_name || "[YOUR NAME]",
+      name: profile?.full_name || localStorage.getItem('userName') || localStorage.getItem('name') || "[YOUR NAME]",
       address: localStorage.getItem('userAddress') || "[YOUR ADDRESS]",
       city: localStorage.getItem('userCity') || "[CITY]",
       state: localStorage.getItem('userState') || "[STATE]",
@@ -70,6 +70,12 @@ export const generateAutomaticDisputeLetter = async (
         if (!letterContent.includes("DISPUTED ITEM")) {
           letterContent += `\n\nDISPUTED ITEM(S):\n- Account Name: ${targetDispute.accountName}\n- Account Number: ${targetDispute.accountNumber || "Unknown"}\n- Reason for Dispute: ${targetDispute.reason}\n`;
         }
+        
+        // Remove the KEY explanation if present
+        letterContent = letterContent.replace(
+          /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+          ''
+        );
         
         usedSampleLetter = true;
       }
@@ -126,7 +132,7 @@ export const generateAutomaticDisputeLetter = async (
       accountNumber: targetDispute.accountNumber || "Unknown",
       errorType: targetDispute.reason,
       explanation: targetDispute.description,
-      status: 'draft',
+      status: 'ready', // Changed from 'draft' to 'ready'
       createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       bureaus: [targetDispute.bureau],
       content: finalLetterContent,
