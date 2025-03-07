@@ -27,7 +27,10 @@ export const extractAccountsFromRawText = (rawText: string): Array<{ name: strin
     /(?:credit card|auto loan|personal loan|mortgage|student loan)[:\s]+([A-Z][A-Z0-9\s&',.-]{2,30})/gi,
     
     // Common formatting in credit reports
-    /([A-Z][A-Z0-9\s&',.-]{2,30})\s+(?:account|loan|card)\s+(?:#|number|no\.?)[:\s]*(\d[\d-]+)/gi
+    /([A-Z][A-Z0-9\s&',.-]{2,30})\s+(?:account|loan|card)\s+(?:#|number|no\.?)[:\s]*(\d[\d-]+)/gi,
+    
+    // Try to find account numbers with their creditors
+    /(?:Account #|Acct:?|Acct #|Account Number:?|Account:)\s*[#:]?\s*([x\d*-]+\d{4})[\s\r\n]*(?:([A-Z][A-Z0-9\s&',.-]{2,30}))?/gi
   ];
 
   // Comprehensive list of known creditors that commonly appear in credit reports
@@ -41,7 +44,7 @@ export const extractAccountsFromRawText = (rawText: string): Array<{ name: strin
     "ROCKET MORTGAGE", "QUICKEN", "LENDING CLUB", "PROSPER", "AVANT", "UPSTART",
     "SOFI", "BEST BUY", "WALMART", "KOHL'S", "MACY'S", "HOME DEPOT", "LOWES",
     "PAYPAL", "AFFIRM", "KLARNA", "AFTERPAY", "COMERICA", "M&T", "HUNTINGTON",
-    "KEYBANK", "CALIBER", "FREEDOM", "ONEMAIN", "UPGRADE", "MARINER", "SANTANDER"
+    "KEYBANK", "CALIBER", "FREEDOM", "ONEMAIN", "UPGRADE", "MARINER"
   ];
   
   // Look for accounts using each pattern
@@ -122,8 +125,10 @@ export const findMatchingAccount = (
   account: CreditReportAccount, 
   realAccounts: Array<{ name: string, number?: string }>
 ): { name: string, number?: string } | null => {
-  // If account already has a valid-looking name, keep it
-  if (isValidAccountName(account.accountName)) {
+  // If account already has a valid-looking name that's not "Multiple Accounts", keep it
+  if (isValidAccountName(account.accountName) && 
+      account.accountName !== "Multiple Accounts" && 
+      account.accountName !== "Unknown Account") {
     return null;
   }
   
@@ -149,8 +154,7 @@ export const findMatchingAccount = (
     }
   }
   
-  // Otherwise, just return the first real account if available
-  // This is imperfect but better than gibberish
+  // If no match found, return the first available real account
   if (realAccounts.length > 0) {
     return realAccounts[0];
   }

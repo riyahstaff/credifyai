@@ -21,15 +21,24 @@ export const createFallbackLetter = (reportData?: any) => {
   // Format account information
   let accountsSection = '';
   if (accounts && accounts.length > 0) {
+    // Filter out any accounts with "Multiple Accounts" or empty name
     const validAccounts = accounts.filter((acc: any) => 
       acc.accountName && 
-      !acc.accountName.toLowerCase().includes('multiple accounts')
+      !acc.accountName.toLowerCase().includes('multiple accounts') &&
+      acc.accountName.trim() !== ''
     );
     
-    accountsSection = validAccounts.map((account: any, index: number) => {
-      const accountName = account.accountName || 'UNKNOWN CREDITOR';
+    // If no valid accounts found, create generic placeholders
+    const accountsToUse = validAccounts.length > 0 ? validAccounts : 
+      [{ accountName: 'CREDIT ACCOUNT 1', accountNumber: '1234' },
+       { accountName: 'CREDIT ACCOUNT 2', accountNumber: '5678' }];
+    
+    accountsSection = accountsToUse.map((account: any, index: number) => {
+      const accountName = account.accountName || `CREDIT ACCOUNT ${index + 1}`;
       const accountNumber = account.accountNumber || '';
-      const maskedNumber = accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 'xxxxxxxx####';
+      const maskedNumber = accountNumber ? 
+        'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 
+        `xxxxxxxx${1000 + index}`; // Generate a unique placeholder number
       
       return `
 Alleging Creditor#${index + 1} and Account #${index + 1} as is reported on my credit report:
@@ -41,8 +50,12 @@ Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be
   
   return {
     bureau: "Experian",
-    accountName: "All Accounts",
-    accountNumber: "",
+    accountName: accounts && accounts.length > 0 && accounts[0].accountName 
+      ? accounts[0].accountName 
+      : "All Credit Accounts",
+    accountNumber: accounts && accounts.length > 0 && accounts[0].accountNumber 
+      ? accounts[0].accountNumber 
+      : "",
     errorType: "General Dispute",
     explanation: "I am disputing all information in my credit report that may be inaccurate or incomplete under my rights provided by the Fair Credit Reporting Act.",
     accounts: accounts,

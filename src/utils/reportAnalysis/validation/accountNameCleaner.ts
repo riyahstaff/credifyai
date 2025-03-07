@@ -8,9 +8,14 @@
  * Clean account name for display
  */
 export const cleanAccountName = (name: string): string => {
-  // Exit early if name is empty or a placeholder like "Multiple Accounts"
-  if (!name || name.toLowerCase().includes('multiple accounts')) {
+  // Exit early if name is empty
+  if (!name) {
     return "";
+  }
+
+  // Don't return "Multiple Accounts" as a cleaned name
+  if (name.toLowerCase().includes('multiple accounts')) {
+    return ""; // Return empty to force extraction of real account name
   }
 
   // Remove PDF artifacts and common garbage patterns
@@ -39,7 +44,9 @@ export const cleanAccountName = (name: string): string => {
     "SYNCHRONY", "CREDIT ONE", "AUTO", "FINANCE", "LOAN", "MORTGAGE", "SANTANDER",
     "FIRST PREMIER", "USAA", "PNC", "BARCLAYS", "JPMCB", "LENDING CLUB", "PROSPER",
     "NAVY FEDERAL", "US BANK", "FIFTH THIRD", "ALLY", "TOYOTA", "HONDA", "NISSAN",
-    "FORD", "GM", "CHRYSLER", "MERCEDES", "BMW", "LEXUS", "HYUNDAI", "KIA"
+    "FORD", "GM", "CHRYSLER", "MERCEDES", "BMW", "LEXUS", "HYUNDAI", "KIA",
+    "GOLDMAN SACHS", "APPLE CARD", "SUNTRUST", "TRUIST", "REGIONS",
+    "CREDIT UNION", "FEDERAL CREDIT", "COMENITY", "WEBBANK", "MARCUS"
   ];
   
   for (const creditor of commonCreditors) {
@@ -60,5 +67,37 @@ export const cleanAccountName = (name: string): string => {
       .join(' ');
   }
   
-  return cleaned.trim();
+  // Instead of returning an empty string, return a more descriptive placeholder
+  // that indicates extraction failed but it's not "Multiple Accounts"
+  return cleaned.trim() || "Credit Account";
+};
+
+// Add function to check if account name is valid
+export const isValidAccountName = (name: string | undefined): boolean => {
+  if (!name) return false;
+  
+  // Check if name is too short or is a placeholder
+  if (
+    name.length < 3 || 
+    name.toLowerCase().includes('multiple') || 
+    name.toLowerCase().includes('unknown') ||
+    name.includes('obj') ||
+    name.includes('stream')
+  ) {
+    return false;
+  }
+  
+  // Check for common PDF artifacts that indicate invalid names
+  if (
+    name.includes('Typ') ||
+    name.includes('endobj') || 
+    name.includes('xref') ||
+    name.includes('Length') ||
+    /^\d+\s+\d+/.test(name)
+  ) {
+    return false;
+  }
+  
+  // Name should have at least one letter
+  return /[a-zA-Z]/.test(name);
 };

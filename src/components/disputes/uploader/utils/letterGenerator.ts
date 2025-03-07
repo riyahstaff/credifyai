@@ -33,7 +33,14 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
       const letterId = Date.now() + index;
       
       // Determine account information from issue or defaults
-      const accountName = issue.account?.accountName || 'Multiple Accounts';
+      // Avoid using "Multiple Accounts" as the account name
+      let accountName = issue.account?.accountName || '';
+      if (!accountName || accountName.toLowerCase().includes('multiple accounts')) {
+        // Use account type or generic name based on issue type
+        const issueType = issue.type || 'Credit Issue';
+        accountName = `${issueType.replace(' Dispute', '')} Account #${index + 1}`;
+      }
+      
       const accountNumber = issue.account?.accountNumber || '';
       
       // Create user info object - Get actual values from localStorage
@@ -90,6 +97,10 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
       letterContent += `Account Name: ${accountName.toUpperCase()}\n`;
       if (accountNumber) {
         letterContent += `Account Number: ${'x'.repeat(Math.max(0, accountNumber.length - 4))}${accountNumber.slice(-4)}\n`;
+      } else {
+        // Generate a placeholder number if none exists
+        const placeholderNum = `xx-xxxx-${1000 + index}`;
+        letterContent += `Account Number: ${placeholderNum}\n`;
       }
       letterContent += `Reason for Dispute: ${disputeData.reason}\n\n`;
       
