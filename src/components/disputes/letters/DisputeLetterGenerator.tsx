@@ -86,7 +86,7 @@ export const useDisputeLetterGenerator = ({
         title: `${disputeData.errorType} Dispute (${disputeData.accountName})`,
         recipient: disputeData.bureau,
         createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        status: 'ready', // Changed from 'draft' to 'ready'
+        status: 'ready', // Status is "ready"
         bureaus: [disputeData.bureau],
         laws: ['FCRA § 611', 'FCRA § 623'],
         content: disputeData.letterContent

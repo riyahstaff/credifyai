@@ -78,6 +78,6 @@ Sincerely,
 ${userName}
     `,
     timestamp: new Date().toISOString(),
-    status: 'ready' // Changed from 'draft' to 'ready'
+    status: 'ready' // Status is "ready"
   };
 };
