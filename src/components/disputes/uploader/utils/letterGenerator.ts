@@ -40,8 +40,8 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         zip: localStorage.getItem('userZip') || "[ZIP]"
       };
       
-      // Generate dispute content with advanced letter format - fixed argument count here
-      const letterContent = await generateAdvancedDisputeLetter({
+      // Create dispute data object
+      const disputeData = {
         bureau,
         accountName,
         accountNumber,
@@ -49,11 +49,17 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         description: issue.description || 'This information appears inaccurate and should be verified',
         explanation: issue.description || 'This information appears inaccurate and should be verified',
         laws: issue.laws || ["FCRA § 611"]
-      }, userInfo);
+      };
+      
+      // Generate dispute content with advanced letter format - fix argument count
+      const letterContent = await generateAdvancedDisputeLetter(disputeData, userInfo);
       
       // Remove the KEY explanation if present
       const cleanedLetterContent = letterContent.replace(
         /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+        ''
+      ).replace(
+        /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
         ''
       );
       

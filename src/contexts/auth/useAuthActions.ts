@@ -1,9 +1,11 @@
 
 import { useToast } from '@/hooks/use-toast';
 import { signUpUser, signInUser, signOutUser } from '@/utils/auth/authUtils';
+import { useNavigate } from 'react-router-dom';
 
 export function useAuthActions() {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSignUp = async (email: string, password: string, fullName: string) => {
     const result = await signUpUser(email, password, fullName);
@@ -34,6 +36,9 @@ export function useAuthActions() {
   };
 
   const handleSignOut = async () => {
+    // Clear additional storage items not cleared in signOutUser
+    localStorage.removeItem('sb-frfeyttlztydgwahjjsw-auth-token');
+    
     const { error } = await signOutUser();
     
     if (!error) {
@@ -42,6 +47,9 @@ export function useAuthActions() {
         description: "You have been successfully logged out.",
         duration: 3000,
       });
+      
+      // Force navigation to home page after logout
+      navigate('/', { replace: true });
     } else {
       toast({
         title: "Error",
