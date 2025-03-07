@@ -94,7 +94,7 @@ Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be
       console.log("Found sample dispute letter for this type of dispute from Supabase");
       
       // Get actual user information from localStorage or input
-      const userName = userInfo.name || localStorage.getItem('userName') || userInfo.fullName || localStorage.getItem('fullName') || localStorage.getItem('userFullName');
+      const userName = userInfo.name || localStorage.getItem('userName') || localStorage.getItem('name');
       const userAddress = userInfo.address || localStorage.getItem('userAddress');
       const userCity = userInfo.city || localStorage.getItem('userCity');
       const userState = userInfo.state || localStorage.getItem('userState');
@@ -186,8 +186,7 @@ ${discrepancy.bureau}`
   }
   
   // Get user information, try localStorage with multiple possible keys if not provided
-  const userName = userInfo.name || localStorage.getItem('userName') || userInfo.fullName || 
-                   localStorage.getItem('fullName') || localStorage.getItem('userFullName');
+  const userName = userInfo.name || localStorage.getItem('userName') || localStorage.getItem('name');
   const userAddress = userInfo.address || localStorage.getItem('userAddress');
   const userCity = userInfo.city || localStorage.getItem('userCity');
   const userState = userInfo.state || localStorage.getItem('userState');
@@ -332,7 +331,7 @@ Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be
       console.log("Found sample dispute letter for this type of dispute from Supabase");
       
       // Get actual user information from localStorage or input
-      const userName = userInfo.name || localStorage.getItem('userName') || userInfo.fullName || localStorage.getItem('fullName') || localStorage.getItem('userFullName');
+      const userName = userInfo.name || localStorage.getItem('userName') || localStorage.getItem('name');
       const userAddress = userInfo.address || localStorage.getItem('userAddress');
       const userCity = userInfo.city || localStorage.getItem('userCity');
       const userState = userInfo.state || localStorage.getItem('userState');
@@ -424,8 +423,7 @@ ${discrepancy.bureau}`
   }
   
   // Get user information, try localStorage with multiple possible keys if not provided
-  const userName = userInfo.name || localStorage.getItem('userName') || userInfo.fullName || 
-                   localStorage.getItem('fullName') || localStorage.getItem('userFullName');
+  const userName = userInfo.name || localStorage.getItem('userName') || localStorage.getItem('name');
   const userAddress = userInfo.address || localStorage.getItem('userAddress');
   const userCity = userInfo.city || localStorage.getItem('userCity');
   const userState = userInfo.state || localStorage.getItem('userState');
