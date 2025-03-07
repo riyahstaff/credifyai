@@ -48,6 +48,13 @@ export const useReportNavigation = () => {
         setTimeout(() => {
           // Check if test mode is active
           const isTestMode = window.location.search.includes('testMode=true');
+          
+          // Important: Use the History API to preserve auth state
+          // This is more reliable than window.location for maintaining auth
+          sessionStorage.setItem('forceAuthPersistence', 'true');
+          sessionStorage.setItem('authTimestamp', timestamp.toString());
+          
+          // Force a full page refresh to ensure clean state
           window.location.href = `/dispute-letters?t=${timestamp}${isTestMode ? '&testMode=true' : ''}`;
         }, 500);
       }
@@ -99,6 +106,8 @@ export const useReportNavigation = () => {
     
     // Set flag to force reload on letters page and include timestamp
     sessionStorage.setItem('forceLettersReload', 'true');
+    sessionStorage.setItem('forceAuthPersistence', 'true');
+    sessionStorage.setItem('authTimestamp', timestamp.toString());
     
     // Use window.location for the most reliable navigation that preserves auth state
     window.location.href = `/dispute-letters?t=${timestamp}${isTestMode ? '&testMode=true' : ''}`;

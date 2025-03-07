@@ -22,6 +22,17 @@ export function useAuthState(): [
 
   const setSession = (session: Session | null) => {
     setState(prev => ({ ...prev, session }));
+    
+    // When setting a new session, persist it to localStorage
+    if (session) {
+      try {
+        // Save a flag in localStorage that we have a valid session
+        localStorage.setItem('hasAuthSession', 'true');
+        localStorage.setItem('lastAuthTime', Date.now().toString());
+      } catch (e) {
+        console.error('Error saving auth session flag:', e);
+      }
+    }
   };
 
   const setUser = (user: User | null) => {
@@ -36,6 +47,9 @@ export function useAuthState(): [
     let isActive = true;
     const retryDelay = 1000;
     
+    // Check if we're in a forced auth persistence situation
+    const forceAuthPersistence = sessionStorage.getItem('forceAuthPersistence') === 'true';
+    
     const initAuth = async (retry = 0) => {
       if (!isActive) return;
       
@@ -43,6 +57,15 @@ export function useAuthState(): [
       setState(prev => ({ ...prev, isLoading: true }));
       
       try {
+        // If we're forcing auth persistence, try harder to maintain the session
+        if (forceAuthPersistence) {
+          console.log("Forced auth persistence mode active");
+          sessionStorage.removeItem('forceAuthPersistence');
+          
+          // Wait a bit longer for auth to initialize in this case
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
         const { data, error } = await getSessionWithTimeout();
         
         if (error) {
@@ -66,6 +89,10 @@ export function useAuthState(): [
           }));
           
           if (session?.user) {
+            // Save auth status to localStorage for persistence
+            localStorage.setItem('hasAuthSession', 'true');
+            localStorage.setItem('lastAuthTime', Date.now().toString());
+            
             const profile = await fetchUserProfile(session.user.id);
             if (!isActive) return;
             setState(prev => ({ ...prev, profile }));
@@ -105,6 +132,10 @@ export function useAuthState(): [
               isLoading: false,
               sessionError: null
             });
+            
+            // Clear auth persistence flags
+            localStorage.removeItem('hasAuthSession');
+            localStorage.removeItem('lastAuthTime');
           } else {
             setState(prev => ({
               ...prev,
@@ -115,6 +146,10 @@ export function useAuthState(): [
             }));
             
             if (session?.user) {
+              // Update auth status in localStorage
+              localStorage.setItem('hasAuthSession', 'true');
+              localStorage.setItem('lastAuthTime', Date.now().toString());
+              
               const profile = await fetchUserProfile(session.user.id);
               if (!isActive) return;
               setState(prev => ({ ...prev, profile }));

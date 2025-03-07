@@ -40,11 +40,20 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode }) => 
   useEffect(() => {
     if (initialLetters && initialLetters.length > 0) {
       console.log(`Setting ${initialLetters.length} letters from initialLetters`);
-      setLetters(initialLetters);
+      
+      // Ensure we have unique letters by adding unique IDs if they don't exist
+      const uniqueLetters = initialLetters.map((letter, index) => {
+        if (!letter.id) {
+          return { ...letter, id: Date.now() + index };
+        }
+        return letter;
+      });
+      
+      setLetters(uniqueLetters);
       
       // Select the first letter for preview if none is selected
       if (!currentLetter) {
-        setCurrentLetter(initialLetters[0]);
+        setCurrentLetter(uniqueLetters[0]);
       }
     }
   }, [initialLetters, currentLetter]);
@@ -59,8 +68,10 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode }) => 
   // Use the dispute letter generator hook
   const { handleGenerateDispute } = useDisputeLetterGenerator({
     onAddNewLetter: (newLetter) => {
-      setLetters(prev => [...prev, newLetter]);
-      setCurrentLetter(newLetter);
+      // Ensure letter has a unique ID
+      const letterWithId = { ...newLetter, id: newLetter.id || Date.now() };
+      setLetters(prev => [letterWithId, ...prev]);
+      setCurrentLetter(letterWithId);
       setShowPreview(true);
       setSelectedView("letters");
     },
@@ -90,9 +101,20 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode }) => 
     setShowPreview(false);
   };
   
-  // Clear navigation flag when page loads
+  // Clear navigation flag and check for auth persistence
   useEffect(() => {
+    // Clear navigation flags
     sessionStorage.removeItem('navigationInProgress');
+    const authTimestamp = sessionStorage.getItem('authTimestamp');
+    
+    if (authTimestamp) {
+      console.log(`Auth timestamp from navigation: ${authTimestamp}`);
+      sessionStorage.removeItem('authTimestamp');
+    }
+    
+    // Check that we have auth state
+    const hasAuthSession = localStorage.getItem('hasAuthSession');
+    console.log(`Auth session status: ${hasAuthSession ? 'Present' : 'Missing'}`);
     
     // Check on mount if we have any generated letters in session storage
     const generatedLetters = sessionStorage.getItem('generatedDisputeLetters');
@@ -110,11 +132,31 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode }) => 
           // Show first letter preview
           setCurrentLetter(parsedLetters[0]);
           setShowPreview(true);
+          
+          // Set a flag to avoid multiple page loads
+          sessionStorage.setItem('lettersAlreadyProcessed', 'true');
         }
       } catch (error) {
         console.error("Error parsing generated letters:", error);
       }
     }
+    
+    // Check for force reload flag
+    const forceReload = sessionStorage.getItem('forceLettersReload');
+    if (forceReload === 'true') {
+      console.log("[DisputeLettersPage] Force reload flag found and cleared");
+      sessionStorage.removeItem('forceLettersReload');
+      
+      // Only refresh if we haven't already processed the letters
+      if (sessionStorage.getItem('lettersAlreadyProcessed') !== 'true') {
+        sessionStorage.setItem('lettersAlreadyProcessed', 'true');
+      }
+    }
+    
+    return () => {
+      // Clean up on unmount
+      sessionStorage.removeItem('lettersAlreadyProcessed');
+    };
   }, []);
   
   // Show a loading message while letters are being loaded
