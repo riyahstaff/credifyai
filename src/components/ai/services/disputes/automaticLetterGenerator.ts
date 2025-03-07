@@ -77,6 +77,12 @@ export const generateAutomaticDisputeLetter = async (
           ''
         );
         
+        // Remove any "KEY" section explaining acronyms
+        letterContent = letterContent.replace(
+          /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
+          ''
+        );
+        
         usedSampleLetter = true;
       }
     } catch (error) {
@@ -99,6 +105,18 @@ export const generateAutomaticDisputeLetter = async (
           targetDispute,
           userInfo
         );
+        
+        // Remove the KEY explanation if present
+        letterContent = letterContent.replace(
+          /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+          ''
+        );
+        
+        // Remove any "KEY" section explaining acronyms
+        letterContent = letterContent.replace(
+          /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
+          ''
+        );
       } catch (error) {
         console.error("Error generating advanced letter:", error);
         
@@ -107,6 +125,18 @@ export const generateAutomaticDisputeLetter = async (
         letterContent = await generateDisputeLetterForDiscrepancy(
           targetDispute,
           userInfo
+        );
+        
+        // Remove the KEY explanation if present
+        letterContent = letterContent.replace(
+          /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+          ''
+        );
+        
+        // Remove any "KEY" section explaining acronyms
+        letterContent = letterContent.replace(
+          /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
+          ''
         );
       }
     }
@@ -132,7 +162,7 @@ export const generateAutomaticDisputeLetter = async (
       accountNumber: targetDispute.accountNumber || "Unknown",
       errorType: targetDispute.reason,
       explanation: targetDispute.description,
-      status: 'ready', // Changed from 'draft' to 'ready'
+      status: 'ready', // Explicitly set to 'ready', not 'draft'
       createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       bureaus: [targetDispute.bureau],
       content: finalLetterContent,

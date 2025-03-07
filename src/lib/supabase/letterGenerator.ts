@@ -108,9 +108,9 @@ ACCOUNT- ${accountDetails.accountNumber ? 'xxxxxxxx' + accountDetails.accountNum
 Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant
 `;
 
-    // Generate the final letter
+    // Generate the final letter - directly use user information from parameters
     let letterContent = `Credit Report #: ${creditReportNumber} Today is ${currentDate}
-My First and My Last name is: ${userInfo.name || '[YOUR NAME]'}
+My First and My Last name is: ${userInfo.name}
 My Street NUMBER and My Street NAME is:
 ${userInfo.address || '[YOUR ADDRESS]'}
 My City and My State is:
@@ -149,14 +149,14 @@ Please notify me that the above items have been deleted pursuant to § 611 (a)(6
 
 Sincerely,
 
-${userInfo.name || '[YOUR NAME]'}
+${userInfo.name}
 
 Enclosures:
 - Copy of Driver's License
 - Copy of Social Security Card
 `;
 
-    // Remove any KEY explanation section if present
+    // Ensure the KEY explanation is removed
     letterContent = letterContent.replace(
       /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
       ''

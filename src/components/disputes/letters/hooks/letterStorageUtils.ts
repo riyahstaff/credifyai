@@ -1,4 +1,3 @@
-
 import { Letter } from './sampleLettersData';
 
 /**
@@ -93,7 +92,7 @@ export const formatLetterFromStorage = (letter: any, index: number): Letter => {
     createdAt: letter.createdAt || new Date().toLocaleDateString('en-US', { 
       month: 'short', day: 'numeric', year: 'numeric' 
     }),
-    status: letter.status || 'draft',
+    status: 'ready', // Always set status to 'ready', not 'draft'
     bureaus: letter.bureaus || [letter.bureau || 'Unknown'],
     // Ensure content is available in both fields for compatibility
     content: letter.letterContent || letter.content || '',
@@ -103,6 +102,27 @@ export const formatLetterFromStorage = (letter: any, index: number): Letter => {
     errorType: letter.errorType || 'General Dispute',
     laws: letter.laws || ["FCRA § 611"]
   };
+  
+  // Remove any KEY explanation if present in either content field
+  if (formattedLetter.content) {
+    formattedLetter.content = formattedLetter.content.replace(
+      /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+      ''
+    ).replace(
+      /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
+      ''
+    );
+  }
+  
+  if (formattedLetter.letterContent) {
+    formattedLetter.letterContent = formattedLetter.letterContent.replace(
+      /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+      ''
+    ).replace(
+      /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
+      ''
+    );
+  }
   
   console.log("[formatLetterFromStorage] Formatted letter result:", formattedLetter);
   return formattedLetter;
@@ -116,19 +136,56 @@ export const saveLettersToStorage = (letters: Letter[], selectedLetter: Letter |
     console.log(`[saveLettersToStorage] Saving ${letters.length} letters to storage`);
     
     // Make sure all letters have both content and letterContent fields
-    const normalizedLetters = letters.map(letter => ({
-      ...letter,
-      content: letter.content || letter.letterContent || '',
-      letterContent: letter.letterContent || letter.content || ''
-    }));
+    // and that all letters have status 'ready'
+    const normalizedLetters = letters.map(letter => {
+      const content = (letter.content || letter.letterContent || '').replace(
+        /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+        ''
+      ).replace(
+        /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
+        ''
+      );
+      
+      const letterContent = (letter.letterContent || letter.content || '').replace(
+        /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+        ''
+      ).replace(
+        /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
+        ''
+      );
+      
+      return {
+        ...letter,
+        content,
+        letterContent,
+        status: 'ready' // Always set to 'ready'
+      };
+    });
     
     sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(normalizedLetters));
     
     if (selectedLetter) {
+      const content = (selectedLetter.content || selectedLetter.letterContent || '').replace(
+        /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+        ''
+      ).replace(
+        /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
+        ''
+      );
+      
+      const letterContent = (selectedLetter.letterContent || selectedLetter.content || '').replace(
+        /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+        ''
+      ).replace(
+        /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
+        ''
+      );
+      
       const normalizedLetter = {
         ...selectedLetter,
-        content: selectedLetter.content || selectedLetter.letterContent || '',
-        letterContent: selectedLetter.letterContent || selectedLetter.content || ''
+        content,
+        letterContent,
+        status: 'ready' // Always set to 'ready'
       };
       
       sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(normalizedLetter));

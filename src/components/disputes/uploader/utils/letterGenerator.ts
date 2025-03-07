@@ -40,7 +40,7 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         zip: localStorage.getItem('userZip') || "[ZIP]"
       };
       
-      // Generate dispute content with advanced letter format
+      // Generate dispute content with advanced letter format - fixed argument count here
       const letterContent = await generateAdvancedDisputeLetter({
         bureau,
         accountName,
@@ -51,6 +51,12 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         laws: issue.laws || ["FCRA § 611"]
       }, userInfo);
       
+      // Remove the KEY explanation if present
+      const cleanedLetterContent = letterContent.replace(
+        /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
+        ''
+      );
+      
       // Create basic letter structure
       return {
         id: letterId,
@@ -60,9 +66,9 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         accountName: accountName,
         accountNumber: accountNumber,
         errorType: issue.type || 'Credit Error',
-        content: letterContent,
-        letterContent: letterContent,
-        status: 'ready', // Changed from 'draft' to 'ready'
+        content: cleanedLetterContent,
+        letterContent: cleanedLetterContent,
+        status: 'ready', // Explicitly set to 'ready', not 'draft'
         createdAt: new Date().toLocaleDateString('en-US', { 
           month: 'short', day: 'numeric', year: 'numeric' 
         }),
@@ -108,9 +114,8 @@ export const storeGeneratedLetters = (letters: any[]): boolean => {
         letter.bureaus = [letter.bureau];
       }
       
-      if (!letter.status) {
-        letter.status = 'ready'; // Changed from 'draft' to 'ready'
-      }
+      // Always explicitly set status to 'ready', not 'draft'
+      letter.status = 'ready';
       
       if (!letter.createdAt) {
         letter.createdAt = new Date().toLocaleDateString('en-US', { 
