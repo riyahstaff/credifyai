@@ -3,6 +3,7 @@ import { Profile } from '@/lib/supabase';
 import { RecommendedDispute } from '../../types';
 import { 
   generateDisputeLetterForDiscrepancy, 
+  generateAdvancedDisputeLetter,
   getSampleDisputeLanguage,
   findSampleDispute
 } from '@/utils/creditReport/disputeLetters';
@@ -36,6 +37,8 @@ export const generateAutomaticDisputeLetter = async (
     
     // Try to find a sample dispute letter first
     let letterContent = '';
+    let usedSampleLetter = false;
+    
     try {
       const sampleLetter = await findSampleDispute(targetDispute.reason, targetDispute.bureau);
       if (sampleLetter) {
@@ -56,66 +59,50 @@ export const generateAutomaticDisputeLetter = async (
           .replace(/\[ACCOUNT_NAME\]/g, targetDispute.accountName)
           .replace(/\[ACCOUNT_NUMBER\]/g, targetDispute.accountNumber || "Unknown")
           .replace(/\[DISPUTE_REASON\]|\[ERROR_TYPE\]/g, targetDispute.reason)
-          .replace(/\[ERROR_DESCRIPTION\]|\[EXPLANATION\]/g, targetDispute.description)
-          .replace(/your credit report/gi, "my credit report")
-          .replace(/Your credit report/gi, "My credit report");
+          .replace(/\[ERROR_DESCRIPTION\]|\[EXPLANATION\]/g, targetDispute.description);
+          
+        // Make sure the letter addresses the bureau, not "your credit report"
+        letterContent = letterContent
+          .replace(/your credit report/gi, `my credit report from ${targetDispute.bureau}`)
+          .replace(/Your credit report/gi, `My credit report from ${targetDispute.bureau}`);
           
         // Ensure the disputed items section is present
-        if (!letterContent.includes("DISPUTED ITEM(S):")) {
+        if (!letterContent.includes("DISPUTED ITEM")) {
           letterContent += `\n\nDISPUTED ITEM(S):\n- Account Name: ${targetDispute.accountName}\n- Account Number: ${targetDispute.accountNumber || "Unknown"}\n- Reason for Dispute: ${targetDispute.reason}\n`;
         }
         
-        // Update enclosures section to only include ID and SSN card
-        if (letterContent.includes("Enclosures:")) {
-          const enclosurePattern = /Enclosures:[\s\S]*?(?=\n\n|\Z)/;
-          letterContent = letterContent.replace(enclosurePattern, 
-            `Enclosures:\n- Copy of Driver's License\n- Copy of Social Security Card`
-          );
-        }
+        usedSampleLetter = true;
       }
     } catch (error) {
       console.error("Error finding sample dispute letter:", error);
     }
     
-    // If we couldn't use a sample letter, proceed with the standard generation
-    if (!letterContent) {
-      // If there's no sample dispute language in the dispute object, try to fetch one
-      if (!targetDispute.sampleDisputeLanguage) {
-        try {
-          console.log("Fetching sample dispute language for", targetDispute.reason);
-          const sampleLanguage = await getSampleDisputeLanguage(
-            targetDispute.reason, 
-            targetDispute.bureau
-          );
-          
-          if (sampleLanguage) {
-            console.log("Found sample dispute language:", sampleLanguage.substring(0, 50) + "...");
-            targetDispute.sampleDisputeLanguage = sampleLanguage;
-          } else {
-            console.log("No sample language found, using original description");
-          }
-        } catch (error) {
-          console.error("Error fetching sample dispute language:", error);
-          // Continue without sample language if there's an error
+    // If we couldn't use a sample letter, proceed with the advanced generation
+    if (!usedSampleLetter) {
+      try {
+        console.log("Generating advanced dispute letter format");
+        // Enhanced description with legal language if needed
+        const enhancedDescription = await deepAnalyzeDisputeReason(targetDispute);
+        if (enhancedDescription) {
+          console.log("Enhanced dispute description:", enhancedDescription.substring(0, 100) + "...");
+          targetDispute.description = enhancedDescription;
         }
+        
+        // Generate advanced letter with detailed legal language
+        letterContent = await generateAdvancedDisputeLetter(
+          targetDispute,
+          userInfo
+        );
+      } catch (error) {
+        console.error("Error generating advanced letter:", error);
+        
+        // Fallback to standard letter if advanced fails
+        console.log("Falling back to standard dispute letter");
+        letterContent = await generateDisputeLetterForDiscrepancy(
+          targetDispute,
+          userInfo
+        );
       }
-      
-      // Force regenerate the description with deep analysis even if we already have one
-      const enhancedDescription = await deepAnalyzeDisputeReason(targetDispute);
-      if (enhancedDescription) {
-        console.log("Enhanced dispute description:", enhancedDescription.substring(0, 100) + "...");
-        targetDispute.description = enhancedDescription;
-      }
-      
-      // Actually generate the letter
-      console.log("Calling letterGenerator with dispute and user info");
-      letterContent = await generateDisputeLetterForDiscrepancy(targetDispute, userInfo);
-      
-      // Ensure all placeholders are replaced
-      letterContent = letterContent
-        .replace(/your credit report/gi, "my credit report")
-        .replace(/Your credit report/gi, "My credit report")
-        .replace(/\[ACCOUNT NUMBER\]/g, targetDispute.accountNumber || "Unknown");
     }
     
     if (!letterContent || letterContent.trim().length < 50) {
@@ -143,7 +130,9 @@ export const generateAutomaticDisputeLetter = async (
       createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       bureaus: [targetDispute.bureau],
       content: finalLetterContent,
+      letterContent: finalLetterContent,
       timestamp: new Date(),
+      usedSampleLetter: usedSampleLetter,
       generatedInTestMode: options?.testMode
     };
 
@@ -157,9 +146,6 @@ export const generateAutomaticDisputeLetter = async (
 // Deep analysis of dispute reasons to craft more effective dispute letters
 async function deepAnalyzeDisputeReason(dispute: RecommendedDispute): Promise<string | null> {
   try {
-    // In a production environment, this would call an advanced LLM like DeepSeek or Grok
-    // For now, we'll enhance the description based on the dispute type
-    
     const baseDescription = dispute.description;
     let enhancedDescription = baseDescription;
     
