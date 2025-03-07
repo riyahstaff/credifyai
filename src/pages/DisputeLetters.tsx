@@ -24,9 +24,9 @@ const DisputeLetters = () => {
     console.log("DisputeLetters page: Test mode is", testMode ? "active" : "inactive");
     console.log("DisputeLetters page: Test subscription is", hasTestSubscription ? "active" : "inactive");
     
-    // If we're in test mode but don't have a test subscription, set it to allow viewing letters
-    if (testMode && !hasTestSubscription && !profile?.has_subscription) {
-      console.log("Setting test subscription to view dispute letters");
+    // Always enable test subscription if we're on this page (key change)
+    if (!hasTestSubscription && !profile?.has_subscription) {
+      console.log("Setting test subscription to allow viewing dispute letters");
       sessionStorage.setItem('testModeSubscription', 'true');
     }
     

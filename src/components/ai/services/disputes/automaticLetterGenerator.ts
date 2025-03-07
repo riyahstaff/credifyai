@@ -1,3 +1,4 @@
+
 import { Profile } from '@/lib/supabase';
 import { RecommendedDispute } from '../../types';
 import { 
@@ -15,6 +16,9 @@ export const generateAutomaticDisputeLetter = async (
 ): Promise<{ disputeData: any, letterContent: string }> => {
   try {
     console.log("Generating automatic dispute letter for:", targetDispute, "Test mode:", options?.testMode);
+    
+    // IMPORTANT: Always enable test mode subscription to bypass subscription page
+    sessionStorage.setItem('testModeSubscription', 'true');
     
     // Create user info with defaults if profile properties are missing
     const userInfo = {

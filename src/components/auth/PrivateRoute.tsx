@@ -17,11 +17,14 @@ const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRoutePr
   const searchParams = new URLSearchParams(location.search);
   const testMode = searchParams.get('testMode') === 'true';
   
+  // Session storage check for test mode subscription bypass
+  const hasTestSubscription = sessionStorage.getItem('testModeSubscription') === 'true';
+  
   // In test mode, we bypass subscription requirement completely
   const hasRequiredAccess = 
     !requiresSubscription || 
     profile?.has_subscription || 
-    testMode;
+    (testMode || hasTestSubscription);
 
   useEffect(() => {
     // If the user is logged out but we previously had a session
@@ -65,10 +68,12 @@ const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRoutePr
 
   // Critical change: Handle test mode more reliably for subscription requirements
   if (requiresSubscription && !hasRequiredAccess) {
-    // We need to check if this is a test mode access attempt before redirecting
-    // This prevents possible redirect loops when test mode is active
+    console.log("Subscription required but not found - checking for test mode bypass");
+    
+    // Set test mode subscription flag to allow viewing dispute letters
     if (testMode) {
       console.log("Test mode active - forcing subscription bypass");
+      sessionStorage.setItem('testModeSubscription', 'true');
       
       // In test mode, we automatically give access to premium features
       return <>{children}</>;
