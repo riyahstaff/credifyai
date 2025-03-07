@@ -13,5 +13,8 @@ export * from './samples';
 // Export fallback templates
 export * from './fallbackTemplates';
 
+// Export sample language and phrases
+export * from './sampleLanguage';
+
 // Export utility types
 export * from './types';

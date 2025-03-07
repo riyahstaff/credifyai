@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { CreditReportData } from '@/utils/creditReportParser';
-import { processCreditReport, loadSampleReports, getSuccessfulDisputePhrases } from '@/utils/creditReportParser';
+import { processCreditReport, loadSampleReports } from '@/utils/creditReportParser';
+import { getSuccessfulDisputePhrases } from '@/utils/creditReport/disputeLetters/sampleLanguage';
 import { MessageType } from '../types';
 import { useToast } from '@/hooks/use-toast';
 
