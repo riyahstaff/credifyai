@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth'; // Updated import
 import { handleAuthError } from '@/utils/auth/authRedirect';
 
@@ -11,7 +11,6 @@ type PrivateRouteProps = {
 const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRouteProps) => {
   const { user, profile, isLoading } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   
   // Check if we're in test mode
   const searchParams = new URLSearchParams(location.search);
@@ -36,7 +35,9 @@ const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRoutePr
       const errorCount = parseInt(sessionStorage.getItem('auth_error_count') || '0', 10);
       if (errorCount > 2) {
         // Only force logout after multiple errors
-        handleAuthError(navigate, new Error('Session expired'), location.pathname);
+        // Use window.location instead of navigate to avoid router context issues
+        const returnPath = encodeURIComponent(location.pathname);
+        window.location.href = `/login?authError=true&returnTo=${returnPath}`;
         // Reset error count after redirecting
         sessionStorage.setItem('auth_error_count', '0');
       } else {
@@ -50,7 +51,7 @@ const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRoutePr
       // Track that we've had a session
       sessionStorage.setItem('had_previous_session', 'true');
     }
-  }, [user, isLoading, navigate, location.pathname]);
+  }, [user, isLoading, location.pathname]);
 
   if (isLoading) {
     // Show loading state while checking auth

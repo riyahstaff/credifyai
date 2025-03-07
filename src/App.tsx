@@ -42,11 +42,11 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+      <BrowserRouter>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
             <RouteLogger />
             <Routes>
               <Route path="/" element={<Index />} />
@@ -89,9 +89,9 @@ function App() {
             
             {/* Global DisputeAgent component that's always available */}
             <DisputeAgent onGenerateDispute={() => {}} />
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
+          </TooltipProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }

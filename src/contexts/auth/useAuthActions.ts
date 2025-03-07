@@ -1,11 +1,9 @@
 
 import { useToast } from '@/hooks/use-toast';
 import { signUpUser, signInUser, signOutUser } from '@/utils/auth/authUtils';
-import { useNavigate } from 'react-router-dom';
 
 export function useAuthActions() {
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const handleSignUp = async (email: string, password: string, fullName: string) => {
     const result = await signUpUser(email, password, fullName);
@@ -48,8 +46,9 @@ export function useAuthActions() {
         duration: 3000,
       });
       
-      // Force navigation to home page after logout
-      navigate('/', { replace: true });
+      // Use window.location instead of navigate for a clean redirect
+      // This avoids the router context issue
+      window.location.href = '/';
     } else {
       toast({
         title: "Error",
