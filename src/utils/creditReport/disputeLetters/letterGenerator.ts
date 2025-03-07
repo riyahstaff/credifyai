@@ -42,38 +42,44 @@ export const generateDisputeLetterForDiscrepancy = async (
   const legalReferences = discrepancy.legalBasis || 
     getLegalReferencesForDispute(discrepancy.reason, discrepancy.description);
   
-  // Format disputed account information - ensure actual account details are used
+  // Generate the account number display - use last 4 digits if available
   const accountNumber = discrepancy.accountNumber || "Unknown";
-  const disputedAccountInfo = `
-DISPUTED ITEM(S):
-- Account Name: ${discrepancy.accountName}
-- Account Number: ${accountNumber}
-- Reason for Dispute: ${discrepancy.reason}
-- Details: ${discrepancy.description}
-`;
+  const maskedNumber = accountNumber && accountNumber.length > 4 ? 
+    'xxxxxxxx' + accountNumber.substring(accountNumber.length - 4) : 
+    accountNumber;
 
   // Extract accounts from the credit report data if available
   let accountsSectionContent = "";
   if (creditReportData && creditReportData.accounts && creditReportData.accounts.length > 0) {
-    accountsSectionContent = creditReportData.accounts.map((account: any, index: number) => {
-      const accountName = account.accountName || 'UNKNOWN CREDITOR';
-      const accountNumber = account.accountNumber || 'Unknown';
-      const maskedNumber = accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 'xxxxxxxx####';
+    const validAccounts = creditReportData.accounts.filter((acc: any) => 
+      acc.accountName && 
+      !acc.accountName.toLowerCase().includes('multiple accounts')
+    );
+    
+    accountsSectionContent = validAccounts.map((account: any, index: number) => {
+      const accName = account.accountName || 'UNKNOWN CREDITOR';
+      const accNumber = account.accountNumber || 'Unknown';
+      const maskedNum = accNumber && accNumber.length > 4 ? 
+        'xxxxxxxx' + accNumber.substring(accNumber.length - 4) : 
+        'xxxxxxxx####';
       
       return `
 Alleging Creditor#${index + 1} and Account #${index + 1} as is reported on my credit report:
-${accountName.toUpperCase()}
-ACCOUNT- ${maskedNumber}
+${accName.toUpperCase()}
+ACCOUNT- ${maskedNum}
 Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant`;
     }).join('\n');
   } else if (discrepancy.accountName) {
     // If no accounts from report, at least include the disputed account
-    accountsSectionContent = `
+    // Skip if it contains "Multiple Accounts"
+    if (!discrepancy.accountName.toLowerCase().includes('multiple accounts')) {
+      accountsSectionContent = `
 Alleging Creditor and Account as is reported on my credit report:
 ${discrepancy.accountName.toUpperCase()}
-ACCOUNT- ${accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 'xxxxxxxx####'}
+ACCOUNT- ${maskedNumber}
 Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant
 `;
+    }
   }
 
   // Try to use a credit report number from the report data, or generate a placeholder
@@ -86,20 +92,24 @@ Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be
     
     if (sampleLetter) {
       console.log("Found sample dispute letter for this type of dispute from Supabase");
-      // Extract key phrases from the sample letter to enhance our letter
-      // Replace placeholders with actual user data
-      const userName = userInfo.name || localStorage.getItem('userName') || '[YOUR NAME]';
-      const userAddress = userInfo.address || localStorage.getItem('userAddress') || '[YOUR ADDRESS]';
-      const userCity = userInfo.city || localStorage.getItem('userCity') || '[CITY]';
-      const userState = userInfo.state || localStorage.getItem('userState') || '[STATE]';
-      const userZip = userInfo.zip || localStorage.getItem('userZip') || '[ZIP]';
       
-      let enhancedLetter = sampleLetter.content
-        .replace(/\[FULL_NAME\]|\[YOUR_NAME\]|\[NAME\]/g, userName)
-        .replace(/\[ADDRESS\]|\[YOUR_ADDRESS\]/g, userAddress)
-        .replace(/\[CITY\]/g, userCity)
-        .replace(/\[STATE\]/g, userState)
-        .replace(/\[ZIP\]/g, userZip)
+      // Get actual user information from localStorage or input
+      const userName = userInfo.name || localStorage.getItem('userName') || userInfo.fullName || localStorage.getItem('fullName') || localStorage.getItem('userFullName');
+      const userAddress = userInfo.address || localStorage.getItem('userAddress');
+      const userCity = userInfo.city || localStorage.getItem('userCity');
+      const userState = userInfo.state || localStorage.getItem('userState');
+      const userZip = userInfo.zip || localStorage.getItem('userZip');
+      
+      // Only replace placeholders if we have actual values
+      let enhancedLetter = sampleLetter.content;
+      
+      if (userName) enhancedLetter = enhancedLetter.replace(/\[FULL_NAME\]|\[YOUR_NAME\]|\[NAME\]/g, userName);
+      if (userAddress) enhancedLetter = enhancedLetter.replace(/\[ADDRESS\]|\[YOUR_ADDRESS\]/g, userAddress);
+      if (userCity) enhancedLetter = enhancedLetter.replace(/\[CITY\]/g, userCity);
+      if (userState) enhancedLetter = enhancedLetter.replace(/\[STATE\]/g, userState);
+      if (userZip) enhancedLetter = enhancedLetter.replace(/\[ZIP\]/g, userZip);
+      
+      enhancedLetter = enhancedLetter
         .replace(/\[DATE\]|\[CURRENT_DATE\]/g, currentDate)
         .replace(/\[BUREAU\]/g, discrepancy.bureau)
         .replace(/\[BUREAU_ADDRESS\]/g, bureauAddress)
@@ -175,12 +185,13 @@ ${discrepancy.bureau}`
     }
   }
   
-  // Get user information, try localStorage if not provided
-  const userName = userInfo.name || localStorage.getItem('userName') || '[YOUR NAME]';
-  const userAddress = userInfo.address || localStorage.getItem('userAddress') || '[YOUR ADDRESS]';
-  const userCity = userInfo.city || localStorage.getItem('userCity') || '[CITY]';
-  const userState = userInfo.state || localStorage.getItem('userState') || '[STATE]';
-  const userZip = userInfo.zip || localStorage.getItem('userZip') || '[ZIP]';
+  // Get user information, try localStorage with multiple possible keys if not provided
+  const userName = userInfo.name || localStorage.getItem('userName') || userInfo.fullName || 
+                   localStorage.getItem('fullName') || localStorage.getItem('userFullName');
+  const userAddress = userInfo.address || localStorage.getItem('userAddress');
+  const userCity = userInfo.city || localStorage.getItem('userCity');
+  const userState = userInfo.state || localStorage.getItem('userState');
+  const userZip = userInfo.zip || localStorage.getItem('userZip');
   
   // Generate citations text from legal references
   const citationsText = legalReferences && legalReferences.length > 0 
@@ -189,9 +200,9 @@ ${discrepancy.bureau}`
   
   // Generate an enhanced letter with more detailed legal language
   let letterContent = `
-${userName}
-${userAddress}
-${userCity}, ${userState} ${userZip}
+${userName || '[YOUR NAME]'}
+${userAddress || '[YOUR ADDRESS]'}
+${userCity || '[CITY]'}, ${userState || '[STATE]'} ${userZip || '[ZIP]'}
 ${currentDate}
 
 Re: Dispute of Inaccurate Credit Information - Account: ${discrepancy.accountName}
@@ -224,7 +235,7 @@ Please notify me that the above items have been deleted pursuant to § 611 (a)(6
 
 Sincerely,
 
-${userName}
+${userName || '[YOUR NAME]'}
 
 Enclosures:
 - Copy of Driver's License
@@ -269,38 +280,44 @@ export const generateAdvancedDisputeLetter = async (
   const legalReferences = discrepancy.legalBasis || 
     getLegalReferencesForDispute(discrepancy.reason, discrepancy.description);
   
-  // Format disputed account information - ensure actual account details are used
+  // Generate the account number display - use last 4 digits if available
   const accountNumber = discrepancy.accountNumber || "Unknown";
-  const disputedAccountInfo = `
-DISPUTED ITEM(S):
-- Account Name: ${discrepancy.accountName}
-- Account Number: ${accountNumber}
-- Reason for Dispute: ${discrepancy.reason}
-- Details: ${discrepancy.description}
-`;
+  const maskedNumber = accountNumber && accountNumber.length > 4 ? 
+    'xxxxxxxx' + accountNumber.substring(accountNumber.length - 4) : 
+    accountNumber;
 
   // Extract accounts from the credit report data if available
   let accountsSectionContent = "";
   if (creditReportData && creditReportData.accounts && creditReportData.accounts.length > 0) {
-    accountsSectionContent = creditReportData.accounts.map((account: any, index: number) => {
-      const accountName = account.accountName || 'UNKNOWN CREDITOR';
-      const accountNumber = account.accountNumber || 'Unknown';
-      const maskedNumber = accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 'xxxxxxxx####';
+    const validAccounts = creditReportData.accounts.filter((acc: any) => 
+      acc.accountName && 
+      !acc.accountName.toLowerCase().includes('multiple accounts')
+    );
+    
+    accountsSectionContent = validAccounts.map((account: any, index: number) => {
+      const accName = account.accountName || 'UNKNOWN CREDITOR';
+      const accNumber = account.accountNumber || 'Unknown';
+      const maskedNum = accNumber && accNumber.length > 4 ? 
+        'xxxxxxxx' + accNumber.substring(accNumber.length - 4) : 
+        'xxxxxxxx####';
       
       return `
 Alleging Creditor#${index + 1} and Account #${index + 1} as is reported on my credit report:
-${accountName.toUpperCase()}
-ACCOUNT- ${maskedNumber}
+${accName.toUpperCase()}
+ACCOUNT- ${maskedNum}
 Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant`;
     }).join('\n');
   } else if (discrepancy.accountName) {
     // If no accounts from report, at least include the disputed account
-    accountsSectionContent = `
+    // Skip if it contains "Multiple Accounts"
+    if (!discrepancy.accountName.toLowerCase().includes('multiple accounts')) {
+      accountsSectionContent = `
 Alleging Creditor and Account as is reported on my credit report:
 ${discrepancy.accountName.toUpperCase()}
-ACCOUNT- ${accountNumber ? 'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 'xxxxxxxx####'}
+ACCOUNT- ${maskedNumber}
 Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant
 `;
+    }
   }
 
   // Try to use a credit report number from the report data, or generate a placeholder
@@ -313,20 +330,24 @@ Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be
     
     if (sampleLetter) {
       console.log("Found sample dispute letter for this type of dispute from Supabase");
-      // Extract key phrases from the sample letter to enhance our letter
-      // Replace placeholders with actual user data
-      const userName = userInfo.name || localStorage.getItem('userName') || '[YOUR NAME]';
-      const userAddress = userInfo.address || localStorage.getItem('userAddress') || '[YOUR ADDRESS]';
-      const userCity = userInfo.city || localStorage.getItem('userCity') || '[CITY]';
-      const userState = userInfo.state || localStorage.getItem('userState') || '[STATE]';
-      const userZip = userInfo.zip || localStorage.getItem('userZip') || '[ZIP]';
       
-      let enhancedLetter = sampleLetter.content
-        .replace(/\[FULL_NAME\]|\[YOUR_NAME\]|\[NAME\]/g, userName)
-        .replace(/\[ADDRESS\]|\[YOUR_ADDRESS\]/g, userAddress)
-        .replace(/\[CITY\]/g, userCity)
-        .replace(/\[STATE\]/g, userState)
-        .replace(/\[ZIP\]/g, userZip)
+      // Get actual user information from localStorage or input
+      const userName = userInfo.name || localStorage.getItem('userName') || userInfo.fullName || localStorage.getItem('fullName') || localStorage.getItem('userFullName');
+      const userAddress = userInfo.address || localStorage.getItem('userAddress');
+      const userCity = userInfo.city || localStorage.getItem('userCity');
+      const userState = userInfo.state || localStorage.getItem('userState');
+      const userZip = userInfo.zip || localStorage.getItem('userZip');
+      
+      // Only replace placeholders if we have actual values
+      let enhancedLetter = sampleLetter.content;
+      
+      if (userName) enhancedLetter = enhancedLetter.replace(/\[FULL_NAME\]|\[YOUR_NAME\]|\[NAME\]/g, userName);
+      if (userAddress) enhancedLetter = enhancedLetter.replace(/\[ADDRESS\]|\[YOUR_ADDRESS\]/g, userAddress);
+      if (userCity) enhancedLetter = enhancedLetter.replace(/\[CITY\]/g, userCity);
+      if (userState) enhancedLetter = enhancedLetter.replace(/\[STATE\]/g, userState);
+      if (userZip) enhancedLetter = enhancedLetter.replace(/\[ZIP\]/g, userZip);
+      
+      enhancedLetter = enhancedLetter
         .replace(/\[DATE\]|\[CURRENT_DATE\]/g, currentDate)
         .replace(/\[BUREAU\]/g, discrepancy.bureau)
         .replace(/\[BUREAU_ADDRESS\]/g, bureauAddress)
@@ -402,12 +423,13 @@ ${discrepancy.bureau}`
     }
   }
   
-  // Get user information, try localStorage if not provided
-  const userName = userInfo.name || localStorage.getItem('userName') || '[YOUR NAME]';
-  const userAddress = userInfo.address || localStorage.getItem('userAddress') || '[YOUR ADDRESS]';
-  const userCity = userInfo.city || localStorage.getItem('userCity') || '[CITY]';
-  const userState = userInfo.state || localStorage.getItem('userState') || '[STATE]';
-  const userZip = userInfo.zip || localStorage.getItem('userZip') || '[ZIP]';
+  // Get user information, try localStorage with multiple possible keys if not provided
+  const userName = userInfo.name || localStorage.getItem('userName') || userInfo.fullName || 
+                   localStorage.getItem('fullName') || localStorage.getItem('userFullName');
+  const userAddress = userInfo.address || localStorage.getItem('userAddress');
+  const userCity = userInfo.city || localStorage.getItem('userCity');
+  const userState = userInfo.state || localStorage.getItem('userState');
+  const userZip = userInfo.zip || localStorage.getItem('userZip');
   
   // Generate citations text from legal references
   const citationsText = legalReferences && legalReferences.length > 0 
@@ -416,9 +438,9 @@ ${discrepancy.bureau}`
   
   // Generate an enhanced letter with more detailed legal language
   let letterContent = `
-${userName}
-${userAddress}
-${userCity}, ${userState} ${userZip}
+${userName || '[YOUR NAME]'}
+${userAddress || '[YOUR ADDRESS]'}
+${userCity || '[CITY]'}, ${userState || '[STATE]'} ${userZip || '[ZIP]'}
 ${currentDate}
 
 Re: Dispute of Inaccurate Credit Information - Account: ${discrepancy.accountName}
@@ -451,7 +473,7 @@ Please notify me that the above items have been deleted pursuant to § 611 (a)(6
 
 Sincerely,
 
-${userName}
+${userName || '[YOUR NAME]'}
 
 Enclosures:
 - Copy of Driver's License

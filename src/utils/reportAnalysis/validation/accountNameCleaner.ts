@@ -8,6 +8,11 @@
  * Clean account name for display
  */
 export const cleanAccountName = (name: string): string => {
+  // Exit early if name is empty or a placeholder like "Multiple Accounts"
+  if (!name || name.toLowerCase().includes('multiple accounts')) {
+    return "";
+  }
+
   // Remove PDF artifacts and common garbage patterns
   let cleaned = name.replace(/^\d+\s+\d+\s+/, ''); // Remove patterns like "142 0 "
   cleaned = cleaned.replace(/GM\s+/, ''); // Remove "GM " prefix
@@ -31,7 +36,10 @@ export const cleanAccountName = (name: string): string => {
   const commonCreditors = [
     "CARMAX", "CAPITAL ONE", "CHASE", "BANK OF AMERICA", "WELLS FARGO", 
     "DISCOVER", "AMERICAN EXPRESS", "AMEX", "CITI", "CITIBANK", "TD BANK",
-    "SYNCHRONY", "CREDIT ONE", "AUTO", "FINANCE", "LOAN", "MORTGAGE", "SANTANDER"
+    "SYNCHRONY", "CREDIT ONE", "AUTO", "FINANCE", "LOAN", "MORTGAGE", "SANTANDER",
+    "FIRST PREMIER", "USAA", "PNC", "BARCLAYS", "JPMCB", "LENDING CLUB", "PROSPER",
+    "NAVY FEDERAL", "US BANK", "FIFTH THIRD", "ALLY", "TOYOTA", "HONDA", "NISSAN",
+    "FORD", "GM", "CHRYSLER", "MERCEDES", "BMW", "LEXUS", "HYUNDAI", "KIA"
   ];
   
   for (const creditor of commonCreditors) {
