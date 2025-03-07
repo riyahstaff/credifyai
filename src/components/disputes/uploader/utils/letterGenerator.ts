@@ -4,7 +4,7 @@
  */
 import { CreditReportAccount, CreditReportData } from '@/utils/creditReportParser';
 import { determineBureau, getBureauAddress } from './bureauUtils';
-import { generateAdvancedDisputeLetter } from '@/utils/creditReport/disputeLetters';
+import { generateFallbackDisputeLetter } from '@/utils/creditReport/disputeLetters/fallbackTemplates';
 
 /**
  * Generate dispute letters for credit report issues
@@ -51,17 +51,60 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         laws: issue.laws || ["FCRA § 611"]
       };
       
-      // Generate dispute content with advanced letter format - fix argument count
-      const letterContent = await generateAdvancedDisputeLetter(disputeData, userInfo);
+      // Generate new formatted letter content with proper layout
+      const currentDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
       
-      // Remove the KEY explanation if present
-      const cleanedLetterContent = letterContent.replace(
-        /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
-        ''
-      ).replace(
-        /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
-        ''
-      );
+      // Credit report number
+      const creditReportNumber = 'CR' + Math.floor(Math.random() * 10000000);
+      
+      // Generate a properly formatted dispute letter
+      let letterContent = `Credit Report #: ${creditReportNumber}\nToday is ${currentDate}\n\n`;
+      
+      // Add sender information
+      letterContent += `${userInfo.name}\n`;
+      letterContent += `${userInfo.address}\n`;
+      letterContent += `${userInfo.city}, ${userInfo.state} ${userInfo.zip}\n\n`;
+      
+      // Add recipient information
+      letterContent += `${bureau}\n`;
+      letterContent += `${bureauAddress}\n\n`;
+      
+      // Add subject line
+      letterContent += `Re: Dispute of Inaccurate Information - ${accountName}\n\n`;
+      
+      // Add salutation and introduction
+      letterContent += `To Whom It May Concern:\n\n`;
+      letterContent += `I am writing to dispute the following information in my credit report. I have identified the following item(s) that are inaccurate or incomplete:\n\n`;
+      
+      // Add account details
+      letterContent += `DISPUTED ITEM(S):\n`;
+      letterContent += `Account Name: ${accountName.toUpperCase()}\n`;
+      if (accountNumber) {
+        letterContent += `Account Number: ${'x'.repeat(Math.max(0, accountNumber.length - 4))}${accountNumber.slice(-4)}\n`;
+      }
+      letterContent += `Reason for Dispute: ${disputeData.reason}\n\n`;
+      
+      // Add explanation
+      letterContent += `${disputeData.explanation}\n\n`;
+      
+      // Add legal basis
+      letterContent += `According to the Fair Credit Reporting Act, Section 611 (15 U.S.C. § 1681i), you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified. Furthermore, as a consumer reporting agency, you are obligated to follow reasonable procedures to assure maximum possible accuracy of the information in consumer reports, as required by Section 607 (15 U.S.C. § 1681e).\n\n`;
+      
+      // Add request
+      letterContent += `Please investigate this matter and correct your records within the 30-day timeframe provided by the FCRA. Additionally, please provide me with notification of the results of your investigation and a free updated copy of my credit report if changes are made, as required by law.\n\n`;
+      
+      // Add closing
+      letterContent += `Sincerely,\n\n`;
+      letterContent += `${userInfo.name}\n\n`;
+      
+      // Add enclosures
+      letterContent += `Enclosures:\n`;
+      letterContent += `- Copy of Driver's License\n`;
+      letterContent += `- Copy of Social Security Card\n`;
       
       // Create basic letter structure
       return {
@@ -72,8 +115,8 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         accountName: accountName,
         accountNumber: accountNumber,
         errorType: issue.type || 'Credit Error',
-        content: cleanedLetterContent,
-        letterContent: cleanedLetterContent,
+        content: letterContent,
+        letterContent: letterContent,
         status: 'ready', // Explicitly set to 'ready', not 'draft'
         createdAt: new Date().toLocaleDateString('en-US', { 
           month: 'short', day: 'numeric', year: 'numeric' 

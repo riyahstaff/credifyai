@@ -13,8 +13,6 @@ export function useLetterDownload() {
     const consumerCity = localStorage.getItem('userCity') || '[CITY]';
     const consumerState = localStorage.getItem('userState') || '[STATE]';
     const consumerZip = localStorage.getItem('userZip') || '[ZIP]';
-    const consumerSSN = localStorage.getItem('userSSN') || '[SSN]';
-    const consumerDOB = localStorage.getItem('userDOB') || '[DOB]';
     
     // Format date with multiple formats to match sample letters
     const today = new Date();
@@ -23,11 +21,9 @@ export function useLetterDownload() {
       month: 'long',
       day: 'numeric'
     });
-    const numericDate = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
     
-    // Credit report number and tracking number
-    const creditReportNumber = localStorage.getItem('creditReportNumber') || 'CR' + Math.floor(Math.random() * 10000000);
-    const trackingNumber = Math.random().toString(16).substring(2, 10) + Math.random().toString(16).substring(2, 10);
+    // Credit report number
+    const creditReportNumber = 'CR' + Math.floor(Math.random() * 10000000);
     
     // Bureau addresses
     const bureauAddresses = {
@@ -38,70 +34,53 @@ export function useLetterDownload() {
     
     const bureauAddress = bureauAddresses[bureau as keyof typeof bureauAddresses] || `${bureau}\n[BUREAU ADDRESS]`;
     
-    // Replace all placeholders with actual user information
-    letterContent = letterContent
-      .replace(/\[YOUR NAME\]|\[FULL_NAME\]|\[NAME\]/g, consumerName)
-      .replace(/\[YOUR ADDRESS\]|\[ADDRESS\]/g, consumerAddress)
-      .replace(/\[CITY\]/g, consumerCity)
-      .replace(/\[STATE\]/g, consumerState)
-      .replace(/\[ZIP\]/g, consumerZip)
-      .replace(/\[SSN\]|\[SOCIAL SECURITY NUMBER\]/g, consumerSSN)
-      .replace(/\[DOB\]|\[DATE OF BIRTH\]/g, consumerDOB)
-      .replace(/\[ACCOUNT NUMBER\]/g, accountNumber || 'Unknown')
-      .replace(/\[BUREAU\]/g, bureau)
-      .replace(/\[BUREAU_ADDRESS\]/g, bureauAddress)
-      .replace(/\[CURRENT_DATE\]|\[DATE\]|\[TODAY'S DATE\]/g, currentDate)
-      .replace(/Your credit report/gi, `My credit report from ${bureau}`)
-      .replace(/your credit report/gi, `my credit report from ${bureau}`);
-    
-    // If this is short or doesn't look like a dispute letter, use simple format
-    if (letterContent.length < 300 || (!letterContent.includes("DISPUTED ITEM") && !letterContent.includes("To Whom It May Concern"))) {
-      letterContent = `${currentDate}\n\n`;
-      letterContent += `${bureau}\n${bureauAddress}\n\n`;
-      letterContent += `Re: Dispute of Inaccurate Credit Information - Account: ${accountName}\n\n`;
-      letterContent += `To Whom It May Concern,\n\n`;
-      letterContent += `I am writing to dispute the following information in my credit report with ${bureau}:\n\n`;
-      letterContent += `CREDITOR NAME: ${accountName.toUpperCase()}\n`;
+    // If this doesn't look like a properly formatted letter, create a new one
+    if (!letterContent.includes("Credit Report #") || letterContent.length < 200) {
+      // Generate a new letter with proper formatting
+      letterContent = `Credit Report #: ${creditReportNumber}\nToday is ${currentDate}\n\n`;
+      letterContent += `${consumerName}\n`;
+      letterContent += `${consumerAddress}\n`;
+      letterContent += `${consumerCity}, ${consumerState} ${consumerZip}\n\n`;
       
+      letterContent += `${bureau}\n`;
+      letterContent += `${bureauAddress}\n\n`;
+      
+      letterContent += `Re: Dispute of Inaccurate Information - ${accountName}\n\n`;
+      
+      letterContent += `To Whom It May Concern:\n\n`;
+      letterContent += `I am writing to dispute the following information in my credit report. I have identified the following item(s) that are inaccurate or incomplete:\n\n`;
+      
+      letterContent += `DISPUTED ITEM(S):\n`;
+      letterContent += `Account Name: ${accountName.toUpperCase()}\n`;
       if (accountNumber) {
-        letterContent += `ACCOUNT NUMBER: ${'xxxx'.padEnd(accountNumber.length - 4, 'x')}${accountNumber.slice(-4)}\n`;
+        letterContent += `Account Number: ${'x'.repeat(Math.max(0, accountNumber.length - 4))}${accountNumber.slice(-4)}\n`;
       }
+      letterContent += `Reason for Dispute: Inaccurate Information\n\n`;
       
-      letterContent += `\nThis information is inaccurate and requires correction. Under the Fair Credit Reporting Act, you are required to investigate this dispute and correct or remove the disputed information.\n\n`;
-      letterContent += `Please investigate this matter and correct the inaccurate information in my credit report.\n\n`;
+      letterContent += `This information appears to be inaccurate and requires verification or correction.\n\n`;
+      
+      letterContent += `According to the Fair Credit Reporting Act, Section 611 (15 U.S.C. § 1681i), you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified. Furthermore, as a consumer reporting agency, you are obligated to follow reasonable procedures to assure maximum possible accuracy of the information in consumer reports, as required by Section 607 (15 U.S.C. § 1681e).\n\n`;
+      
+      letterContent += `Please investigate this matter and correct your records within the 30-day timeframe provided by the FCRA. Additionally, please provide me with notification of the results of your investigation and a free updated copy of my credit report if changes are made, as required by law.\n\n`;
+      
       letterContent += `Sincerely,\n\n`;
-      letterContent += `${consumerName}\n${consumerAddress}\n${consumerCity}, ${consumerState} ${consumerZip}`;
-    }
-    
-    // Remove the technical KEY explanation section if present
-    letterContent = letterContent.replace(
-      /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
-      ''
-    );
-    
-    // Remove any "KEY" section explaining acronyms
-    letterContent = letterContent.replace(
-      /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
-      ''
-    );
-    
-    // Add credit report #, tracking # if not present
-    if (!letterContent.includes("Credit Report #")) {
-      letterContent = letterContent.replace(bureau, `Credit Report #: ${creditReportNumber}\n\n${bureau}`);
-    }
-    
-    // Update enclosures section to match the requested format
-    if (letterContent.includes("Enclosures:")) {
-      const enclosurePattern = /Enclosures:[\s\S]*?(?=\n\n|\Z)/;
-      letterContent = letterContent.replace(enclosurePattern, 
-        `Enclosures:
-- Copy of Driver's License
-- Copy of Social Security Card`
-      );
+      letterContent += `${consumerName}\n\n`;
+      
+      letterContent += `Enclosures:\n`;
+      letterContent += `- Copy of Driver's License\n`;
+      letterContent += `- Copy of Social Security Card\n`;
     } else {
-      letterContent += `\n\nEnclosures:
-- Copy of Driver's License
-- Copy of Social Security Card`;
+      // Replace placeholders in existing letter content
+      letterContent = letterContent
+        .replace(/\[YOUR NAME\]|\[FULL_NAME\]|\[NAME\]/g, consumerName)
+        .replace(/\[YOUR ADDRESS\]|\[ADDRESS\]/g, consumerAddress)
+        .replace(/\[CITY\]/g, consumerCity)
+        .replace(/\[STATE\]/g, consumerState)
+        .replace(/\[ZIP\]/g, consumerZip)
+        .replace(/\[ACCOUNT NUMBER\]/g, accountNumber || 'Unknown')
+        .replace(/\[BUREAU\]/g, bureau)
+        .replace(/\[BUREAU_ADDRESS\]/g, bureauAddress)
+        .replace(/\[CURRENT_DATE\]|\[DATE\]|\[TODAY'S DATE\]/g, currentDate);
     }
     
     // Create file and trigger download

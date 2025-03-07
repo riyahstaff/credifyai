@@ -18,25 +18,34 @@ export const generateFallbackInquiryDisputeLetter = (): string => {
     day: 'numeric',
     year: 'numeric'
   })}`;
-  const numericDate = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
   
-  let letter = `Credit Report #: ${creditReportNumber}\n`;
-  letter += `Today's Date is: ${formattedDate} ${numericDate}\n\n`;
+  let letter = `Credit Report #: ${creditReportNumber}\nToday is ${formattedDate}\n\n`;
+  letter += `[YOUR NAME]\n`;
+  letter += `[YOUR ADDRESS]\n`;
+  letter += `[CITY], [STATE] [ZIP]\n\n`;
+  
   letter += `TransUnion\nP.O. Box 2000\nChester, PA 19016\n\n`;
-  letter += `My Personal Tracking Number is ${trackingNumber}\n\n`;
-  letter += `RE: Unauthorized inquiries on my credit report - Request for immediate removal\n\n`;
+  
+  letter += `Re: Unauthorized inquiries on my credit report - Request for immediate removal\n\n`;
+  
   letter += `To Whom It May Concern:\n\n`;
   letter += `I recently reviewed my credit report and discovered unauthorized inquiries that I did not authorize. Under the Fair Credit Reporting Act (FCRA), Section 604, inquiries can only be made with a permissible purpose and with my authorization.\n\n`;
+  
+  letter += `DISPUTED ITEM(S):\n`;
+  letter += `- Unauthorized inquiry from [ACCOUNT_NAME] on [DATE]\n\n`;
+  
   letter += `I did not authorize these inquiries and request their immediate investigation and removal. These unauthorized inquiries have negatively impacted my credit score and constitute a violation of my privacy rights.\n\n`;
-  letter += `Please note that per the FCRA §611, you are required to conduct a reasonable investigation into this matter. Additionally, according to FCRA §605, there are strict limitations on how inquiries can be reported.\n\n`;
-  letter += `I also request verification that all information is being reported in accordance with Metro 2 reporting standards. The CDIA (Consumer Data Industry Association) requires all credit reporting to follow these standards, and "any deviations from these standards jeopardizes data integrity" (CRRG 3-4).\n\n`;
+  
+  letter += `According to the Fair Credit Reporting Act, Section 609 (a)(1)(A), you are required by federal law to verify any and all inquiries you post on a credit report. Under Section 611 of the FCRA, you must conduct a thorough investigation of this disputed information within 30 days.\n\n`;
+  
   letter += `Please remove these unauthorized inquiries immediately and provide confirmation when completed. If you find that these inquiries were authorized, please provide me with copies of my signed authorization for each inquiry.\n\n`;
-  letter += `Upon completion of your investigation, please send me an updated copy of my credit report showing that the disputed inquiries have been removed. According to FCRA §611(a)(6) and §612, there should be no charge for this report.\n\n`;
+  
   letter += `Sincerely,\n\n`;
-  letter += `[YOUR NAME]\n[YOUR ADDRESS]\n[CITY], [STATE] [ZIP]\n\n`;
+  letter += `[YOUR NAME]\n\n`;
+  
   letter += `Enclosures:\n`;
-  letter += `- Copy of identification\n`;
-  letter += `- Copy of credit report with disputed inquiries highlighted`;
+  letter += `- Copy of Driver's License\n`;
+  letter += `- Copy of Social Security Card\n`;
   
   return letter;
 };
