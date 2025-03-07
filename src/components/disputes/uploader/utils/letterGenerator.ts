@@ -4,7 +4,7 @@
  */
 import { CreditReportAccount, CreditReportData } from '@/utils/creditReportParser';
 import { determineBureau, getBureauAddress } from './bureauUtils';
-import { generateFallbackDisputeLetter } from '@/utils/creditReport/disputeLetters/fallbackTemplates';
+import { generateFallbackInquiryDisputeLetter } from '@/utils/creditReport/disputeLetters/fallbackTemplates';
 
 /**
  * Generate dispute letters for credit report issues
