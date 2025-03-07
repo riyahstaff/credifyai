@@ -1,4 +1,3 @@
-
 /**
  * Account Name Cleaner
  * Functions for cleaning and formatting account names
@@ -101,3 +100,6 @@ export const isValidAccountName = (name: string | undefined): boolean => {
   // Name should have at least one letter
   return /[a-zA-Z]/.test(name);
 };
+
+// Add a more explicit alias for clarity
+export const isAccountNameValid = isValidAccountName;
