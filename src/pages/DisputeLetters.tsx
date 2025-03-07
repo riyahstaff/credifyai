@@ -24,11 +24,10 @@ const DisputeLetters = () => {
     console.log("DisputeLetters page: Test mode is", testMode ? "active" : "inactive");
     console.log("DisputeLetters page: Test subscription is", hasTestSubscription ? "active" : "inactive");
     
-    // If we're in test mode but don't have a test subscription, go to subscription page
+    // If we're in test mode but don't have a test subscription, set it to allow viewing letters
     if (testMode && !hasTestSubscription && !profile?.has_subscription) {
-      console.log("No test subscription detected, redirecting to subscription page");
-      navigate('/subscription?testMode=true');
-      return;
+      console.log("Setting test subscription to view dispute letters");
+      sessionStorage.setItem('testModeSubscription', 'true');
     }
     
     // Check for any generated letters when this page loads
