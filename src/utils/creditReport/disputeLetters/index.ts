@@ -7,8 +7,10 @@
 // Re-export the letter generators
 export * from './generator';
 
-// Export sample letter functions
-export * from './samples';
+// Export sample letter functions with explicit naming
+import { getSampleDisputeLanguage as getSampleDisputeLanguageOrig, findSampleDispute } from './samples';
+export { findSampleDispute };
+export { getSampleDisputeLanguage as getSampleDisputeLetterTemplate } from './samples';
 
 // Export fallback templates
 export * from './fallbackTemplates';

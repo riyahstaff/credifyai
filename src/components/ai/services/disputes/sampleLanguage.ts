@@ -1,4 +1,7 @@
 
+// Import the renamed function if needed
+import { getSampleDisputeLetterTemplate } from '@/utils/creditReport/disputeLetters';
+
 // Function to provide sample dispute language based on account and field types
 export const getSampleDisputeLanguage = async (
   accountName: string, 
