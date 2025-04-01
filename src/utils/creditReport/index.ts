@@ -13,8 +13,7 @@ export type {
   CreditReportData,
   CreditReportAccount,
   CreditReportInquiry,
-  CreditReportPublicRecord,
-  CreditReportAnalysisResults,
+  CreditReportPublicRecord
 } from './types';
 
 // Export the extractPersonalInfo functionality directly to avoid ambiguity

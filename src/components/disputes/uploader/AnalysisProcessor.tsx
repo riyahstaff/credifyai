@@ -3,7 +3,7 @@ import { AnalysisProcessorProps, AnalysisHandlerProps } from './types/analysisTy
 import { handleAnalysisComplete } from './handlers/analysisHandler';
 import { preloadSampleData } from './utils/sampleDataLoader';
 
-export type { AnalysisProcessorProps } from './types/analysisTypes';
+export type { AnalysisProcessorProps, AnalysisHandlerProps } from './types/analysisTypes';
 
 // Export handleAnalysisComplete for external use (needed for tests)
 export { handleAnalysisComplete } from './handlers/analysisHandler';

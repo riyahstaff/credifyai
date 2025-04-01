@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { CreditReportData } from '@/utils/creditReportParser';
-import { processCreditReport, loadSampleReports } from '@/utils/creditReportParser';
+import { CreditReportData } from '@/utils/creditReport/types';
+import { parseReportContent } from '@/utils/creditReport/parser/parseReportContent';
+import { extractTextFromPDF } from '@/utils/creditReport/extractors/pdfExtractor';
 import { getSuccessfulDisputePhrases } from '@/utils/creditReport/disputeLetters/sampleLanguage';
 import { MessageType } from '../types';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +19,7 @@ export const useReportAnalysis = () => {
     const loadSamples = async () => {
       try {
         // Load sample reports
-        await loadSampleReports();
+        const { getSampleReportData } = await import('@/utils/creditReport/disputeLetters/sampleLetters');
         setSampleReportsLoaded(true);
         
         // Load successful dispute phrases
@@ -40,7 +41,20 @@ export const useReportAnalysis = () => {
     try {
       // Process the report
       console.log("Starting credit report processing...");
-      const data = await processCreditReport(file);
+      
+      // Extract text from the file
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      let textContent = '';
+      
+      if (isPdf) {
+        textContent = await extractTextFromPDF(file);
+      } else {
+        textContent = await file.text();
+      }
+      
+      // Parse the text content
+      const data = await parseReportContent(textContent, isPdf);
+      
       console.log("Credit report processing complete.");
       setReportData(data);
       return data;

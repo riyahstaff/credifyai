@@ -1,6 +1,7 @@
 
 import { MutableRefObject } from 'react';
-import { CreditReportAccount, CreditReportData } from '@/utils/creditReportParser';
+import { CreditReportData } from '@/utils/creditReport/types';
+import { CreditReportAccount } from '@/utils/creditReport/types';
 import { handleAnalysisComplete } from '@/components/disputes/uploader/handlers/analysisHandler';
 import { useToast } from '@/hooks/use-toast';
 

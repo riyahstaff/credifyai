@@ -1,7 +1,9 @@
 
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { processCreditReport, CreditReportData, CreditReportAccount } from '@/utils/creditReport';
+import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
+import { parseReportContent } from '@/utils/creditReport/parser/parseReportContent';
+import { extractTextFromPDF } from '@/utils/creditReport/extractors/pdfExtractor';
 import { formatFileSize } from '@/utils/fileUtils';
 
 // Import new component files
@@ -41,7 +43,19 @@ const CreditReportUploader: React.FC<CreditReportUploaderProps> = ({
     setIsUploading(true);
     
     try {
-      const data = await processCreditReport(file);
+      // Extract text from the file
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      let textContent = '';
+      
+      if (isPdf) {
+        textContent = await extractTextFromPDF(file);
+      } else {
+        textContent = await file.text();
+      }
+      
+      // Parse the text content
+      const data = await parseReportContent(textContent, isPdf);
+      
       setReportData(data);
       onReportProcessed(data);
       
