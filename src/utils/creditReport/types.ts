@@ -14,6 +14,9 @@ export interface CreditReportAccount {
   dateReported?: string;
   bureau?: string;
   remarks?: string[];
+  // Add missing fields that caused errors
+  openDate?: string;
+  lastReportedDate?: string;
 }
 
 export interface CreditReportInquiry {
@@ -35,6 +38,9 @@ export interface RecommendedDispute {
   description: string;
   impact: "High" | "Medium" | "Low";
   severity: string;
+  // Add missing fields that caused errors
+  sampleDisputeLanguage?: string;
+  legalBasis?: LegalReference[];
 }
 
 export interface AnalysisResults {
@@ -75,4 +81,38 @@ export interface CreditReportData {
   rawText?: string;
   htmlContent?: string;
   analysisResults?: AnalysisResults;
+}
+
+// Add missing types needed by other modules
+export interface UserInfo {
+  name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+}
+
+export interface LegalReference {
+  law: string;
+  section: string;
+  title: string;
+  text: string;
+}
+
+export interface SampleDisputeLetter {
+  content: string;
+  disputeType: string;
+  bureau: string;
+  successfulOutcome: boolean;
+  effectiveLanguage: string[];
+  legalCitations: string[];
+}
+
+// Define type for CreditReportPublicRecord
+export interface CreditReportPublicRecord {
+  type: string;
+  date: string;
+  reference: string;
+  status: string;
+  bureau?: string;
 }

@@ -1,42 +1,32 @@
-
 import { CreditReportData } from '@/utils/creditReport/types';
 import { parseReportContent } from '@/utils/creditReport/parser/parseReportContent';
 import { extractTextFromPDF } from '@/utils/creditReport/extractors/pdfExtractor';
-import type { Toast } from '@/hooks/use-toast';
+import type { ToastProps } from "@/components/ui/toast";
 import { identifyIssues } from '@/utils/reportAnalysis/issueIdentification/identifyIssues';
 import { addFallbackGenericIssues } from '@/utils/reportAnalysis/issueIdentification/genericIssues';
 
-// Define the Toast type to match what's used in tests
-export type Toast = {
-  toast: (props: { 
-    title?: string; 
-    description?: string; 
-    variant?: "default" | "destructive";
-    duration?: number;
-  }) => void;
-};
-
 export interface AnalysisHandlerProps {
   uploadedFile: File;
-  setReportData: (data: CreditReportData) => void;
+  setReportData: (data: any) => void;
   setIssues: (issues: any[]) => void;
   setLetterGenerated: (generated: boolean) => void;
   setAnalysisError: (error: string | null) => void;
   setAnalyzing: (analyzing: boolean) => void;
   setAnalyzed: (analyzed: boolean) => void;
-  toast: Toast;
+  toast: {
+    toast: (props: ToastProps) => void;
+    dismiss: (toastId?: string) => void;
+    toasts: any[];
+  };
 }
 
-// The main handler for analyzing uploaded credit reports
 export const analyzeReport = async (
   file: File,
   onProgress?: (progress: number) => void
 ): Promise<CreditReportData> => {
   try {
-    // Report the start of processing
     onProgress?.(10);
     
-    // Extract text from the file (PDF or text)
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
     let textContent = '';
     
@@ -48,17 +38,13 @@ export const analyzeReport = async (
       onProgress?.(40);
     }
     
-    // Parse the text content into structured data
     onProgress?.(50);
     const reportData = parseReportContent(textContent, isPdf);
     
-    // Additional processing and enhancement
     onProgress?.(70);
     
-    // Further analyze for issues
     onProgress?.(90);
     
-    // Complete the analysis
     onProgress?.(100);
     
     return reportData;
@@ -68,7 +54,6 @@ export const analyzeReport = async (
   }
 };
 
-// Generate sample report data for testing
 export const getSampleReportData = (): CreditReportData => {
   return {
     bureaus: {
@@ -128,7 +113,6 @@ export const getSampleReportData = (): CreditReportData => {
   };
 };
 
-// Handle the analysis completion
 export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
   const {
     uploadedFile,
@@ -144,20 +128,16 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
   try {
     console.log("Starting analysis of credit report:", uploadedFile.name);
     
-    // Check if we have sample data loaded
     const useSample = sessionStorage.getItem('sampleReportsLoaded') === 'true';
     
     if (useSample) {
       console.log("Using sample credit report data for analysis");
       
-      // Import sample data and create a proper CreditReportData object with bureaus field
       const sampleData = getSampleReportData();
       
-      // Simulate analysis steps
       setTimeout(() => {
         setReportData(sampleData);
         
-        // Ensure we have at least some issues to display
         const sampleIssues = [
           {
             type: 'Account Error',
@@ -200,7 +180,6 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
       return;
     }
     
-    // Process real report
     console.log("Processing uploaded report:", uploadedFile.name);
     const reportData = await analyzeReport(uploadedFile);
     
@@ -208,19 +187,15 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
       throw new Error("Failed to parse credit report");
     }
     
-    // Set the report data
     setReportData(reportData);
     
-    // Generate issues from the report data
     let generatedIssues = identifyIssues(reportData);
     
-    // If no issues were found, add fallback issues
     if (generatedIssues.length === 0) {
       console.log("No issues were automatically detected - adding fallback issues");
       generatedIssues = addFallbackGenericIssues();
     }
     
-    // Always ensure we have at least 3 issues
     if (generatedIssues.length < 3) {
       const additionalIssues = addFallbackGenericIssues().slice(0, 3 - generatedIssues.length);
       generatedIssues = [...generatedIssues, ...additionalIssues];
@@ -228,7 +203,6 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
     
     setIssues(generatedIssues);
     
-    // Mark analysis as complete
     setAnalyzing(false);
     setAnalyzed(true);
     
@@ -253,18 +227,14 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
   }
 };
 
-// Simplified analysis for testing without requiring a real file
 export const analyzeTestReport = async (
   onProgress?: (progress: number) => void
 ): Promise<CreditReportData> => {
   try {
-    // Simulate progress
     onProgress?.(20);
     
-    // Get sample data
     const reportData = getSampleReportData();
     
-    // Simulate analysis steps
     onProgress?.(50);
     setTimeout(() => onProgress?.(70), 500);
     setTimeout(() => onProgress?.(90), 1000);
