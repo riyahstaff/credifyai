@@ -130,7 +130,7 @@ const UploadReport = () => {
               analyzing={analyzing}
               analyzed={analyzed}
               fileName={fileName}
-              fileSize={fileSize.toString()}
+              fileSize={String(fileSize)}
               reportData={reportData}
               uploadedFile={uploadedFile}
               issues={issues}

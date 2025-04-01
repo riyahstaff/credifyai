@@ -1,8 +1,9 @@
+
 /**
  * Credit Report Parser - Main Parser
  * This module handles parsing text content from credit reports into structured data
  */
-import { CreditReportData, CreditReportInquiry } from '../types';
+import { CreditReportData, CreditReportInquiry, RecommendedDispute, AnalysisResults } from '../types';
 import { extractPersonalInfo } from './extractPersonalInfo';
 import { extractAccounts } from './accounts';
 import { extractInquiries } from './extractInquiries';
@@ -90,7 +91,7 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
   // If we have actual account data, generate more accurate recommendedDisputes
   if (reportData.accounts.length > 0) {
     // Create proper RecommendedDispute objects
-    const recommendedDisputes = reportData.accounts.slice(0, 3).map((account, index) => {
+    const recommendedDisputes: RecommendedDispute[] = reportData.accounts.slice(0, 3).map((account, index) => {
       return {
         id: `dispute-${index}`,
         type: "Account Error",

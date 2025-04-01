@@ -25,9 +25,14 @@ export const generateAnalysisResults = (reportData: CreditReportData): AnalysisR
   let totalCreditLimit = 0;
   
   accounts.forEach(account => {
+    // Handle both number and string types safely
     const balance = typeof account.currentBalance === 'number' ? account.currentBalance : 
-                   (typeof account.balance === 'number' ? account.balance : 0);
-    const limit = typeof account.creditLimit === 'number' ? account.creditLimit : 0;
+                  (typeof account.balance === 'number' ? account.balance : 
+                  (typeof account.currentBalance === 'string' ? parseFloat(account.currentBalance) || 0 : 
+                  (typeof account.balance === 'string' ? parseFloat(account.balance) || 0 : 0)));
+                  
+    const limit = typeof account.creditLimit === 'number' ? account.creditLimit : 
+               (typeof account.creditLimit === 'string' ? parseFloat(account.creditLimit) || 0 : 0);
     
     totalBalance += balance;
     totalCreditLimit += limit;
@@ -37,10 +42,17 @@ export const generateAnalysisResults = (reportData: CreditReportData): AnalysisR
   const accountsWithIssues = accounts.filter(account => {
     const hasPaymentIssue = account.paymentStatus && account.paymentStatus.toLowerCase().includes('late');
     
-    const isHighUtilization = typeof account.creditLimit === 'number' && 
-                             typeof account.currentBalance === 'number' &&
-                             account.creditLimit > 0 && 
-                             (account.currentBalance / account.creditLimit > 0.8);
+    // Handle balance and credit limit safely for comparisons
+    let isHighUtilization = false;
+    if (account.creditLimit !== undefined && account.currentBalance !== undefined) {
+      const creditLimit = typeof account.creditLimit === 'number' ? account.creditLimit : 
+                         (typeof account.creditLimit === 'string' ? parseFloat(account.creditLimit) || 0 : 0);
+                         
+      const currentBalance = typeof account.currentBalance === 'number' ? account.currentBalance : 
+                           (typeof account.currentBalance === 'string' ? parseFloat(account.currentBalance) || 0 : 0);
+      
+      isHighUtilization = creditLimit > 0 && (currentBalance / creditLimit > 0.8);
+    }
       
     const recentlyClosed = account.status?.toLowerCase().includes('closed') && 
       account.lastActivity && isRecentActivity(account.lastActivity);
@@ -61,17 +73,21 @@ export const generateAnalysisResults = (reportData: CreditReportData): AnalysisR
       impact = 'High';
       type = 'Late Payment';
       description = 'Account shows late payments that may be inaccurate.';
-    } else if (typeof account.creditLimit === 'number' && 
-               typeof account.currentBalance === 'number' &&
-               account.creditLimit > 0 && 
-               (account.currentBalance / account.creditLimit > 0.8)) {
-      const utilizationRate = typeof account.creditLimit === 'number' && 
-                              typeof account.currentBalance === 'number' ? 
-                              Math.round((account.currentBalance / account.creditLimit) * 100) : 0;
-      reason = `High utilization (${utilizationRate}%) on ${accountName}`;
-      impact = 'Medium';
-      type = 'High Utilization';
-      description = 'This account has a high balance relative to its credit limit.';
+    } else if (account.creditLimit !== undefined && account.currentBalance !== undefined) {
+      // Handle balance and credit limit safely for comparisons and calculations
+      const creditLimit = typeof account.creditLimit === 'number' ? account.creditLimit : 
+                         (typeof account.creditLimit === 'string' ? parseFloat(account.creditLimit) || 0 : 0);
+                         
+      const currentBalance = typeof account.currentBalance === 'number' ? account.currentBalance : 
+                           (typeof account.currentBalance === 'string' ? parseFloat(account.currentBalance) || 0 : 0);
+      
+      if (creditLimit > 0 && (currentBalance / creditLimit > 0.8)) {
+        const utilizationRate = Math.round((currentBalance / creditLimit) * 100);
+        reason = `High utilization (${utilizationRate}%) on ${accountName}`;
+        impact = 'Medium';
+        type = 'High Utilization';
+        description = 'This account has a high balance relative to its credit limit.';
+      }
     } else if (account.status?.toLowerCase().includes('closed') && 
       account.lastActivity && isRecentActivity(account.lastActivity)) {
       reason = `Recently closed account (${accountName}) still showing impact`;
