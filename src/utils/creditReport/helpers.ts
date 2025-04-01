@@ -1,4 +1,3 @@
-
 /**
  * Helper functions for credit report processing
  */
@@ -73,4 +72,34 @@ export const addSampleAccountToReport = (report: CreditReportData, accountDetail
       closedAccounts: (report.analysisResults?.closedAccounts || 0) + (account.status === "Closed" ? 1 : 0),
     }
   };
+};
+
+/**
+ * Normalize an account object to include all expected fields
+ */
+export const normalizeAccount = (account: any): CreditReportAccount => {
+  // Create a normalized account with all expected fields
+  const normalized: CreditReportAccount = {
+    accountName: account.accountName || account.name || "Unknown Account",
+    accountNumber: account.accountNumber || account.account_number,
+    accountType: account.accountType || account.type,
+    balance: account.balance || account.currentBalance || 0,
+    currentBalance: account.currentBalance || account.balance || 0,
+    creditLimit: account.creditLimit || account.limit || 0,
+    paymentStatus: account.paymentStatus || account.status,
+    dateOpened: account.dateOpened || account.openDate || "",
+    lastActivity: account.lastActivity || "",
+    status: account.status || "Unknown",
+    isNegative: account.isNegative || false,
+    dateReported: account.dateReported || account.lastReportedDate || "",
+    bureau: account.bureau || "",
+    remarks: account.remarks || [],
+    // Add the fields that were previously missing
+    openDate: account.openDate || account.dateOpened || "",
+    lastReportedDate: account.lastReportedDate || account.dateReported || "",
+    highBalance: account.highBalance || 0,
+    creditor: account.creditor || ""
+  };
+
+  return normalized;
 };

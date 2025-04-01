@@ -1,7 +1,8 @@
+
 import { CreditReportData } from '@/utils/creditReport/types';
 import { parseReportContent } from '@/utils/creditReport/parser/parseReportContent';
 import { extractTextFromPDF } from '@/utils/creditReport/extractors/pdfExtractor';
-import type { ToastProps } from "@/components/ui/toast";
+import { ToastAction } from "@/components/ui/toast";
 import { identifyIssues } from '@/utils/reportAnalysis/issueIdentification/identifyIssues';
 import { addFallbackGenericIssues } from '@/utils/reportAnalysis/issueIdentification/genericIssues';
 
@@ -14,7 +15,7 @@ export interface AnalysisHandlerProps {
   setAnalyzing: (analyzing: boolean) => void;
   setAnalyzed: (analyzed: boolean) => void;
   toast: {
-    toast: (props: ToastProps) => void;
+    toast: (props: { title: string; description?: string; variant?: "default" | "destructive"; action?: React.ReactNode }) => void;
     dismiss: (toastId?: string) => void;
     toasts: any[];
   };
@@ -173,7 +174,7 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
         console.log("Sample analysis complete");
         toast.toast({
           title: "Analysis Complete",
-          description: "Sample report analyzed successfully.",
+          description: "Sample report analyzed successfully."
         });
       }, 2000);
       
@@ -209,7 +210,7 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
     console.log("Credit report analysis complete with", generatedIssues.length, "issues identified");
     toast.toast({
       title: "Analysis Complete",
-      description: `Credit report analyzed successfully with ${generatedIssues.length} potential issues identified.`,
+      description: `Credit report analyzed successfully with ${generatedIssues.length} potential issues identified.`
     });
     
   } catch (error) {
@@ -222,7 +223,7 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
     toast.toast({
       title: "Analysis Error",
       description: error instanceof Error ? error.message : "Failed to analyze report",
-      variant: "destructive",
+      variant: "destructive"
     });
   }
 };

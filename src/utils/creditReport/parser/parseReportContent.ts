@@ -90,7 +90,7 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
   
   // If we have actual account data, generate more accurate recommendedDisputes
   if (reportData.accounts.length > 0) {
-    // Create proper RecommendedDispute objects
+    // Create properly typed RecommendedDispute objects
     const recommendedDisputes: RecommendedDispute[] = reportData.accounts.slice(0, 3).map((account, index) => {
       return {
         id: `dispute-${index}`,
@@ -98,11 +98,13 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
         title: `Issue with ${account.accountName}`,
         bureau: account.bureau || "Experian",
         accountName: account.accountName,
-        accountNumber: account.accountNumber,
+        accountNumber: account.accountNumber || "",
         reason: "Inaccurate Information",
         description: "This account contains information that may be inaccurate.",
-        impact: "High",
-        severity: "high"
+        impact: "High", // Using valid enum value
+        severity: "high",
+        // Add new fields that were causing TypeScript errors
+        sampleDisputeLanguage: "I am disputing this account as it contains inaccurate information."
       };
     });
     

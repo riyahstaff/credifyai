@@ -17,6 +17,8 @@ export interface CreditReportAccount {
   // Add missing fields that caused errors
   openDate?: string;
   lastReportedDate?: string;
+  highBalance?: number | string;
+  creditor?: string;
 }
 
 export interface CreditReportInquiry {
@@ -41,6 +43,7 @@ export interface RecommendedDispute {
   // Add missing fields that caused errors
   sampleDisputeLanguage?: string;
   legalBasis?: LegalReference[];
+  applicability?: string;
 }
 
 export interface AnalysisResults {
@@ -97,6 +100,7 @@ export interface LegalReference {
   section: string;
   title: string;
   text: string;
+  applicability?: string;
 }
 
 export interface SampleDisputeLetter {

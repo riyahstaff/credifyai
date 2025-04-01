@@ -29,7 +29,13 @@ export const useReportAnalysis = (
     if (uploadedFile) {
       console.log("Starting analysis of uploaded file:", uploadedFile.name);
       setAnalyzing(true);
-      // Pass the entire toast object instead of just the toast function
+      // Create a compatible toast object for the handler
+      const toastObject = {
+        toast: toast,
+        dismiss: () => {},
+        toasts: []
+      };
+      
       handleAnalysisComplete({
         uploadedFile,
         setReportData,
@@ -38,7 +44,7 @@ export const useReportAnalysis = (
         setAnalysisError,
         setAnalyzing,
         setAnalyzed,
-        toast: { toast, dismiss: () => {}, toasts: [] }
+        toast: toastObject
       });
     } else {
       console.error("Attempted to start analysis without an uploaded file");
