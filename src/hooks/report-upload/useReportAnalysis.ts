@@ -23,7 +23,7 @@ export const useReportAnalysis = (
   setAnalyzed: (analyzed: boolean) => void,
   analysisCompleted: MutableRefObject<boolean>
 ) => {
-  const toast = useToast();
+  const { toast } = useToast();
   
   const startAnalysis = () => {
     if (uploadedFile) {

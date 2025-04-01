@@ -2,7 +2,8 @@
 import { CreditReportData } from '@/utils/creditReport/types';
 import { parseReportContent } from '@/utils/creditReport/parser/parseReportContent';
 import { extractTextFromPDF } from '@/utils/creditReport/extractors/pdfExtractor';
-import { Toast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
+import { type Toast } from '@/hooks/use-toast';
 
 export interface AnalysisHandlerProps {
   uploadedFile: File;
@@ -100,7 +101,7 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
         setAnalyzed(true);
         
         console.log("Sample analysis complete");
-        toast.toast({
+        toast({
           title: "Analysis Complete",
           description: "Sample report analyzed successfully.",
         });
@@ -129,7 +130,7 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
     setAnalyzed(true);
     
     console.log("Credit report analysis complete");
-    toast.toast({
+    toast({
       title: "Analysis Complete",
       description: "Credit report analyzed successfully.",
     });
@@ -141,7 +142,7 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
     setAnalyzing(false);
     setAnalyzed(true);
     
-    toast.toast({
+    toast({
       title: "Analysis Error",
       description: error instanceof Error ? error.message : "Failed to analyze report",
       variant: "destructive",
@@ -176,7 +177,11 @@ function extractIssuesFromReport(reportData: CreditReportData): any[] {
     const accountsWithHighBalance = reportData.accounts.filter(account => {
       const balance = account.currentBalance || account.balance || 0;
       const limit = account.creditLimit || 0;
-      return limit > 0 && (balance / limit) > 0.7;
+      // Make sure both are numbers and limit is greater than 0
+      return typeof balance === 'number' && 
+             typeof limit === 'number' && 
+             limit > 0 && 
+             (balance / limit) > 0.7;
     });
     
     for (const account of accountsWithHighBalance) {

@@ -1,4 +1,3 @@
-
 import * as React from "react"
 
 type ToastProps = React.ComponentPropsWithoutRef<typeof import("@/components/ui/toast").Toast>
@@ -119,6 +118,16 @@ function dispatch(action: Action) {
     listener(memoryState)
   })
 }
+
+export type Toast = {
+  (props: {
+    title?: string;
+    description?: string;
+    action?: React.ReactElement;
+    variant?: "default" | "destructive";
+    duration?: number;
+  }): void;
+};
 
 export function toast({
   ...props

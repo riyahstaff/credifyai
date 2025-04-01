@@ -11,7 +11,7 @@ export const useReportUpload = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
   const [fileName, setFileName] = useState('');
-  const [fileSize, setFileSize] = useState(0);
+  const [fileSize, setFileSize] = useState('0');
   const [reportData, setReportData] = useState<CreditReportData | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [issues, setIssues] = useState<Array<{
@@ -30,7 +30,7 @@ export const useReportUpload = () => {
   const analysisCompleted = useRef(false);
   
   // Import report storage hooks
-  const { storeForDispute, checkPendingLetters } = useReportStorage();
+  const { storeForDispute, checkPendingLetters, clearStoredReport } = useReportStorage();
   
   // Use report analysis hooks
   const { startAnalysis, onAnalysisComplete } = useReportAnalysis(
@@ -50,13 +50,14 @@ export const useReportUpload = () => {
     setAnalyzing(false);
     setAnalyzed(false);
     setFileName('');
-    setFileSize(0);
+    setFileSize('0');
     setReportData(null);
     setUploadedFile(null);
     setIssues([]);
     setAnalysisError(null);
     setLetterGenerated(false);
     analysisCompleted.current = false;
+    clearStoredReport(); // Clear any stored report data
   };
   
   // Handle file upload
@@ -68,7 +69,7 @@ export const useReportUpload = () => {
     
     // Set the file information
     setFileName(file.name);
-    setFileSize(file.size);
+    setFileSize(file.size.toString());
     setUploadedFile(file);
     setFileUploaded(true);
     
