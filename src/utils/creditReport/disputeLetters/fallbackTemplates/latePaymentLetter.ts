@@ -14,10 +14,17 @@ export const generateFallbackLatePaymentDisputeLetter = (): string => {
     year: 'numeric'
   });
   
+  // Get user information from localStorage
+  const userName = localStorage.getItem('userName') || localStorage.getItem('name') || "[YOUR NAME]";
+  const userAddress = localStorage.getItem('userAddress') || "[YOUR ADDRESS]";
+  const userCity = localStorage.getItem('userCity') || "[CITY]";
+  const userState = localStorage.getItem('userState') || "[STATE]";
+  const userZip = localStorage.getItem('userZip') || "[ZIP]";
+  
   let letter = `Credit Report #: ${creditReportNumber}\nToday is ${formattedDate}\n\n`;
-  letter += `[YOUR NAME]\n`;
-  letter += `[YOUR ADDRESS]\n`;
-  letter += `[CITY], [STATE] [ZIP]\n\n`;
+  letter += `${userName}\n`;
+  letter += `${userAddress}\n`;
+  letter += `${userCity}, ${userState} ${userZip}\n\n`;
   
   letter += `[BUREAU]\n`;
   letter += `[BUREAU ADDRESS]\n\n`;
@@ -53,7 +60,7 @@ export const generateFallbackLatePaymentDisputeLetter = (): string => {
   letter += `Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant.\n\n`;
   
   letter += `Sincerely,\n\n`;
-  letter += `[YOUR NAME]\n\n`;
+  letter += `${userName}\n\n`;
   
   letter += `Enclosures:\n`;
   letter += `- Copy of Driver's License\n`;

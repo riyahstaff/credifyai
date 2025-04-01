@@ -14,6 +14,9 @@ export const extractPersonalInfo = (content: string) => {
     address?: string;
     previousAddresses?: string[];
     employers?: string[];
+    city?: string;
+    state?: string;
+    zip?: string;
     bureauSpecificInfo?: {
       experian?: any;
       equifax?: any;
@@ -40,13 +43,40 @@ export const extractPersonalInfo = (content: string) => {
   // Look for address in the report
   const addressPatterns = [
     /(?:Address|Street|Location|Residence):?\s*([^\n\r]+(?:\r?\n[^\n\r]+){0,2})/i,
-    /Personal\s+Information[\s\S]{0,100}(?:Address|Street):?\s*([^\n\r]+(?:\r?\n[^\n\r]+){0,2})/i
+    /Personal\s+Information[\s\S]{0,100}(?:Address|Street):?\s*([^\n\r]+(?:\r?\n[^\n\r]+){0,2})/i,
+    /Current\s+Address:?\s*([^\n\r]+(?:\r?\n[^\n\r]+){0,2})/i
   ];
   
   for (const pattern of addressPatterns) {
     const match = content.match(pattern);
     if (match && match[1]?.trim()) {
       personalInfo.address = match[1].trim().replace(/\r?\n/g, ' ');
+      
+      // Try to extract city, state, zip from address
+      const cityStateZipPatterns = [
+        /([A-Za-z\s.-]+),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/,  // City, ST 12345
+        /([A-Za-z\s.-]+)\s+([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/    // City ST 12345
+      ];
+      
+      for (const pattern of cityStateZipPatterns) {
+        const addressParts = personalInfo.address.match(pattern);
+        if (addressParts && addressParts.length >= 4) {
+          personalInfo.city = addressParts[1].trim();
+          personalInfo.state = addressParts[2];
+          personalInfo.zip = addressParts[3];
+          // Remove city, state, zip from address field
+          personalInfo.address = personalInfo.address.replace(pattern, '').trim();
+          break;
+        }
+      }
+      
+      // Store this in localStorage immediately for future use
+      if (personalInfo.name) localStorage.setItem('userName', personalInfo.name);
+      if (personalInfo.address) localStorage.setItem('userAddress', personalInfo.address);
+      if (personalInfo.city) localStorage.setItem('userCity', personalInfo.city);
+      if (personalInfo.state) localStorage.setItem('userState', personalInfo.state);
+      if (personalInfo.zip) localStorage.setItem('userZip', personalInfo.zip);
+      
       break;
     }
   }

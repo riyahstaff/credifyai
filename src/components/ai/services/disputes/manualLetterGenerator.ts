@@ -99,12 +99,17 @@ export const generateManualDisputeLetter = async (
     accountsSection = `\nAlleging Creditor and Account as is reported on my credit report:\n${dispute.accountName.toUpperCase()}\nACCOUNT- ${'xxxxxxxx####'}\nNotation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant\n`;
   }
 
+  // Get user info from localStorage - try multiple keys for backward compatibility
+  const userName = localStorage.getItem('userName') || localStorage.getItem('name') || "[YOUR NAME]";
+  const userAddress = localStorage.getItem('userAddress') || "[YOUR ADDRESS]";
+  const userCity = localStorage.getItem('userCity') || "[CITY]";
+  const userState = localStorage.getItem('userState') || "[STATE]";
+  const userZip = localStorage.getItem('userZip') || "[ZIP]";
+
   return `${testModeHeader}Credit Report #: ${creditReportNumber} Today is ${currentDate}
-My First and My Last name is: [YOUR NAME]
-My Street NUMBER and My Street NAME is:
-[YOUR ADDRESS]
-My City and My State is:
-[CITY], [STATE] [ZIP]
+${userName}
+${userAddress}
+${userCity}, ${userState} ${userZip}
 
 Re: My certified letter in notice of an official consumer declaration of complaint for your thus far NOT proven true, NOT proven correct, NOT proven complete, NOT proven timely, or NOT proven compliant mis-information, to include likely the deficient of proven metro 2 compliant data field formatted reporting as MANDATED! I am enacting my consumer and or civil rights to compel you here and now to absolutely and permanently remove any and all aspects of untrue, inaccurate, not complete, not timely, not proven mine, not proven my responsibility, and or not proven adequately and entirely compliant allegations of credit information.
 
@@ -137,11 +142,9 @@ By the provisions of the Fair Credit Reporting Act and per the standards of repo
 Please send an updated copy of my credit report to the above address. According to the act, there shall be no charge for this updated report. I also request that you please send notices of corrections to anyone who received my credit report in the past six months.
 
 THANK YOU IN ADVANCE for your WILLFUL rectifying of the notated MIS-INFORMATION above indicated,
-My First and My Last name is: [YOUR NAME]
-My Street NUMBER and My Street NAME is:
-[YOUR ADDRESS]
-My City and My State is:
-[CITY], [STATE] [ZIP]
+${userName}
+${userAddress}
+${userCity}, ${userState} ${userZip}
 
 Enclosures:
 - Proof of identification
