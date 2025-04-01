@@ -3,7 +3,10 @@ import { CreditReportData } from '@/utils/creditReport/types';
 import { parseReportContent } from '@/utils/creditReport/parser/parseReportContent';
 import { extractTextFromPDF } from '@/utils/creditReport/extractors/pdfExtractor';
 import { ToastAction } from '@/components/ui/toast';
-import { type Toast } from '@/hooks/use-toast';
+import { toast as toastFunction } from '@/hooks/use-toast';
+
+// Define the Toast type to match what's used in the tests
+export type Toast = typeof toastFunction;
 
 export interface AnalysisHandlerProps {
   uploadedFile: File;
@@ -13,7 +16,7 @@ export interface AnalysisHandlerProps {
   setAnalysisError: (error: string | null) => void;
   setAnalyzing: (analyzing: boolean) => void;
   setAnalyzed: (analyzed: boolean) => void;
-  toast: Toast;
+  toast: ReturnType<typeof import('@/hooks/use-toast').useToast>;
 }
 
 // The main handler for analyzing uploaded credit reports
@@ -79,8 +82,7 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
     if (useSample) {
       console.log("Using sample credit report data for analysis");
       
-      // Import sample data
-      const { getSampleReportData } = await import('@/utils/creditReport/disputeLetters/sampleLetters');
+      // Import sample data and create a proper CreditReportData object with bureaus field
       const sampleData = getSampleReportData();
       
       // Simulate analysis steps
@@ -101,7 +103,7 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
         setAnalyzed(true);
         
         console.log("Sample analysis complete");
-        toast({
+        toast.toast({
           title: "Analysis Complete",
           description: "Sample report analyzed successfully.",
         });
@@ -130,7 +132,7 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
     setAnalyzed(true);
     
     console.log("Credit report analysis complete");
-    toast({
+    toast.toast({
       title: "Analysis Complete",
       description: "Credit report analyzed successfully.",
     });
@@ -142,7 +144,7 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
     setAnalyzing(false);
     setAnalyzed(true);
     
-    toast({
+    toast.toast({
       title: "Analysis Error",
       description: error instanceof Error ? error.message : "Failed to analyze report",
       variant: "destructive",
@@ -175,13 +177,12 @@ function extractIssuesFromReport(reportData: CreditReportData): any[] {
     
     // Check for high utilization
     const accountsWithHighBalance = reportData.accounts.filter(account => {
-      const balance = account.currentBalance || account.balance || 0;
-      const limit = account.creditLimit || 0;
-      // Make sure both are numbers and limit is greater than 0
-      return typeof balance === 'number' && 
-             typeof limit === 'number' && 
-             limit > 0 && 
-             (balance / limit) > 0.7;
+      const balance = typeof account.currentBalance === 'number' ? account.currentBalance : 
+                     (typeof account.balance === 'number' ? account.balance : 0);
+      const limit = typeof account.creditLimit === 'number' ? account.creditLimit : 0;
+      
+      // Make sure limit is greater than 0
+      return limit > 0 && (balance / limit) > 0.7;
     });
     
     for (const account of accountsWithHighBalance) {
@@ -200,6 +201,65 @@ function extractIssuesFromReport(reportData: CreditReportData): any[] {
   return issues;
 }
 
+// Sample data function
+export function getSampleReportData(): CreditReportData {
+  return {
+    bureaus: {
+      experian: true,
+      equifax: false,
+      transunion: false
+    },
+    personalInfo: {
+      name: "John Doe",
+      address: "123 Main St, Anytown, CA 12345",
+      ssn: "xxx-xx-1234",
+      dob: "01/01/1980"
+    },
+    accounts: [
+      {
+        accountName: "Sample Bank Credit Card",
+        accountNumber: "xxxx-xxxx-xxxx-1234",
+        accountType: "Credit Card",
+        balance: 1500,
+        currentBalance: 1500,
+        creditLimit: 5000,
+        paymentStatus: "Current",
+        dateOpened: "01/01/2020",
+        lastActivity: "01/01/2023",
+        status: "Open",
+        isNegative: false,
+        dateReported: "01/15/2023",
+        bureau: "Experian"
+      },
+      {
+        accountName: "Sample Auto Loan",
+        accountNumber: "12345-ABC",
+        accountType: "Auto Loan",
+        balance: 8000,
+        currentBalance: 8000,
+        paymentStatus: "Late 30 days",
+        dateOpened: "06/15/2019",
+        lastActivity: "12/15/2022",
+        status: "Open",
+        isNegative: true,
+        dateReported: "01/15/2023",
+        bureau: "TransUnion"
+      }
+    ],
+    inquiries: [
+      {
+        inquiryDate: "12/01/2022",
+        inquiryBy: "Sample Lender",
+        type: "Hard inquiry",
+        bureau: "Experian",
+        creditor: "Sample Lender"
+      }
+    ],
+    publicRecords: [],
+    rawText: "Sample credit report text content"
+  };
+}
+
 // Simplified analysis for testing without requiring a real file
 export const analyzeTestReport = async (
   onProgress?: (progress: number) => void
@@ -208,8 +268,7 @@ export const analyzeTestReport = async (
     // Simulate progress
     onProgress?.(20);
     
-    // Import sample data
-    const { getSampleReportData } = await import('@/utils/creditReport/disputeLetters/sampleLetters');
+    // Get sample data
     const reportData = getSampleReportData();
     
     // Simulate analysis steps

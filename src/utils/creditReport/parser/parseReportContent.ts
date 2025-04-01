@@ -84,17 +84,41 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
     totalDiscrepancies: Math.min(reportData.accounts.length * 2, 10), // Simulated discrepancies
     highSeverityIssues: Math.floor(Math.random() * 3) + 1, // 1-3 high severity issues
     accountsWithIssues: Math.min(reportData.accounts.length, 5),
-    recommendedDisputes: []
+    recommendedDisputes: [] // Will be populated below
   };
   
-  // If we have actual account data, generate a more accurate analysis
+  // If we have actual account data, generate more accurate recommendedDisputes
   if (reportData.accounts.length > 0) {
+    // Create proper RecommendedDispute objects
+    const recommendedDisputes = reportData.accounts.slice(0, 3).map((account, index) => {
+      return {
+        id: `dispute-${index}`,
+        type: "Account Error",
+        title: `Issue with ${account.accountName}`,
+        bureau: account.bureau || "Experian",
+        accountName: account.accountName,
+        accountNumber: account.accountNumber,
+        reason: "Inaccurate Information",
+        description: "This account contains information that may be inaccurate.",
+        impact: "High",
+        severity: "high"
+      };
+    });
+    
+    // Add the properly formatted recommended disputes
+    if (reportData.analysisResults) {
+      reportData.analysisResults.recommendedDisputes = recommendedDisputes;
+    }
+    
+    // Update with more accurate results
     const generatedResults = generateAnalysisResults(reportData);
     // Merge generated results with required default fields
-    reportData.analysisResults = {
-      ...reportData.analysisResults,
-      ...generatedResults
-    };
+    if (reportData.analysisResults && generatedResults) {
+      reportData.analysisResults = {
+        ...reportData.analysisResults,
+        ...generatedResults
+      };
+    }
   }
   
   return reportData;

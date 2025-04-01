@@ -1,3 +1,4 @@
+
 /**
  * Core types for credit report data and functionality
  */
@@ -28,9 +29,9 @@ export interface CreditReportAccount {
   openDate?: string;
   status?: string;
   lastReportedDate?: string;
-  creditLimit?: string;
+  creditLimit?: number | string;
   highBalance?: string;
-  currentBalance?: string;
+  currentBalance?: number | string;
   paymentStatus?: string;
   paymentHistory?: Record<string, string>;
   isNegative?: boolean;
@@ -43,7 +44,7 @@ export interface CreditReportAccount {
   chargeOffAmount?: string;
   
   // Adding explicitly the properties referenced in the code
-  balance?: string;
+  balance?: number | string;
   dateOpened?: string;
   dateReported?: string;
 }
@@ -74,6 +75,26 @@ export interface CreditReportPublicRecord {
   dateSatisfied?: string;
 }
 
+// Recommended dispute information
+export interface RecommendedDispute {
+  id: string;
+  type: string;
+  title: string;
+  bureau: string;
+  accountName?: string;
+  accountNumber?: string;
+  reason: string;
+  description: string;
+  impact: 'High' | 'Medium' | 'Low';
+  legalBasis?: LegalReference[];
+  disputeStrategy?: string;
+  sampleDisputeLanguage?: string;
+  successRate?: number;
+  
+  // Adding the severity property that's referenced in code
+  severity?: 'high' | 'medium' | 'low';
+}
+
 // Analysis results for a credit report
 export interface AnalysisResults {
   totalAccounts: number;
@@ -90,6 +111,10 @@ export interface AnalysisResults {
   highSeverityIssues?: number;
   accountsWithIssues?: number;
   recommendedDisputes?: RecommendedDispute[];
+  
+  // Financial metrics
+  totalCreditLimit?: number;
+  totalBalance?: number;
 }
 
 // Overall credit report data structure
@@ -122,26 +147,6 @@ export interface UserInfo {
   zip?: string;
   email?: string;
   phone?: string;
-}
-
-// Recommended dispute information
-export interface RecommendedDispute {
-  id: string;
-  type: string;
-  title: string;
-  bureau: string;
-  accountName: string;
-  accountNumber?: string;
-  reason: string;
-  description: string;
-  impact: 'High' | 'Medium' | 'Low';
-  legalBasis?: LegalReference[];
-  disputeStrategy?: string;
-  sampleDisputeLanguage?: string;
-  successRate?: number;
-  
-  // Adding the severity property that's referenced in code
-  severity?: 'high' | 'medium' | 'low';
 }
 
 // Sample dispute letter structure

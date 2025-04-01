@@ -1,35 +1,10 @@
 
-import { CreditReportData, CreditReportAccount } from '../types';
-
-/**
- * Interface for credit report analysis results
- */
-export interface CreditReportAnalysisResults {
-  totalAccounts: number;
-  openAccounts: number;
-  closedAccounts: number;
-  negativeItems: number;
-  inquiryCount: number;
-  publicRecordCount: number;
-  accountTypeSummary: Record<string, number>;
-  creditUtilization: number;
-  totalCreditLimit: number;
-  totalBalance: number;
-  totalDiscrepancies: number;
-  highSeverityIssues: number;
-  accountsWithIssues: number;
-  recommendedDisputes: Array<{
-    accountName?: string;
-    accountNumber?: string;
-    reason: string;
-    impact: string;
-  }>;
-}
+import { CreditReportData, CreditReportAccount, AnalysisResults, RecommendedDispute } from '../types';
 
 /**
  * Generate analysis results from credit report data
  */
-export const generateAnalysisResults = (reportData: CreditReportData): CreditReportAnalysisResults => {
+export const generateAnalysisResults = (reportData: CreditReportData): AnalysisResults => {
   const { accounts, inquiries, publicRecords } = reportData;
   
   // Count account types
@@ -50,27 +25,22 @@ export const generateAnalysisResults = (reportData: CreditReportData): CreditRep
   let totalCreditLimit = 0;
   
   accounts.forEach(account => {
-    const balance = account.currentBalance || account.balance || 0;
-    const limit = account.creditLimit || 0;
+    const balance = typeof account.currentBalance === 'number' ? account.currentBalance : 
+                   (typeof account.balance === 'number' ? account.balance : 0);
+    const limit = typeof account.creditLimit === 'number' ? account.creditLimit : 0;
     
-    if (typeof balance === 'number') {
-      totalBalance += balance;
-    }
-    
-    if (typeof limit === 'number') {
-      totalCreditLimit += limit;
-    }
+    totalBalance += balance;
+    totalCreditLimit += limit;
   });
   
   // Find potential issues and create recommended disputes
   const accountsWithIssues = accounts.filter(account => {
     const hasPaymentIssue = account.paymentStatus && account.paymentStatus.toLowerCase().includes('late');
     
-    const isHighUtilization = account.creditLimit && account.currentBalance && 
-      typeof account.creditLimit === 'number' && 
-      typeof account.currentBalance === 'number' &&
-      account.creditLimit > 0 && 
-      (account.currentBalance / account.creditLimit > 0.8);
+    const isHighUtilization = typeof account.creditLimit === 'number' && 
+                             typeof account.currentBalance === 'number' &&
+                             account.creditLimit > 0 && 
+                             (account.currentBalance / account.creditLimit > 0.8);
       
     const recentlyClosed = account.status?.toLowerCase().includes('closed') && 
       account.lastActivity && isRecentActivity(account.lastActivity);
@@ -79,16 +49,19 @@ export const generateAnalysisResults = (reportData: CreditReportData): CreditRep
   });
   
   // Generate recommendations
-  const recommendedDisputes = accountsWithIssues.map(account => {
+  const recommendedDisputes: RecommendedDispute[] = accountsWithIssues.map((account, index) => {
     const accountName = account.accountName || 'Unknown account';
     let reason = '';
-    let impact = '';
+    let impact: 'High' | 'Medium' | 'Low' = 'Medium';
+    let type = 'Account Error';
+    let description = '';
     
     if (account.paymentStatus && account.paymentStatus.toLowerCase().includes('late')) {
       reason = `Late payment reported for ${accountName}`;
-      impact = 'high';
-    } else if (account.creditLimit && account.currentBalance && 
-               typeof account.creditLimit === 'number' && 
+      impact = 'High';
+      type = 'Late Payment';
+      description = 'Account shows late payments that may be inaccurate.';
+    } else if (typeof account.creditLimit === 'number' && 
                typeof account.currentBalance === 'number' &&
                account.creditLimit > 0 && 
                (account.currentBalance / account.creditLimit > 0.8)) {
@@ -96,18 +69,28 @@ export const generateAnalysisResults = (reportData: CreditReportData): CreditRep
                               typeof account.currentBalance === 'number' ? 
                               Math.round((account.currentBalance / account.creditLimit) * 100) : 0;
       reason = `High utilization (${utilizationRate}%) on ${accountName}`;
-      impact = 'medium';
+      impact = 'Medium';
+      type = 'High Utilization';
+      description = 'This account has a high balance relative to its credit limit.';
     } else if (account.status?.toLowerCase().includes('closed') && 
       account.lastActivity && isRecentActivity(account.lastActivity)) {
       reason = `Recently closed account (${accountName}) still showing impact`;
-      impact = 'medium';
+      impact = 'Medium';
+      type = 'Closed Account';
+      description = 'This closed account is still affecting your credit score.';
     }
     
     return {
+      id: `dispute-${index}-${account.accountNumber || ''}`,
+      type,
+      title: `Issue with ${accountName}`,
+      bureau: account.bureau || 'Experian',
       accountName: account.accountName,
       accountNumber: account.accountNumber,
       reason,
-      impact
+      description,
+      impact,
+      severity: impact.toLowerCase() as 'high' | 'medium' | 'low'
     };
   });
   

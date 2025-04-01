@@ -1,6 +1,5 @@
 
-import { useToast } from '@/hooks/use-toast';
-import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
+import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
 
 export interface AnalysisProcessorProps {
   uploadedFile: File | null;
@@ -21,7 +20,7 @@ export interface AnalysisProcessorProps {
 }
 
 export interface AnalysisHandlerProps extends AnalysisProcessorProps {
-  toast: ReturnType<typeof useToast>;
+  toast: ReturnType<typeof import('@/hooks/use-toast').useToast>;
 }
 
 export interface IssueItem {

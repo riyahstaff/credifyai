@@ -40,7 +40,7 @@ describe('handleAnalysisComplete', () => {
 
   it('should handle successful analysis and set reportData', async () => {
     // Mock dependencies
-    const mockParams: Partial<AnalysisHandlerProps> = {
+    const mockParams = {
       uploadedFile: new File(['test content'], 'test.pdf', { type: 'application/pdf' }),
       setReportData: vi.fn(),
       setIssues: vi.fn(),
@@ -59,7 +59,7 @@ describe('handleAnalysisComplete', () => {
     mockSessionStorage.setItem('sampleReportsLoaded', 'false');
 
     try {
-      await handleAnalysisComplete(mockParams as AnalysisHandlerProps);
+      await handleAnalysisComplete(mockParams as any);
       // This is a simplistic test just to make sure the function runs without errors
       // We'd expect it to throw in a real scenario without actual file processing
       expect.fail('Should have thrown an error without actual file processing');
