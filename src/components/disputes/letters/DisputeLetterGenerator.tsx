@@ -45,26 +45,33 @@ export const useDisputeLetterGenerator = ({
 
   const handleGenerateDispute = async (disputeData: any) => {
     setIsGenerating(true);
-    console.log('Generating dispute:', disputeData, 'Test mode:', testMode);
+    console.log('Generating dispute with full data:', disputeData);
     
     try {
+      // Get user info from local storage or use placeholder
+      // If we have actual account data, use it
+      const actualAccountInfo = disputeData.actualAccountInfo || {};
+      
+      // Extract user info from storage or dispute data
+      const userInfo = {
+        name: localStorage.getItem('userName') || localStorage.getItem('name') || "[YOUR NAME]",
+        address: localStorage.getItem('userAddress') || "[YOUR ADDRESS]",
+        city: localStorage.getItem('userCity') || "[CITY]",
+        state: localStorage.getItem('userState') || "[STATE]",
+        zip: localStorage.getItem('userZip') || "[ZIP]"
+      };
+      
+      console.log("User info for letter:", userInfo);
+      console.log("Account info for letter:", actualAccountInfo);
+      
       // If letterContent is not provided, generate it
       if (!disputeData.letterContent) {
-        // Get user info from local storage or use placeholder
-        const userInfo = {
-          name: localStorage.getItem('userName') || localStorage.getItem('name') || "[YOUR NAME]",
-          address: localStorage.getItem('userAddress') || "[YOUR ADDRESS]",
-          city: localStorage.getItem('userCity') || "[CITY]",
-          state: localStorage.getItem('userState') || "[STATE]",
-          zip: localStorage.getItem('userZip') || "[ZIP]"
-        };
-        
-        // Generate letter content
+        // Generate letter content with detailed account information
         disputeData.letterContent = await generateEnhancedDisputeLetter(
           disputeData.errorType,
           {
-            accountName: disputeData.accountName,
-            accountNumber: disputeData.accountNumber,
+            accountName: disputeData.accountName || actualAccountInfo.name || "Unknown Account",
+            accountNumber: disputeData.accountNumber || actualAccountInfo.number || "xxxx",
             errorDescription: disputeData.explanation,
             bureau: disputeData.bureau
           },
@@ -83,7 +90,7 @@ export const useDisputeLetterGenerator = ({
       // Create a new letter from the dispute data
       const newLetter = {
         id: Date.now(),
-        title: `${disputeData.errorType} Dispute (${disputeData.accountName})`,
+        title: `${disputeData.errorType} (${disputeData.accountName || actualAccountInfo.name || "Unknown Account"})`,
         recipient: disputeData.bureau,
         createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         status: 'ready', // Status is "ready"
@@ -91,6 +98,13 @@ export const useDisputeLetterGenerator = ({
         laws: ['FCRA § 611', 'FCRA § 623'],
         content: disputeData.letterContent
       };
+      
+      // Log the generated letter
+      console.log("Generated letter:", {
+        title: newLetter.title,
+        contentLength: newLetter.content.length,
+        content: newLetter.content.substring(0, 100) + "..." // Log just the beginning
+      });
       
       // Add the new letter 
       onAddNewLetter(newLetter);

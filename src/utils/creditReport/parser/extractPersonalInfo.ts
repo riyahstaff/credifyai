@@ -1,115 +1,131 @@
 
 /**
- * Personal Information Extractor
+ * Credit Report Parser - Personal Information Extractor
  * This module extracts personal information from credit reports
  */
 
-interface PersonalInfo {
-  name?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  ssn?: string;
+export interface PersonalInfo {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
   phone?: string;
+  ssn?: string;
   dob?: string;
 }
 
-/**
- * Extract personal information from credit report text
- */
-export function extractPersonalInfo(content: string): PersonalInfo {
-  console.log("Extracting personal information from credit report");
+export const extractPersonalInfo = (content: string): PersonalInfo => {
+  console.log("Extracting personal information from report content length:", content.length);
   
-  // Initialize personal info object
-  const personalInfo: PersonalInfo = {};
+  const personalInfo: PersonalInfo = {
+    name: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: ''
+  };
   
-  // Clean up the content (remove excess whitespace, normalize newlines)
-  const cleanContent = content.replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
+  if (!content || content.length < 100) {
+    console.warn("Content too short for personal info extraction");
+    return personalInfo;
+  }
   
-  // Look for name in the report with various patterns
-  const namePatterns = [
-    /(?:Name|Consumer)(?:\s*|:)([A-Za-z\s\.]{2,35}?)(?:\n|\s{2,}|$)/i,
-    /Personal\s+Information.*?(?:Name|Consumer)(?:\s*|:)([A-Za-z\s\.]{2,35}?)(?:\n|\s{2,}|$)/is,
-    /Report\s+for:?\s*([A-Za-z\s\.]{2,35}?)(?:\n|\s{2,}|$)/i,
-  ];
+  // Normalize line breaks and spaces
+  const normalized = content.replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
   
-  for (const pattern of namePatterns) {
-    const match = cleanContent.match(pattern);
-    if (match && match[1]?.trim()) {
-      personalInfo.name = match[1].trim();
-      console.log(`Found name: ${personalInfo.name}`);
-      break;
+  try {
+    // Extract name using various patterns
+    const namePatterns = [
+      /name:?\s*([A-Za-z\s.'-]{3,30})/i,
+      /CONSUMER(?:\s+NAME)?:?\s*([A-Za-z\s.'-]{3,30})/i,
+      /(?:PERSONAL|CONSUMER) INFORMATION[^\n]{0,50}(?:name|consumer)(?:[^\n]{0,10})?:?\s*([A-Za-z\s.'-]{3,30})/i,
+      /report for:?\s*([A-Za-z\s.'-]{3,30})/i,
+      /prepared for:?\s*([A-Za-z\s.'-]{3,30})/i
+    ];
+    
+    for (const pattern of namePatterns) {
+      const match = normalized.match(pattern);
+      if (match && match[1] && match[1].trim().length > 3) {
+        personalInfo.name = match[1].trim();
+        console.log("Found name:", personalInfo.name);
+        break;
+      }
     }
-  }
-  
-  // Look for address patterns
-  const addressPatterns = [
-    /(?:Address|Street|Location|Residence)(?:\s*|:)([^,\n]{5,50}[A-Za-z0-9])/i,
-    /Personal\s+Information.*?(?:Address|Street)(?:\s*|:)([^,\n]{5,50}[A-Za-z0-9])/is,
-    /(?:Current|Reported)\s+Address(?:\s*|:)([^,\n]{5,50}[A-Za-z0-9])/i,
-  ];
-  
-  for (const pattern of addressPatterns) {
-    const match = cleanContent.match(pattern);
-    if (match && match[1]?.trim()) {
-      personalInfo.address = match[1].trim();
-      console.log(`Found address: ${personalInfo.address}`);
-      break;
+    
+    // Extract address
+    const addressPatterns = [
+      /(?:address|street|residence|current address)[^\n]{0,20}:?\s*([A-Za-z0-9\s.#,-]{5,50})/i,
+      /(?:PERSONAL|CONSUMER) INFORMATION[^\n]{0,100}(?:address|street|residence)[^\n]{0,20}:?\s*([A-Za-z0-9\s.#,-]{5,50})/i
+    ];
+    
+    for (const pattern of addressPatterns) {
+      const match = normalized.match(pattern);
+      if (match && match[1] && match[1].trim().length > 5) {
+        personalInfo.address = match[1].trim();
+        console.log("Found address:", personalInfo.address);
+        break;
+      }
     }
-  }
-  
-  // Look for city, state, zip patterns
-  const cityStateZipPatterns = [
-    /(?:Address|Street|Location|City)(?:\s*|:).*?\n?.*?([A-Za-z\s\.]{2,25}),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/is,
-    /([A-Za-z\s\.]{2,25}),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i,
-  ];
-  
-  for (const pattern of cityStateZipPatterns) {
-    const match = cleanContent.match(pattern);
-    if (match && match[1]?.trim() && match[2] && match[3]) {
-      personalInfo.city = match[1].trim();
-      personalInfo.state = match[2];
-      personalInfo.zip = match[3];
-      console.log(`Found city/state/zip: ${personalInfo.city}, ${personalInfo.state} ${personalInfo.zip}`);
-      break;
+    
+    // Extract city, state, zip
+    const cityStateZipPatterns = [
+      /(?:city|address|location)(?:[^\n]{0,30})?(?:\n|,|\s{2,})?\s*([A-Za-z\s.'-]{2,25})\s*,?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i,
+      /([A-Za-z\s.'-]{2,25})\s*,?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i
+    ];
+    
+    for (const pattern of cityStateZipPatterns) {
+      const match = normalized.match(pattern);
+      if (match && match[1] && match[2] && match[3]) {
+        personalInfo.city = match[1].trim();
+        personalInfo.state = match[2].trim();
+        personalInfo.zip = match[3].trim();
+        console.log("Found city/state/zip:", personalInfo.city, personalInfo.state, personalInfo.zip);
+        break;
+      }
     }
-  }
-  
-  // Extract SSN (last 4 digits only for security)
-  const ssnPattern = /(?:SSN|Social Security)(?:\s*|:|\#).*?(\d{3}-\d{2}-\d{4}|\d{9})/i;
-  const ssnMatch = cleanContent.match(ssnPattern);
-  if (ssnMatch && ssnMatch[1]) {
-    const fullSsn = ssnMatch[1].replace(/-/g, '');
-    personalInfo.ssn = `xxx-xx-${fullSsn.slice(-4)}`;
-    console.log("Found SSN (last 4 digits)");
-  }
-  
-  // Extract phone number
-  const phonePattern = /(?:Phone|Telephone|Mobile)(?:\s*|:).*?(\(?\d{3}\)?[-\s\.]?\d{3}[-\s\.]?\d{4})/i;
-  const phoneMatch = cleanContent.match(phonePattern);
-  if (phoneMatch && phoneMatch[1]) {
-    personalInfo.phone = phoneMatch[1];
-    console.log(`Found phone: ${personalInfo.phone}`);
-  }
-  
-  // Extract date of birth
-  const dobPattern = /(?:DOB|Date\s+of\s+Birth|Birth\s+Date)(?:\s*|:).*?(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})/i;
-  const dobMatch = cleanContent.match(dobPattern);
-  if (dobMatch && dobMatch[1]) {
-    personalInfo.dob = dobMatch[1];
-    console.log(`Found DOB: ${personalInfo.dob}`);
-  }
-  
-  // Store the extracted personal info in localStorage for future use
-  if (typeof localStorage !== 'undefined') {
+    
+    // Extract phone
+    const phonePattern = /(?:phone|telephone|mobile|contact)[^\n]{0,20}:?\s*(\(?\d{3}\)?[-.)\s]?\d{3}[-.)\s]?\d{4})/i;
+    const phoneMatch = normalized.match(phonePattern);
+    if (phoneMatch && phoneMatch[1]) {
+      personalInfo.phone = phoneMatch[1].trim();
+      console.log("Found phone:", personalInfo.phone);
+    }
+    
+    // Extract SSN (partial for security)
+    const ssnPattern = /(?:ssn|social security)[^\n]{0,30}(?:number)?:?\s*(?:\d{3}-\d{2}-(\d{4})|\*{3}-\*{2}-(\d{4}))/i;
+    const ssnMatch = normalized.match(ssnPattern);
+    if (ssnMatch && (ssnMatch[1] || ssnMatch[2])) {
+      const lastFour = ssnMatch[1] || ssnMatch[2];
+      personalInfo.ssn = `xxx-xx-${lastFour}`;
+      console.log("Found SSN (last 4)");
+    }
+    
+    // Extract date of birth
+    const dobPattern = /(?:dob|date of birth|birth date)[^\n]{0,20}:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})/i;
+    const dobMatch = normalized.match(dobPattern);
+    if (dobMatch && dobMatch[1]) {
+      personalInfo.dob = dobMatch[1].trim();
+      console.log("Found DOB:", personalInfo.dob);
+    }
+    
+    // Save to localStorage for the letter generation
     if (personalInfo.name) localStorage.setItem('userName', personalInfo.name);
     if (personalInfo.address) localStorage.setItem('userAddress', personalInfo.address);
     if (personalInfo.city) localStorage.setItem('userCity', personalInfo.city);
     if (personalInfo.state) localStorage.setItem('userState', personalInfo.state);
     if (personalInfo.zip) localStorage.setItem('userZip', personalInfo.zip);
-    if (personalInfo.phone) localStorage.setItem('userPhone', personalInfo.phone);
+    
+    // Log extraction results
+    console.log("Personal info extraction complete:", Object.keys(personalInfo)
+      .filter(key => personalInfo[key as keyof PersonalInfo])
+      .length, "fields found");
+      
+    return personalInfo;
+  } catch (error) {
+    console.error("Error extracting personal information:", error);
+    // Return whatever we have so far
+    return personalInfo;
   }
-  
-  return personalInfo;
-}
+};

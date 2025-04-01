@@ -1,20 +1,52 @@
 
 import React, { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import { 
-  FileEditIcon,
-  ArrowRight,
-  Sparkles, 
-  Info
-} from 'lucide-react';
+  CreditReportData, 
+  CreditReportAccount 
+} from '@/utils/creditReport/types';
+import { Button } from '@/components/ui/button';
+import { 
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from '@/components/ui/form';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { 
+  Textarea
+} from '@/components/ui/textarea';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import { ChevronRight, FileText, AlertCircle } from 'lucide-react';
+import AccountSelector from './AccountSelector';
+import BureauSelector from './BureauSelector';
+import DisputeTypeSelector from './DisputeTypeSelector';
 
 interface DisputeFormProps {
-  reportData: any;
-  selectedAccount: any;
+  reportData: CreditReportData | null;
+  selectedAccount: CreditReportAccount | null;
   selectedTemplate: any;
   onGenerate: (disputeData: any) => void;
   testMode?: boolean;
 }
+
+const formSchema = z.object({
+  accountName: z.string().optional(),
+  accountNumber: z.string().optional(),
+  bureau: z.string().min(1, 'Please select a credit bureau'),
+  errorType: z.string().min(1, 'Please select an error type'),
+  explanation: z.string().min(5, 'Please provide a brief explanation').max(500, 'Explanation too long')
+});
 
 const DisputeForm: React.FC<DisputeFormProps> = ({
   reportData,
@@ -23,271 +55,217 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
   onGenerate,
   testMode = false
 }) => {
-  const { toast } = useToast();
-  const [selectedBureau, setSelectedBureau] = useState<string | null>(null);
-  const [disputeReason, setDisputeReason] = useState('');
-  const [explanation, setExplanation] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [accounts, setAccounts] = useState<CreditReportAccount[]>([]);
   
-  // Log test mode status
   useEffect(() => {
-    if (testMode) {
-      console.log("DisputeForm: Test mode is active");
+    if (reportData && reportData.accounts && reportData.accounts.length > 0) {
+      setAccounts(reportData.accounts);
+      console.log("Loaded accounts from report data:", reportData.accounts);
     }
-  }, [testMode]);
+  }, [reportData]);
   
-  const bureaus = ['Experian', 'Equifax', 'TransUnion'];
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      accountName: selectedAccount?.accountName || '',
+      accountNumber: selectedAccount?.accountNumber || '',
+      bureau: selectedAccount?.bureau || 'Experian',
+      errorType: 'Late Payment Dispute',
+      explanation: 'This information appears inaccurate on my credit report and should be removed or corrected.'
+    }
+  });
   
-  const disputeReasons = [
-    'Not my account',
-    'Account closed by consumer',
-    'Account paid in full',
-    'Incorrect balance',
-    'Incorrect payment status',
-    'Incorrect account information',
-    'Duplicate account',
-    'Account included in bankruptcy',
-    'Account settled',
-    'Fraudulent account/Identity theft',
-    'Late payments disputed',
-    'Other (specify below)'
-  ];
-
-  // Try to determine which bureaus report this account when the selectedAccount changes
+  // Update form values when selectedAccount changes
   useEffect(() => {
-    if (selectedAccount?.bureau) {
-      const lowerBureau = selectedAccount.bureau.toLowerCase();
-      if (lowerBureau.includes('experian')) {
-        setSelectedBureau('Experian');
-      } else if (lowerBureau.includes('equifax')) {
-        setSelectedBureau('Equifax');
-      } else if (lowerBureau.includes('transunion')) {
-        setSelectedBureau('TransUnion');
-      }
+    if (selectedAccount) {
+      console.log("Selected account changed, updating form:", selectedAccount);
+      form.setValue('accountName', selectedAccount.accountName || '');
+      form.setValue('accountNumber', selectedAccount.accountNumber || '');
+      form.setValue('bureau', selectedAccount.bureau || 'Experian');
     }
-  }, [selectedAccount]);
+  }, [selectedAccount, form]);
   
-  const handleGenerateDispute = () => {
-    if (!selectedAccount || !selectedTemplate || !selectedBureau || !disputeReason) {
-      toast({
-        title: "Missing information",
-        description: "Please select an account, template, bureau, and dispute reason.",
-        variant: "destructive",
-      });
-      return;
+  // Update form values when selectedTemplate changes
+  useEffect(() => {
+    if (selectedTemplate) {
+      form.setValue('errorType', selectedTemplate.name || 'Late Payment Dispute');
     }
+  }, [selectedTemplate, form]);
+  
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    console.log("Submitting form with values:", values);
+    console.log("Selected account data:", selectedAccount);
     
-    setIsGenerating(true);
+    // Make sure to include all account details
+    const disputeData = {
+      ...values,
+      // Ensure account information is included from the selected account
+      actualAccountInfo: selectedAccount ? {
+        ...selectedAccount,
+        name: selectedAccount.accountName,
+        number: selectedAccount.accountNumber,
+        balance: selectedAccount.currentBalance || selectedAccount.balance,
+        openDate: selectedAccount.dateOpened || selectedAccount.openDate,
+        reportedDate: selectedAccount.dateReported || selectedAccount.lastReportedDate,
+        status: selectedAccount.paymentStatus
+      } : null,
+      allAccounts: reportData?.accounts || []
+    };
     
-    // Simulate AI processing delay
-    setTimeout(() => {
-      try {
-        // Generate dispute letter by replacing placeholders in the template
-        let letterContent = selectedTemplate.content;
-        
-        // Replace placeholders with actual values
-        letterContent = letterContent
-          .replace(/\[BUREAU\]/g, selectedBureau)
-          .replace(/\[ACCOUNT_NAME\]/g, selectedAccount.accountName)
-          .replace(/\[ACCOUNT_NUMBER\]/g, selectedAccount.accountNumber || '[Account Number]')
-          .replace(/\[DISPUTE_REASON\]/g, disputeReason)
-          .replace(/\[EXPLANATION\]/g, explanation || 'This information is inaccurate and should be investigated.')
-          .replace(/\[REPORT_DATE\]/g, new Date().toLocaleDateString())
-          .replace(/\[YOUR_NAME\]/g, '[YOUR NAME]');
-        
-        // Set dates if available
-        if (selectedAccount.dateOpened) {
-          letterContent = letterContent.replace(/\[DATE_OPENED\]/g, selectedAccount.dateOpened);
-        }
-        
-        if (selectedAccount.dateReported) {
-          letterContent = letterContent.replace(/\[DATE_REPORTED\]/g, selectedAccount.dateReported);
-        }
-        
-        // Replace bureau address placeholders
-        const bureauAddresses = {
-          'Experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
-          'Equifax': 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374',
-          'TransUnion': 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016'
-        };
-        
-        letterContent = letterContent.replace(/\[BUREAU_ADDRESS\]/g, bureauAddresses[selectedBureau as keyof typeof bureauAddresses] || '[BUREAU ADDRESS]');
-        
-        const disputeData = {
-          bureau: selectedBureau,
-          accountName: selectedAccount.accountName,
-          accountNumber: selectedAccount.accountNumber,
-          errorType: disputeReason,
-          explanation: explanation,
-          creditReport: reportData,
-          letterContent: letterContent,
-          template: selectedTemplate.name,
-          timestamp: new Date(),
-          generatedInTestMode: testMode
-        };
-        
-        onGenerate(disputeData);
-        
-        toast({
-          title: testMode ? "Test letter created" : "Dispute letter created",
-          description: `Your personalized dispute letter has been generated${testMode ? ' in test mode' : ''}.`,
-        });
-      } catch (error) {
-        toast({
-          title: "Error generating letter",
-          description: "Failed to generate dispute letter. Please try again.",
-          variant: "destructive",
-        });
-        console.error('Error generating dispute letter:', error);
-      } finally {
-        setIsGenerating(false);
-      }
-    }, 1500);
+    // Log the dispute data for debugging
+    console.log("Generating dispute with data:", disputeData);
+    
+    onGenerate(disputeData);
   };
   
-  const isReadyToGenerate = () => {
-    return selectedAccount && selectedTemplate && selectedBureau && disputeReason;
-  };
+  const accountCount = accounts.length;
+  const noAccounts = accountCount === 0;
+  const hasPersonalInfo = reportData?.personalInfo && Object.keys(reportData.personalInfo).length > 0;
   
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3 border-b border-gray-200 dark:border-gray-700/30 pb-4 mb-2">
-        <div className="p-2 rounded-full bg-credify-teal text-white">
-          <FileEditIcon size={18} />
+    <div>
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <FileText className="text-credify-teal" size={20} />
+          <h3 className="text-lg font-semibold text-credify-navy dark:text-white">
+            Generate Dispute Letter
+            {testMode && <span className="ml-2 text-xs text-amber-500">(Test Mode)</span>}
+          </h3>
         </div>
-        <h4 className="font-medium text-credify-navy dark:text-white">
-          Dispute Details
-          {testMode && <span className="text-amber-500 text-sm ml-2">(Test Mode)</span>}
-        </h4>
+        
+        {!reportData && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 p-4 rounded-lg mb-6 flex items-start gap-3">
+            <AlertCircle className="text-amber-500 mt-0.5" size={18} />
+            <div>
+              <p className="font-medium">No credit report uploaded</p>
+              <p className="text-sm">Upload a credit report first to automatically extract account information.</p>
+            </div>
+          </div>
+        )}
+        
+        {reportData && noAccounts && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 p-4 rounded-lg mb-6 flex items-start gap-3">
+            <AlertCircle className="text-amber-500 mt-0.5" size={18} />
+            <div>
+              <p className="font-medium">No accounts found in your report</p>
+              <p className="text-sm">Your credit report was processed but no accounts were detected.</p>
+            </div>
+          </div>
+        )}
+        
+        {reportData && !hasPersonalInfo && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 p-4 rounded-lg mb-6 flex items-start gap-3">
+            <AlertCircle className="text-amber-500 mt-0.5" size={18} />
+            <div>
+              <p className="font-medium">Personal information missing</p>
+              <p className="text-sm">Your personal information could not be extracted from the report.</p>
+            </div>
+          </div>
+        )}
       </div>
       
-      {testMode && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-lg p-3 mb-4">
-          <p className="text-amber-800 dark:text-amber-300 text-sm">
-            You are creating a dispute letter in test mode. The letter will be generated but not saved to your account.
-          </p>
-        </div>
-      )}
-      
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-credify-navy-light dark:text-white/70 mb-1">
-            Select Credit Bureau
-          </label>
-          <select
-            value={selectedBureau || ''}
-            onChange={(e) => setSelectedBureau(e.target.value || null)}
-            className="w-full px-3 py-2 bg-white dark:bg-credify-navy/40 border border-gray-200 dark:border-gray-700/50 rounded-lg"
-          >
-            <option value="">Select a bureau</option>
-            {bureaus.map((bureau) => (
-              <option key={bureau} value={bureau}>
-                {bureau}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-credify-navy-light dark:text-white/70 mb-1">
-            Account to Dispute
-          </label>
-          <div className="w-full px-3 py-2 bg-white dark:bg-credify-navy/40 border border-gray-200 dark:border-gray-700/50 rounded-lg flex justify-between items-center">
-            {selectedAccount ? (
-              <div>
-                <span className="font-medium text-credify-navy dark:text-white">
-                  {selectedAccount.accountName}
-                </span>
-                {selectedAccount.accountNumber && (
-                  <span className="text-xs text-credify-navy-light dark:text-white/70 ml-2">
-                    #{selectedAccount.accountNumber}
-                  </span>
-                )}
-              </div>
-            ) : (
-              <span className="text-credify-navy-light dark:text-white/70">
-                Select an account from your credit report
-              </span>
-            )}
-            <Info size={16} className="text-gray-400" />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Account Selection */}
+          <div className="space-y-6">
+            <div>
+              <FormLabel className="text-credify-navy dark:text-white text-sm font-semibold">
+                Account Information
+              </FormLabel>
+              <FormDescription className="text-credify-navy-light dark:text-white/60 text-xs">
+                Select the account you want to dispute
+              </FormDescription>
+            </div>
+            
+            <AccountSelector
+              accounts={accounts}
+              selectedAccount={selectedAccount}
+              onAccountSelect={(account) => {
+                console.log("Account selected:", account);
+                form.setValue('accountName', account.accountName || '');
+                form.setValue('accountNumber', account.accountNumber || '');
+                form.setValue('bureau', account.bureau || 'Experian');
+              }}
+              testMode={testMode}
+            />
           </div>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-credify-navy-light dark:text-white/70 mb-1">
-            Reason for Dispute
-          </label>
-          <select
-            value={disputeReason}
-            onChange={(e) => setDisputeReason(e.target.value)}
-            className="w-full px-3 py-2 bg-white dark:bg-credify-navy/40 border border-gray-200 dark:border-gray-700/50 rounded-lg"
-          >
-            <option value="">Select a reason</option>
-            {disputeReasons.map((reason) => (
-              <option key={reason} value={reason}>
-                {reason}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-credify-navy-light dark:text-white/70 mb-1">
-            Detailed Explanation
-          </label>
-          <textarea
-            value={explanation}
-            onChange={(e) => setExplanation(e.target.value)}
-            className="w-full px-3 py-2 bg-white dark:bg-credify-navy/40 border border-gray-200 dark:border-gray-700/50 rounded-lg min-h-[120px]"
-            placeholder="Provide additional details about why this information is incorrect..."
-          ></textarea>
-          <p className="mt-1 text-xs text-credify-navy-light dark:text-white/70">
-            The more details you provide, the stronger your dispute case will be.
-          </p>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-credify-navy-light dark:text-white/70 mb-1">
-            Letter Template
-          </label>
-          <div className="w-full px-3 py-2 bg-white dark:bg-credify-navy/40 border border-gray-200 dark:border-gray-700/50 rounded-lg flex justify-between items-center">
-            {selectedTemplate ? (
-              <span className="font-medium text-credify-navy dark:text-white">
-                {selectedTemplate.name}
-              </span>
-            ) : (
-              <span className="text-credify-navy-light dark:text-white/70">
-                Select a letter template
-              </span>
+          
+          {/* Credit Bureau Selection */}
+          <FormField
+            control={form.control}
+            name="bureau"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-credify-navy dark:text-white text-sm font-semibold">
+                  Credit Bureau
+                </FormLabel>
+                <FormDescription className="text-credify-navy-light dark:text-white/60 text-xs">
+                  Select which credit bureau you want to send this dispute to
+                </FormDescription>
+                
+                <BureauSelector value={field.value} onChange={field.onChange} />
+                
+                <FormMessage />
+              </FormItem>
             )}
-            <Info size={16} className="text-gray-400" />
-          </div>
-        </div>
-        
-        <div className="pt-2 flex justify-end">
-          <button
-            onClick={handleGenerateDispute}
-            disabled={!isReadyToGenerate() || isGenerating}
-            className={`px-6 py-3 rounded-lg transition-colors flex items-center gap-2 ${
-              isReadyToGenerate() && !isGenerating
-                ? 'bg-credify-teal hover:bg-credify-teal-dark text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {isGenerating ? (
-              <>
-                <div className="h-5 w-5 border-2 border-white/70 border-t-transparent rounded-full animate-spin"></div>
-                <span>Generating Letter...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={18} />
-                <span>Generate Dispute Letter</span>
-              </>
+          />
+          
+          {/* Error Type Selection */}
+          <FormField
+            control={form.control}
+            name="errorType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-credify-navy dark:text-white text-sm font-semibold">
+                  Dispute Type
+                </FormLabel>
+                <FormDescription className="text-credify-navy-light dark:text-white/60 text-xs">
+                  Select the type of error you want to dispute
+                </FormDescription>
+                
+                <DisputeTypeSelector value={field.value} onChange={field.onChange} />
+                
+                <FormMessage />
+              </FormItem>
             )}
-          </button>
-        </div>
-      </div>
+          />
+          
+          {/* Explanation */}
+          <FormField
+            control={form.control}
+            name="explanation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-credify-navy dark:text-white text-sm font-semibold">
+                  Explanation
+                </FormLabel>
+                <FormDescription className="text-credify-navy-light dark:text-white/60 text-xs">
+                  Provide a brief explanation of why this information is incorrect
+                </FormDescription>
+                
+                <FormControl>
+                  <Textarea 
+                    {...field} 
+                    placeholder="Briefly explain why this information should be corrected..." 
+                    rows={4} 
+                    className="resize-none" 
+                  />
+                </FormControl>
+                
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <Button 
+            type="submit"
+            className="w-full bg-credify-teal hover:bg-credify-teal-dark text-white"
+          >
+            <span>Generate Dispute Letter</span>
+            <ChevronRight size={16} className="ml-2" />
+          </Button>
+        </form>
+      </Form>
     </div>
   );
 };

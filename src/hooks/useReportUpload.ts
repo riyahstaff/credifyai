@@ -1,53 +1,39 @@
 
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CreditReportAccount } from '@/utils/creditReportParser';
-import { useReportUploadState } from './report-upload/useReportUploadState';
-import { useReportStorage } from './report-upload/useReportStorage';
-import { useReportNavigation } from './report-upload/useReportNavigation';
+import { useState, useRef, useEffect } from 'react';
+import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
 import { useReportAnalysis } from './report-upload/useReportAnalysis';
+import { useToast } from './use-toast';
+import { useReportStorage } from './report-upload/useReportStorage';
 
 export const useReportUpload = () => {
-  // Compose the smaller hooks
-  const {
-    fileUploaded,
-    fileName,
-    fileSize,
-    uploadedFile,
-    analyzing,
-    setAnalyzing,
-    analyzed,
-    setAnalyzed,
-    analysisError,
-    setAnalysisError,
-    reportData,
-    setReportData,
-    issues,
-    setIssues,
-    letterGenerated,
-    setLetterGenerated,
-    analysisInProgress,
-    analysisCompleted,
-    handleFile,
-    resetUpload
-  } = useReportUploadState();
-
-  const { 
-    checkPendingLetters, 
-    clearPendingLetters, 
-    storeForDispute 
-  } = useReportStorage();
-
-  const { 
-    navigateToDisputeLetters, 
-    navigate, 
-    toast 
-  } = useReportNavigation();
-
-  const {
-    onAnalysisComplete,
-    startAnalysis
-  } = useReportAnalysis(
+  const { toast } = useToast();
+  const [fileUploaded, setFileUploaded] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzed, setAnalyzed] = useState(false);
+  const [fileName, setFileName] = useState('');
+  const [fileSize, setFileSize] = useState(0);
+  const [reportData, setReportData] = useState<CreditReportData | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [issues, setIssues] = useState<Array<{
+    type: string;
+    title: string;
+    description: string;
+    impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
+    impactColor: string;
+    account?: CreditReportAccount;
+    laws: string[];
+  }>>([]);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [letterGenerated, setLetterGenerated] = useState(false);
+  
+  // Ref to track if analysis has completed
+  const analysisCompleted = useRef(false);
+  
+  // Import report storage hooks
+  const { storeForDispute, checkPendingLetters } = useReportStorage();
+  
+  // Use report analysis hooks
+  const { startAnalysis, onAnalysisComplete } = useReportAnalysis(
     uploadedFile,
     setReportData,
     setIssues,
@@ -57,80 +43,84 @@ export const useReportUpload = () => {
     setAnalyzed,
     analysisCompleted
   );
-
-  // Add the letter generation effect with stronger navigation logic
-  useEffect(() => {
-    if (letterGenerated) {
-      console.log("Letter has been generated, checking storage before navigation");
-      
-      // Verify that we have letters in storage
-      const pendingLetter = sessionStorage.getItem('pendingDisputeLetter');
-      const generatedLetters = sessionStorage.getItem('generatedDisputeLetters');
-      
-      if (pendingLetter || generatedLetters) {
-        console.log("Letters found in storage, navigating to dispute letters page");
-        // Set flag to force reload on letters page
-        sessionStorage.setItem('forceLettersReload', 'true');
-        
-        // IMPORTANT: Enable test mode subscription to always bypass subscription page
-        sessionStorage.setItem('testModeSubscription', 'true');
-        
-        // Add a longer delay to ensure storage operations complete
-        const timer = setTimeout(() => {
-          console.log("Executing navigation to dispute-letters");
-          // Always include testMode=true to ensure we can see the letters
-          navigate('/dispute-letters?testMode=true');
-        }, 1500); // Increased delay to 1.5 seconds
-        
-        return () => clearTimeout(timer);
-      } else {
-        console.error("Letter generated flag is true but no letters found in storage");
-        
-        // Try to set letterGenerated to false to allow the user to try again
-        setLetterGenerated(false);
-        
-        // Use the toast function correctly as a function call with an object parameter
-        toast({
-          title: "Letter Storage Error",
-          description: "Letters were generated but couldn't be saved. Please try again.",
-          variant: "destructive"
-        });
-      }
-    }
-  }, [letterGenerated, navigate, toast, setLetterGenerated]);
-
-  // Handle generate dispute (combines storeForDispute and navigation)
-  const handleGenerateDispute = (account?: CreditReportAccount) => {
+  
+  // Reset the upload state
+  const resetUpload = () => {
+    setFileUploaded(false);
+    setAnalyzing(false);
+    setAnalyzed(false);
+    setFileName('');
+    setFileSize(0);
+    setReportData(null);
+    setUploadedFile(null);
+    setIssues([]);
+    setAnalysisError(null);
+    setLetterGenerated(false);
+    analysisCompleted.current = false;
+  };
+  
+  // Handle file upload
+  const handleFile = (file: File) => {
+    console.log("File selected:", file.name, "size:", file.size);
+    
+    // Reset any existing state
+    resetUpload();
+    
+    // Set the file information
+    setFileName(file.name);
+    setFileSize(file.size);
+    setUploadedFile(file);
+    setFileUploaded(true);
+    
+    // Log file format for debugging
+    console.log("File type:", file.type);
+    
+    toast({
+      title: "File uploaded",
+      description: `${file.name} uploaded successfully. Click "Analyze Report" to continue.`,
+    });
+  };
+  
+  // Generate dispute letter from the report data
+  const handleGenerateDispute = async (account: CreditReportAccount | null = null) => {
+    console.log("Generating dispute for account:", account);
+    
     if (reportData) {
-      // Clear existing letters first to avoid conflicts
-      sessionStorage.removeItem('pendingDisputeLetter');
-      sessionStorage.removeItem('generatedDisputeLetters');
-      sessionStorage.removeItem('autoGeneratedLetter');
-      sessionStorage.removeItem('forceLettersReload');
+      // If no account is provided, use the first account from the report
+      const targetAccount = account || (reportData.accounts.length > 0 ? reportData.accounts[0] : null);
       
-      // IMPORTANT: Enable test mode subscription to always bypass subscription check
-      sessionStorage.setItem('testModeSubscription', 'true');
+      // Log detailed information about the account and report data for debugging
+      console.log("Target account for dispute:", targetAccount);
+      console.log("Report data personal info:", reportData.personalInfo);
       
-      storeForDispute(reportData, account);
+      // Store data for dispute generation
+      const stored = storeForDispute(reportData, targetAccount);
       
-      // Add delay to ensure storage operations complete before navigation
-      setTimeout(() => {
-        // Always navigate with test mode to bypass subscription page
-        navigate('/dispute-letters?testMode=true');
-      }, 300);
+      if (stored) {
+        setLetterGenerated(true);
+        toast({
+          title: "Dispute letter generated",
+          description: "Your dispute letter has been generated. You'll be redirected to review it.",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Error generating letter",
+          description: "There was a problem generating your dispute letter. Please try again.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } else {
+      toast({
+        title: "Missing report data",
+        description: "No credit report data is available. Please upload and analyze a report first.",
+        variant: "destructive",
+      });
+      return false;
     }
   };
-
-  // Debug logging for state changes
-  console.log("UploadReport state:", { 
-    fileUploaded, 
-    analyzing, 
-    analyzed, 
-    letterGenerated,
-    analysisInProgress: analysisInProgress.current,
-    analysisCompleted: analysisCompleted.current,
-  });
-
+  
   return {
     fileUploaded,
     analyzing,
@@ -140,13 +130,12 @@ export const useReportUpload = () => {
     reportData,
     uploadedFile,
     issues,
-    letterGenerated,
     analysisError,
+    letterGenerated,
     resetUpload,
     startAnalysis,
-    handleGenerateDispute,
     onAnalysisComplete,
     handleFile,
-    clearPendingLetters
+    handleGenerateDispute
   };
 };

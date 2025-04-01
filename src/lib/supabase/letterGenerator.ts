@@ -28,6 +28,8 @@ export async function generateEnhancedDisputeLetter(
   }
 ): Promise<string> {
   try {
+    console.log("Generating dispute letter with:", { disputeType, accountDetails, userInfo });
+    
     // Determine the dispute category and type based on the input
     let disputeCategory: keyof typeof DISPUTE_TEMPLATES = 'general';
     let templateType = 'GENERAL_DISPUTE';
@@ -100,60 +102,68 @@ export async function generateEnhancedDisputeLetter(
     const bureau = accountDetails.bureau.toLowerCase();
     const bureauAddress = bureauAddresses[bureau as keyof typeof bureauAddresses] || '[BUREAU ADDRESS]';
     
+    // Clean up account name and number
+    const accountName = accountDetails.accountName || 'Unknown Account';
+    const accountNumber = accountDetails.accountNumber || 'xxxxx';
+    
     // Format the account section in the requested format
     const accountSection = `
-Alleging Creditor and Account as is reported on my credit report:
-${accountDetails.accountName.toUpperCase()}
-ACCOUNT- ${accountDetails.accountNumber ? 'xxxxxxxx' + accountDetails.accountNumber.substring(Math.max(0, accountDetails.accountNumber.length - 4)) : 'xxxxxxxx####'}
-Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant
+DISPUTED ITEMS:
+- **Creditor:** ${accountName.toUpperCase()}
+- **Account #:** ${accountNumber ? (accountNumber.startsWith('xxxx') ? accountNumber : 'xxxx-xxxx-' + accountNumber.slice(-4)) : 'xxxx-xxxx-xxxx-xxxx'}
+- **Alleged Late Payments:** As reported on my credit report
 `;
+
+    // Handle empty user information with clear logging
+    if (!userInfo.name || userInfo.name === "[YOUR NAME]") {
+      console.warn("Missing user name in letter generation");
+    }
+    if (!userInfo.address || !userInfo.city || !userInfo.state || !userInfo.zip) {
+      console.warn("Missing address information in letter generation:", { 
+        address: userInfo.address, 
+        city: userInfo.city,
+        state: userInfo.state,
+        zip: userInfo.zip
+      });
+    }
 
     // Generate the final letter - directly use user information from parameters
     let letterContent = `Credit Report #: ${creditReportNumber} Today is ${currentDate}
-My First and My Last name is: ${userInfo.name}
-My Street NUMBER and My Street NAME is:
+
+${userInfo.name || '[YOUR NAME]'}
 ${userInfo.address || '[YOUR ADDRESS]'}
-My City and My State is:
 ${userInfo.city || '[CITY]'}, ${userInfo.state || '[STATE]'} ${userInfo.zip || '[ZIP]'}
 
-Re: My certified letter in notice of an official consumer declaration of complaint for your thus far NOT proven true, NOT proven correct, NOT proven complete, NOT proven timely, or NOT proven compliant mis-information, to include likely the deficient of proven metro 2 compliant data field formatted reporting as MANDATED! I am enacting my consumer and or civil rights to compel you here and now to absolutely and permanently remove any and all aspects of untrue, inaccurate, not complete, not timely, not proven mine, not proven my responsibility, and or not proven adequately and entirely compliant allegations of credit information.
-
-${accountDetails.bureau}
+${bureau.charAt(0).toUpperCase() + bureau.slice(1)}
 ${bureauAddress}
+
+Re: Dispute of Inaccurate Late Payment Information
 
 To Whom It May Concern:
 
-I received a copy of my credit report and found the following item(s) to be errors, or are deficient of proof of not being untrue, incorrect, incomplete, untimely, not mine, not my responsibility, or else wise not compliant, to include to metro 2 reporting standards.
+I am writing to dispute inaccurate late payment information that appears on my credit report. Per my review, under the credit report provided to me, the following alleged late payments noted are inaccurately reported and in violation of multiple laws, both federal and state, including but not limited to the FCRA, CRSA, and CDIA enactments.
 
-Here as follows are items in potential error requiring immediate annulment of the retainment and or reporting:
 ${accountSection}
 
-The federal and my state laws require full compliance to any and all standards of exacting and perfect reporting in its entirety, and should I be compelled to direct a consumer request for a lawful potential resolution via civil and or criminal courts, undoubtedly the court and its ruling magistrate would requisite irrefutable evidence to every single and each any and or all of the aspects of mandated reporting of which you are obligated, to include full proof in testimonial certificate to your precise metro 2 reporting.
+Under the Fair Credit Reporting Act (FCRA), you are required to:
+1. Conduct a reasonable investigation into the information I am disputing
+2. Forward all relevant information that I provide to the furnisher
+3. Review and consider all relevant information
+4. Provide me the results of your investigation
+5. Delete the disputed information if it cannot be verified
 
-The CRSA enacted ad CDIA implemented Metro 2 COMPLIANCE standards will be among the many fold documents of evidence I will with no uncertainty request from you for each and every allegation of adversary notation and aspects of claimed account(s) that clearly needs to be removed immediately.
+I am disputing this information as it is inaccurate and the creditor may be unable to provide adequate verification as required by law. The industry standard Metro 2 format requires specific, accurate reporting practices that have not been followed in this case.
 
-To avoid such an unnecessary and obviously troublesome action for you, please compose undoubted certificates of your lawful actions to irrefutably verify and validate all data for this and all allegations of derogatory account and or aspects of adversary reporting to include at a minimum every notation, each and all dates, unmistakable accounting balances, all transactions and the audits of all such activities, any and all lawfully verified and recorded identifications, the minimal five (5) portioned personal identifiers, each and every of the alpha-/ numeric-/ and or alphanumeric source codes, all of the sequential and precisely exact 426 characters of the P-6 segment (aka P-statement), the 386 pieces to confirmation of a collection (if any), the creditor classification codes, each and all pay status, and else wise mandated portions of metro 2 compliant reporting, whether reported or not.
-
-To return to federal and my state's reporting compliance, as REQUIRED BY LAW, please eradicate any and every aspect of adversary and or derogatory reportings in any and every of your data files for which you will directly or indirectly produce, contain, store, sell, exhibit, or elsewise report.
-
-According to the Fair Credit Reporting Act, Section 609 (a)(1)(A), you are required by federal law to verify - through the physical verification of the original signed consumer contract - any and all accounts you post on a credit report.
-
-Under Section 611 of the FCRA, you must:
-1. Conduct a thorough investigation of this disputed information within 30 days (45 days if I submit additional information)
-2. Forward all relevant information to the furnisher of this information
-3. Consider all information I have submitted
-4. Provide me with the results of your investigation and a free copy of my credit report if changes are made
-5. Remove the disputed item if it cannot be properly verified
-
-Please notify me that the above items have been deleted pursuant to § 611 (a)(6) [15 USC § 1681j (a) (6)]. I am also requesting an updated copy of my credit report, which should be sent to the address listed below. According to the provisions of § 612 [15 USC § 1681j], there should be no charge for this report.
+Please investigate this matter and provide me with the results within 30 days as required by the FCRA.
 
 Sincerely,
 
-${userInfo.name}
+${userInfo.name || '[YOUR NAME]'}
 
 Enclosures:
-- Copy of Driver's License
-- Copy of Social Security Card
+- Copy of ID
+- Copy of social security card
+- Copy of utility bill
 `;
 
     // Ensure the KEY explanation is removed
@@ -168,6 +178,7 @@ Enclosures:
       ''
     );
 
+    console.log("Generated letter content length:", letterContent.length);
     return letterContent;
   } catch (error) {
     console.error("Error generating enhanced dispute letter:", error);

@@ -1,17 +1,28 @@
 
-import { useToast } from '@/hooks/use-toast';
-import { processCreditReport } from '@/utils/creditReportParser';
-import { identifyIssues } from '@/utils/reportAnalysis';
-import { AnalysisHandlerProps } from '../types/analysisTypes';
-import { ensureMinimumIssues } from '../utils/issueGenerator';
-import { generateDisputeLetters } from '../utils/letterGenerator';
+import { extractTextFromPDF } from '@/utils/creditReport/extractors';
+import { parseReportContent, parseReportFile } from '@/utils/creditReport/parser';
+import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
 import { storeReportData } from '../utils/reportStorage';
-import { createFallbackLetter } from './fallbackLetterCreator';
-import { storeGeneratedLetters } from '../utils/disputeLetterHelpers';
 
-/**
- * Main handler function for processing credit report analysis
- */
+interface AnalysisCompleteParams {
+  uploadedFile: File;
+  setReportData: (data: CreditReportData) => void;
+  setIssues: (issues: Array<{
+    type: string;
+    title: string;
+    description: string;
+    impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
+    impactColor: string;
+    account?: CreditReportAccount;
+    laws: string[];
+  }>) => void;
+  setLetterGenerated: (generated: boolean) => void;
+  setAnalysisError: (error: string | null) => void;
+  setAnalyzing: (analyzing: boolean) => void;
+  setAnalyzed: (analyzed: boolean) => void;
+  toast: any;
+}
+
 export const handleAnalysisComplete = async ({
   uploadedFile,
   setReportData,
@@ -21,127 +32,171 @@ export const handleAnalysisComplete = async ({
   setAnalyzing,
   setAnalyzed,
   toast
-}: AnalysisHandlerProps) => {
-  console.log("handleAnalysisComplete called");
-  
+}: AnalysisCompleteParams) => {
   try {
-    setAnalyzing(true);
+    console.log("Beginning analysis of credit report:", uploadedFile.name);
     
-    if (!uploadedFile) {
-      console.error("No file available for analysis");
-      setAnalysisError("No file was available for analysis");
-      setAnalyzing(false);
-      setAnalyzed(true);
-      return;
+    // Extract text from the file (PDF or text)
+    const fileText = await extractTextFromPDF(uploadedFile);
+    console.log(`Extracted ${fileText.length} characters from file`);
+    
+    if (fileText.length < 100) {
+      throw new Error("Could not extract sufficient text from the credit report. Please try a different file format.");
     }
     
-    // Process the credit report
-    console.log("Processing credit report:", uploadedFile.name);
-    const data = await processCreditReport(uploadedFile);
+    // Parse the report content
+    console.log("Parsing credit report content...");
+    const reportData = await parseReportFile(uploadedFile);
     
-    if (!data) {
-      throw new Error("Failed to process credit report data");
+    if (!reportData) {
+      throw new Error("Failed to parse credit report data");
     }
     
-    // Store the report data
-    setReportData(data);
-    storeReportData(data);
+    console.log("Parsed credit report data:", {
+      accounts: reportData.accounts.length,
+      inquiries: reportData.inquiries.length,
+      personalInfo: reportData.personalInfo 
+        ? Object.keys(reportData.personalInfo).filter(k => !!reportData.personalInfo[k as keyof typeof reportData.personalInfo]).length + " fields" 
+        : "none"
+    });
     
-    // Identify issues in the report
-    console.log("Identifying issues in report data");
-    let detectedIssues = identifyIssues(data);
-    detectedIssues = ensureMinimumIssues(detectedIssues, 3);
+    // Save extracted user data to localStorage for later use in letter generation
+    if (reportData.personalInfo) {
+      console.log("Saving personal info to localStorage");
+      const { name, address, city, state, zip } = reportData.personalInfo;
+      if (name) localStorage.setItem('userName', name);
+      if (address) localStorage.setItem('userAddress', address);
+      if (city) localStorage.setItem('userCity', city);
+      if (state) localStorage.setItem('userState', state);
+      if (zip) localStorage.setItem('userZip', zip);
+    }
     
-    console.log(`Found ${detectedIssues.length} potential issues:`, detectedIssues);
-    setIssues(detectedIssues);
+    // Store the report data in session storage
+    const stored = storeReportData(reportData);
+    if (!stored) {
+      console.warn("Could not store full report data");
+    }
     
-    // Generate dispute letters
-    console.log(`Generating dispute letters for ${detectedIssues.length} issues`);
-    const generatedLetters = await generateDisputeLetters(detectedIssues, data);
+    // Set the report data for use in the UI
+    setReportData(reportData);
     
-    if (generatedLetters && generatedLetters.length > 0) {
-      console.log(`Generated ${generatedLetters.length} dispute letters successfully`);
+    // If we have analysis results, convert them to issues
+    if (reportData.analysisResults?.recommendedDisputes) {
+      const disputes = reportData.analysisResults.recommendedDisputes;
+      console.log(`Found ${disputes.length} recommended disputes`);
       
-      // Ensure all letters have KEY explanation removed
-      const cleanedLetters = generatedLetters.map(letter => {
-        if (letter.content) {
-          letter.content = letter.content.replace(
-            /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
-            ''
-          ).replace(
-            /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
-            ''
-          );
-        }
-        
-        if (letter.letterContent) {
-          letter.letterContent = letter.letterContent.replace(
-            /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
-            ''
-          ).replace(
-            /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
-            ''
-          );
-        }
-        
-        // Ensure status is 'ready'
-        letter.status = 'ready';
-        
-        return letter;
-      });
-      
-      storeGeneratedLetters(cleanedLetters);
-      setLetterGenerated(true);
-      sessionStorage.setItem('autoGeneratedLetter', 'true');
-      
-      toast.toast({
-        title: "Dispute letters generated",
-        description: `${cleanedLetters.length} dispute letters have been created and are ready for review.`,
-      });
-    } else {
-      console.warn("No letters were generated");
-      
-      // Create a fallback letter if no letters were generated
-      const fallbackLetter = createFallbackLetter(data);
-      
-      // Remove KEY explanation from fallback letter
-      if (fallbackLetter.letterContent) {
-        fallbackLetter.letterContent = fallbackLetter.letterContent.replace(
-          /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
-          ''
-        ).replace(
-          /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
-          ''
+      // Create issues from recommended disputes
+      const issues = disputes.map(dispute => {
+        const account = reportData.accounts.find(a => 
+          a.accountNumber === dispute.accountNumber || 
+          a.accountName === dispute.accountName
         );
+        
+        return {
+          type: dispute.type,
+          title: dispute.title,
+          description: dispute.description,
+          impact: dispute.impact === 'High' ? 'High Impact' : 'Medium Impact',
+          impactColor: dispute.impact === 'High' ? 'red' : 'orange',
+          account: account,
+          laws: ['FCRA § 611', 'FCRA § 623']
+        };
+      });
+      
+      setIssues(issues);
+    } else {
+      console.log("No recommended disputes found, generating default issues");
+      
+      // Create default issues based on account types if no recommendations
+      const defaultIssues = [];
+      
+      // Look for accounts with late payments
+      const latePaymentAccounts = reportData.accounts.filter(account => 
+        account.paymentStatus?.toLowerCase().includes('late') ||
+        account.remarks?.some(remark => remark.toLowerCase().includes('late'))
+      );
+      
+      if (latePaymentAccounts.length > 0) {
+        latePaymentAccounts.forEach(account => {
+          defaultIssues.push({
+            type: 'late_payment',
+            title: 'Late Payment Dispute',
+            description: `Dispute late payments reported for ${account.accountName}`,
+            impact: 'High Impact' as const,
+            impactColor: 'red',
+            account: account,
+            laws: ['FCRA § 611', 'FCRA § 623']
+          });
+        });
       }
       
-      // Ensure fallback letter status is 'ready'
-      fallbackLetter.status = 'ready';
+      // Look for collection accounts
+      const collectionAccounts = reportData.accounts.filter(account => 
+        account.accountType?.toLowerCase().includes('collection') ||
+        account.accountName?.toLowerCase().includes('collection') ||
+        account.paymentStatus?.toLowerCase().includes('collection')
+      );
       
-      storeGeneratedLetters([fallbackLetter]);
-      setLetterGenerated(true);
+      if (collectionAccounts.length > 0) {
+        collectionAccounts.forEach(account => {
+          defaultIssues.push({
+            type: 'collection',
+            title: 'Collection Account Dispute',
+            description: `Dispute collection account ${account.accountName}`,
+            impact: 'Critical Impact' as const,
+            impactColor: 'red',
+            account: account,
+            laws: ['FCRA § 611', 'FCRA § 623', 'FDCPA § 809']
+          });
+        });
+      }
       
-      toast.toast({
-        title: "Fallback dispute letter generated",
-        description: "We created a basic dispute letter since we couldn't generate specific letters for the issues found.",
-      });
+      // Look for inquiries
+      if (reportData.inquiries.length > 0) {
+        defaultIssues.push({
+          type: 'inquiry',
+          title: 'Unauthorized Inquiry Dispute',
+          description: 'Dispute unauthorized inquiries on your credit report',
+          impact: 'Medium Impact' as const,
+          impactColor: 'orange',
+          laws: ['FCRA § 611', 'FCRA § 604']
+        });
+      }
+      
+      // If we still don't have any issues, add a general issue
+      if (defaultIssues.length === 0 && reportData.accounts.length > 0) {
+        defaultIssues.push({
+          type: 'general',
+          title: 'General Dispute',
+          description: 'Dispute inaccurate information on your credit report',
+          impact: 'Medium Impact' as const,
+          impactColor: 'orange',
+          account: reportData.accounts[0],
+          laws: ['FCRA § 611']
+        });
+      }
+      
+      setIssues(defaultIssues);
     }
     
-    setAnalyzing(false);
     setAnalyzed(true);
+    setAnalyzing(false);
+    setAnalysisError(null);
     
-    // Force navigation by logging this special message 
-    console.log("ANALYSIS_COMPLETE_READY_FOR_NAVIGATION");
+    toast({
+      title: "Analysis complete",
+      description: `Successfully analyzed your credit report with ${reportData.accounts.length} accounts.`,
+    });
     
   } catch (error) {
-    console.error("Error analyzing report:", error);
-    setAnalysisError(error instanceof Error ? error.message : "Unknown error processing report");
+    console.error("Error analyzing credit report:", error);
     setAnalyzing(false);
-    setAnalyzed(true);
+    setAnalyzed(false);
+    setAnalysisError(error instanceof Error ? error.message : "Unknown error analyzing credit report");
     
-    toast.toast({
+    toast({
       title: "Analysis failed",
-      description: error instanceof Error ? error.message : "Failed to process your credit report.",
+      description: error instanceof Error ? error.message : "Unknown error analyzing credit report",
       variant: "destructive",
     });
   }
