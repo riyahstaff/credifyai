@@ -7,6 +7,7 @@ import ReportUploadInfo from '@/components/disputes/uploader/ReportUploadInfo';
 import UploadReportHeader from '@/components/disputes/uploader/UploadReportHeader';
 import UploadReportContent from '@/components/disputes/uploader/UploadReportContent';
 import { useReportUpload } from '@/hooks/useReportUpload';
+import { useBackendReportUpload } from '@/hooks/useBackendReportUpload';
 import { useToast } from '@/hooks/use-toast';
 import { verifyLetterStorage, forceNavigateToLetters } from '@/components/disputes/uploader/utils/bureauUtils';
 import { useNavigate } from 'react-router-dom';
@@ -39,6 +40,11 @@ const UploadReport = () => {
     handleFile,
     handleGenerateDispute
   } = useReportUpload();
+
+  const {
+    uploadedReportId,
+    handleUploadSuccess,
+  } = useBackendReportUpload();
 
   const {
     letterGenerated,
@@ -135,6 +141,8 @@ const UploadReport = () => {
               onGenerateDispute={handleDisputeGeneration}
               onAnalysisComplete={onAnalysisComplete}
               onFileSelected={handleFile}
+              onBackendUploadSuccess={handleUploadSuccess}
+              useBackend={true}
               testMode={testMode}
             />
             
