@@ -4,7 +4,7 @@
  * This module generates analysis results based on parsed credit report data
  */
 
-import { CreditReportData } from '../types';
+import { CreditReportData, RecommendedDispute } from '../types';
 import { extractPersonalInfo } from './extractPersonalInfo';
 
 export const generateAnalysisResults = (data: CreditReportData) => {
@@ -31,12 +31,12 @@ export const generateAnalysisResults = (data: CreditReportData) => {
   // Calculate open and closed accounts
   const openAccounts = data.accounts.filter(a => 
     (a.status && a.status.toLowerCase().includes('open')) || 
-    (!a.status && !a.dateClosed)
+    (!a.status && !a.lastActivity) // Use lastActivity instead of dateClosed
   ).length;
   
   const closedAccounts = data.accounts.filter(a => 
     (a.status && a.status.toLowerCase().includes('closed')) || 
-    a.dateClosed
+    a.lastActivity // Use lastActivity instead of dateClosed
   ).length;
   
   // Calculate negative items
@@ -51,26 +51,33 @@ export const generateAnalysisResults = (data: CreditReportData) => {
   
   // Calculate total balances
   const totalBalances = data.accounts.reduce((sum, account) => {
-    const balance = parseFloat(account.currentBalance || account.balance || '0');
+    // Convert string to number and handle both currentBalance and balance properties
+    const balanceStr = account.currentBalance || account.balance || '0';
+    // Use Number() instead of parseFloat on a String object
+    const balance = typeof balanceStr === 'string' ? parseFloat(balanceStr) : Number(balanceStr);
     return isNaN(balance) ? sum : sum + balance;
   }, 0);
   
   // Generate recommended disputes
-  const recommendedDisputes = [];
+  const recommendedDisputes: RecommendedDispute[] = [];
   
   // Look for late payments
   const lateAccounts = data.accounts.filter(a => 
     (a.paymentStatus && a.paymentStatus.toLowerCase().includes('late')) ||
-    (a.paymentHistory && a.paymentHistory.toLowerCase().includes('late'))
+    (a.paymentHistory && a.paymentHistory.toLowerCase?.includes('late'))
   );
   
   for (const account of lateAccounts) {
     recommendedDisputes.push({
+      id: `late-${account.accountNumber || Math.random().toString(36).substring(2, 10)}`,
+      type: 'late_payment',
+      title: 'Late Payment Dispute',
       accountName: account.accountName,
       accountNumber: account.accountNumber,
       reason: 'Late Payment Dispute',
       description: `Dispute late payments for ${account.accountName} account`,
-      bureau: account.bureau || 'Experian'
+      bureau: account.bureau || 'Experian',
+      impact: 'High'
     });
   }
   
@@ -83,21 +90,29 @@ export const generateAnalysisResults = (data: CreditReportData) => {
   
   for (const account of collectionAccounts) {
     recommendedDisputes.push({
+      id: `collection-${account.accountNumber || Math.random().toString(36).substring(2, 10)}`,
+      type: 'collection',
+      title: 'Collection Account Dispute',
       accountName: account.accountName,
       accountNumber: account.accountNumber,
       reason: 'Collection Account Dispute',
       description: `Dispute collection account ${account.accountName}`,
-      bureau: account.bureau || 'Experian'
+      bureau: account.bureau || 'Experian',
+      impact: 'High'
     });
   }
   
   // Look for inquiries
   if (data.inquiries && data.inquiries.length > 0) {
     recommendedDisputes.push({
+      id: `inquiry-${Math.random().toString(36).substring(2, 10)}`,
+      type: 'inquiry',
+      title: 'Unauthorized Inquiry Dispute',
       accountName: 'Recent Inquiries',
       reason: 'Unauthorized Inquiry Dispute',
       description: 'Dispute unauthorized inquiries on your credit report',
-      bureau: data.inquiries[0].bureau || 'Experian'
+      bureau: data.inquiries[0].bureau || 'Experian',
+      impact: 'Medium'
     });
   }
   
