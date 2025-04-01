@@ -1,3 +1,4 @@
+
 import { LegalReference } from './types';
 
 // Collection of FCRA legal references for dispute letters
@@ -45,4 +46,68 @@ export const getFCRAReferences = (): Record<string, LegalReference> => {
 export const getReferenceText = (referenceKey: string): string | undefined => {
   const references = getFCRAReferences();
   return references[referenceKey]?.text;
+};
+
+/**
+ * Returns legal references relevant for a specific dispute
+ * @param disputeReason The reason for the dispute
+ * @param description Additional description of the dispute
+ * @returns Array of legal references applicable to this dispute
+ */
+export const getLegalReferencesForDispute = (disputeReason: string, description: string): LegalReference[] => {
+  const references = getFCRAReferences();
+  const result: LegalReference[] = [];
+  
+  // Always include section 611 as it's the basis for all disputes
+  if (references.section_611) {
+    result.push(references.section_611);
+  }
+  
+  // Add section 623 for furnisher responsibilities
+  if (references.section_623) {
+    result.push(references.section_623);
+  }
+  
+  // Check for specific types of disputes and add relevant references
+  const lowerReason = disputeReason.toLowerCase();
+  const lowerDescription = description.toLowerCase();
+  
+  // For collection-related disputes, add FDCPA reference
+  if (
+    lowerReason.includes('collection') || 
+    lowerReason.includes('debt') || 
+    lowerDescription.includes('collection') || 
+    lowerDescription.includes('collector')
+  ) {
+    if (references.fdcpa_809) {
+      result.push(references.fdcpa_809);
+    }
+  }
+  
+  // For disputes about information being too old, add section 605
+  if (
+    lowerReason.includes('too old') || 
+    lowerReason.includes('expired') || 
+    lowerDescription.includes('too old') || 
+    lowerDescription.includes('seven years') || 
+    lowerDescription.includes('7 years')
+  ) {
+    if (references.section_605) {
+      result.push(references.section_605);
+    }
+  }
+  
+  // For disputes about access to information, add section 609
+  if (
+    lowerReason.includes('access') || 
+    lowerReason.includes('disclosure') || 
+    lowerDescription.includes('access') || 
+    lowerDescription.includes('disclosure')
+  ) {
+    if (references.section_609) {
+      result.push(references.section_609);
+    }
+  }
+  
+  return result;
 };
