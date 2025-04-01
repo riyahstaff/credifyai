@@ -1,4 +1,3 @@
-
 import { fetchDisputeTemplate } from './legalTemplates';
 import { getRelevantFCRASections } from './legalTemplates';
 import { getSuccessfulDisputeExamples } from './disputeLetters';
@@ -34,33 +33,6 @@ export async function generateEnhancedDisputeLetter(
     let disputeCategory: keyof typeof DISPUTE_TEMPLATES = 'general';
     let templateType = 'GENERAL_DISPUTE';
     
-    const normalizedDispute = disputeType.toLowerCase();
-    if (normalizedDispute.includes('not') && normalizedDispute.includes('mine')) {
-      disputeCategory = 'account';
-      templateType = 'NOT_MY_ACCOUNT';
-    } else if (normalizedDispute.includes('identity') || normalizedDispute.includes('fraud')) {
-      disputeCategory = 'account';
-      templateType = 'IDENTITY_THEFT';
-    } else if (normalizedDispute.includes('balance')) {
-      disputeCategory = 'account';
-      templateType = 'INCORRECT_BALANCE';
-    } else if (normalizedDispute.includes('payment') || normalizedDispute.includes('late')) {
-      disputeCategory = 'account';
-      templateType = 'INCORRECT_PAYMENT_HISTORY';
-    } else if (normalizedDispute.includes('status')) {
-      disputeCategory = 'account';
-      templateType = 'INCORRECT_STATUS';
-    } else if (normalizedDispute.includes('closed')) {
-      disputeCategory = 'account';
-      templateType = 'ACCOUNT_CLOSED';
-    } else if (normalizedDispute.includes('inquiry')) {
-      disputeCategory = 'inquiry';
-      templateType = 'UNAUTHORIZED_INQUIRY';
-    } else if (normalizedDispute.includes('collection')) {
-      disputeCategory = 'collection';
-      templateType = 'COLLECTION_DISPUTE';
-    }
-    
     // Get relevant FCRA sections
     const fcraSections = await getRelevantFCRASections(templateType);
     
@@ -89,7 +61,7 @@ export async function generateEnhancedDisputeLetter(
       day: 'numeric'
     });
     
-    // Credit report number (placeholder)
+    // Generate a unique credit report number
     const creditReportNumber = 'CR' + Math.floor(Math.random() * 10000000);
     
     // Bureau addresses
@@ -104,44 +76,60 @@ export async function generateEnhancedDisputeLetter(
     
     // Clean up account name and number
     const accountName = accountDetails.accountName || 'Unknown Account';
-    const accountNumber = accountDetails.accountNumber || 'xxxxx';
+    // Format account number with masked format if available
+    const accountNumber = accountDetails.accountNumber 
+      ? (accountDetails.accountNumber.length > 4 
+          ? 'xx-xxxx-' + accountDetails.accountNumber.slice(-4) 
+          : 'xx-xxxx-' + accountDetails.accountNumber)
+      : 'xx-xxxx-1000';
     
     // Format the account section in the requested format
     const accountSection = `
-DISPUTED ITEMS:
-- **Creditor:** ${accountName.toUpperCase()}
-- **Account #:** ${accountNumber ? (accountNumber.startsWith('xxxx') ? accountNumber : 'xxxx-xxxx-' + accountNumber.slice(-4)) : 'xxxx-xxxx-xxxx-xxxx'}
-- **Alleged Late Payments:** As reported on my credit report
+DISPUTED ITEM(S):
+Account Name: ${accountName.toUpperCase()}
+Account Number: ${accountNumber}
+Reason for Dispute: ${disputeType}
 `;
 
     // Handle empty user information with clear logging
     if (!userInfo.name || userInfo.name === "[YOUR NAME]") {
       console.warn("Missing user name in letter generation");
     }
-    if (!userInfo.address || !userInfo.city || !userInfo.state || !userInfo.zip) {
-      console.warn("Missing address information in letter generation:", { 
-        address: userInfo.address, 
-        city: userInfo.city,
-        state: userInfo.state,
-        zip: userInfo.zip
-      });
+    
+    // Format address with proper line breaks
+    let formattedAddress = '';
+    if (userInfo.address && userInfo.address !== "[YOUR ADDRESS]") {
+      formattedAddress = userInfo.address;
+    } else {
+      formattedAddress = "[YOUR ADDRESS]";
+    }
+    
+    let locationInfo = '';
+    if (userInfo.city && userInfo.state && userInfo.zip && 
+        userInfo.city !== "[CITY]" && 
+        userInfo.state !== "[STATE]" && 
+        userInfo.zip !== "[ZIP]") {
+      locationInfo = `${userInfo.city}, ${userInfo.state} ${userInfo.zip}`;
+    } else {
+      locationInfo = "[CITY], [STATE] [ZIP]";
     }
 
-    // Generate the final letter - directly use user information from parameters
-    let letterContent = `Credit Report #: ${creditReportNumber} Today is ${currentDate}
+    // Generate the final letter
+    let letterContent = `Credit Report #: ${creditReportNumber}
+Today is ${currentDate}
 
 ${userInfo.name || '[YOUR NAME]'}
-${userInfo.address || '[YOUR ADDRESS]'}
-${userInfo.city || '[CITY]'}, ${userInfo.state || '[STATE]'} ${userInfo.zip || '[ZIP]'}
+${formattedAddress}
+${locationInfo}
 
 ${bureau.charAt(0).toUpperCase() + bureau.slice(1)}
 ${bureauAddress}
 
-Re: Dispute of Inaccurate Late Payment Information
+Re: Dispute of Inaccurate Information - ${disputeType} Account #1
 
 To Whom It May Concern:
 
-I am writing to dispute inaccurate late payment information that appears on my credit report. Per my review, under the credit report provided to me, the following alleged late payments noted are inaccurately reported and in violation of multiple laws, both federal and state, including but not limited to the FCRA, CRSA, and CDIA enactments.
+I am writing to dispute the following information in my credit report. I have identified the following item(s) that are inaccurate or incomplete:
 
 ${accountSection}
 
@@ -153,6 +141,8 @@ Under the Fair Credit Reporting Act (FCRA), you are required to:
 5. Delete the disputed information if it cannot be verified
 
 I am disputing this information as it is inaccurate and the creditor may be unable to provide adequate verification as required by law. The industry standard Metro 2 format requires specific, accurate reporting practices that have not been followed in this case.
+
+${accountDetails.errorDescription || "The information appears to be incorrect and should be verified or removed from my credit report."}
 
 Please investigate this matter and provide me with the results within 30 days as required by the FCRA.
 

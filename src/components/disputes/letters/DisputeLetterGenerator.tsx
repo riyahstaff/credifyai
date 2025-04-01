@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -64,25 +63,52 @@ export const useDisputeLetterGenerator = ({
       console.log("User info for letter:", userInfo);
       console.log("Account info for letter:", actualAccountInfo);
       
+      // Clean up account name and format it consistently
+      const accountName = actualAccountInfo.name || disputeData.accountName || "Unknown Account";
+      const formattedAccountName = accountName.toUpperCase();
+      
+      // Format account number with proper masking
+      const rawAccountNumber = actualAccountInfo.number || disputeData.accountNumber || "1000";
+      const accountNumber = rawAccountNumber.length > 4
+        ? `xx-xxxx-${rawAccountNumber.slice(-4)}`
+        : `xx-xxxx-${rawAccountNumber}`;
+      
+      // Generate a credit report number
+      const creditReportNumber = `CR${Math.floor(Math.random() * 10000000)}`;
+      
       // If letterContent is not provided, generate it
       if (!disputeData.letterContent) {
         // Generate letter content with detailed account information
         disputeData.letterContent = await generateEnhancedDisputeLetter(
           disputeData.errorType,
           {
-            accountName: disputeData.accountName || actualAccountInfo.name || "Unknown Account",
-            accountNumber: disputeData.accountNumber || actualAccountInfo.number || "xxxx",
+            accountName: formattedAccountName,
+            accountNumber: accountNumber,
             errorDescription: disputeData.explanation,
             bureau: disputeData.bureau
           },
           userInfo
         );
         
-        // Remove the KEY explanation if present
+        // Make sure the letter has the correct format for the account section
         if (disputeData.letterContent) {
+          const accountSection = `
+DISPUTED ITEM(S):
+Account Name: ${formattedAccountName}
+Account Number: ${accountNumber}
+Reason for Dispute: ${disputeData.errorType}
+`;
+          
+          // Replace any existing account section with our properly formatted one
           disputeData.letterContent = disputeData.letterContent.replace(
-            /Please utilize the following KEY to explain markings[\s\S]*?Do Not Attack/g,
-            ''
+            /DISPUTED ITEM\(S\):[\s\S]*?(?=\n\nUnder)/,
+            accountSection
+          );
+          
+          // Replace credit report number
+          disputeData.letterContent = disputeData.letterContent.replace(
+            /Credit Report #: [A-Z0-9]+/,
+            `Credit Report #: ${creditReportNumber}`
           );
         }
       }
@@ -90,7 +116,7 @@ export const useDisputeLetterGenerator = ({
       // Create a new letter from the dispute data
       const newLetter = {
         id: Date.now(),
-        title: `${disputeData.errorType} (${disputeData.accountName || actualAccountInfo.name || "Unknown Account"})`,
+        title: `${disputeData.errorType} (${formattedAccountName})`,
         recipient: disputeData.bureau,
         createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         status: 'ready', // Status is "ready"

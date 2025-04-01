@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   CreditReportData, 
@@ -14,13 +13,6 @@ import {
   FormLabel,
   FormMessage
 } from '@/components/ui/form';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
 import { 
   Textarea
 } from '@/components/ui/textarea';
@@ -96,19 +88,38 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
     console.log("Submitting form with values:", values);
     console.log("Selected account data:", selectedAccount);
     
+    // Ensure account number is properly formatted
+    let formattedAccountNumber = selectedAccount?.accountNumber || values.accountNumber || '';
+    if (formattedAccountNumber) {
+      // If it's already formatted, leave it alone; otherwise format it
+      if (!formattedAccountNumber.includes('xx-xxxx-')) {
+        formattedAccountNumber = formattedAccountNumber.length > 4
+          ? `xx-xxxx-${formattedAccountNumber.slice(-4)}`
+          : `xx-xxxx-${formattedAccountNumber}`;
+      }
+    }
+    
+    // Format account name consistently
+    const formattedAccountName = (selectedAccount?.accountName || values.accountName || 'Unknown Account').toUpperCase();
+    
     // Make sure to include all account details
     const disputeData = {
       ...values,
-      // Ensure account information is included from the selected account
+      accountName: formattedAccountName,
+      accountNumber: formattedAccountNumber || "xx-xxxx-1000",
+      
+      // Add actual account details to ensure they're included in the letter
       actualAccountInfo: selectedAccount ? {
         ...selectedAccount,
-        name: selectedAccount.accountName,
-        number: selectedAccount.accountNumber,
+        name: formattedAccountName,
+        number: formattedAccountNumber,
         balance: selectedAccount.currentBalance || selectedAccount.balance,
         openDate: selectedAccount.dateOpened || selectedAccount.openDate,
         reportedDate: selectedAccount.dateReported || selectedAccount.lastReportedDate,
         status: selectedAccount.paymentStatus
       } : null,
+      
+      // Add all accounts from the credit report
       allAccounts: reportData?.accounts || []
     };
     
