@@ -4,7 +4,7 @@
  */
 import { CreditReportAccount, CreditReportData } from '@/utils/creditReportParser';
 import { determineBureau, getBureauAddress } from './bureauUtils';
-import { generateFallbackInquiryDisputeLetter } from '@/utils/creditReport/disputeLetters/fallbackTemplates';
+import { generateFallbackLatePaymentDisputeLetter } from '@/utils/creditReport/disputeLetters/fallbackTemplates/latePaymentLetter';
 
 /**
  * Generate dispute letters for credit report issues
@@ -35,7 +35,7 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
       // Determine account information from issue or defaults
       // Avoid using "Multiple Accounts" as the account name
       let accountName = issue.account?.accountName || '';
-      if (!accountName || accountName.toLowerCase().includes('multiple accounts')) {
+      if (!accountName || accountName.toLowerCase().includes('multiple accounts') || accountName.toLowerCase().includes('unknown account')) {
         // Use account type or generic name based on issue type
         const issueType = issue.type || 'Credit Issue';
         accountName = `${issueType.replace(' Dispute', '')} Account #${index + 1}`;
@@ -63,64 +63,104 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         laws: issue.laws || ["FCRA § 611"]
       };
       
-      // Generate new formatted letter content with proper layout
-      const currentDate = new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+      // Generate letter content based on issue type
+      let letterContent = '';
       
-      // Credit report number
-      const creditReportNumber = 'CR' + Math.floor(Math.random() * 10000000);
-      
-      // Generate a properly formatted dispute letter
-      let letterContent = `Credit Report #: ${creditReportNumber}\nToday is ${currentDate}\n\n`;
-      
-      // Add sender information
-      letterContent += `${userInfo.name}\n`;
-      letterContent += `${userInfo.address}\n`;
-      letterContent += `${userInfo.city}, ${userInfo.state} ${userInfo.zip}\n\n`;
-      
-      // Add recipient information
-      letterContent += `${bureau}\n`;
-      letterContent += `${bureauAddress}\n\n`;
-      
-      // Add subject line
-      letterContent += `Re: Dispute of Inaccurate Information - ${accountName}\n\n`;
-      
-      // Add salutation and introduction
-      letterContent += `To Whom It May Concern:\n\n`;
-      letterContent += `I am writing to dispute the following information in my credit report. I have identified the following item(s) that are inaccurate or incomplete:\n\n`;
-      
-      // Add account details
-      letterContent += `DISPUTED ITEM(S):\n`;
-      letterContent += `Account Name: ${accountName.toUpperCase()}\n`;
-      if (accountNumber) {
-        letterContent += `Account Number: ${'x'.repeat(Math.max(0, accountNumber.length - 4))}${accountNumber.slice(-4)}\n`;
+      // For late payment issues, use the enhanced late payment template
+      if (issue.type === 'late_payment') {
+        letterContent = generateFallbackLatePaymentDisputeLetter();
+        
+        // Replace placeholders with actual values
+        letterContent = letterContent
+          .replace('[YOUR NAME]', userInfo.name)
+          .replace('[YOUR ADDRESS]', userInfo.address)
+          .replace('[CITY], [STATE] [ZIP]', `${userInfo.city}, ${userInfo.state} ${userInfo.zip}`)
+          .replace('[BUREAU]', bureau)
+          .replace('[BUREAU ADDRESS]', bureauAddress)
+          .replace('[ACCOUNT_NAME]', accountName.toUpperCase())
+          .replace('[ACCOUNT_NUMBER]', accountNumber || 'xxxx-xxxx-xxxx-xxxx')
+          .replace('[DATES OF REPORTED LATE PAYMENTS]', 'As reported on my credit report');
+          
+        // If we have reportData with multiple accounts that have late payments, add them
+        if (reportData && reportData.accounts && reportData.accounts.length > 0) {
+          const accountsWithLatePayments = reportData.accounts.filter(account => 
+            account.isNegative || 
+            (account.paymentStatus && account.paymentStatus.toLowerCase().includes('late')) ||
+            (account.remarks && account.remarks.some(remark => remark.toLowerCase().includes('late')))
+          );
+          
+          if (accountsWithLatePayments.length > 1) {
+            // Replace the standard single account format with multiple accounts
+            const accountsSection = accountsWithLatePayments.map(account => {
+              return `- **Creditor:** ${account.accountName.toUpperCase()}\n` +
+                     `- **Account #:** ${account.accountNumber ? account.accountNumber : 'xxxx-xxxx-xxxx-xxxx'}\n` +
+                     `- **Alleged Late Payments:** As reported on my credit report\n`;
+            }).join('\n');
+            
+            // Replace the placeholder disputed items section with our multi-account format
+            letterContent = letterContent.replace(
+              /DISPUTED ITEMS:\n- \*\*Creditor:\*\* \[ACCOUNT_NAME\]\n- \*\*Account #:\*\* \[ACCOUNT_NUMBER\]\n- \*\*Alleged Late Payments:\*\* \[DATES OF REPORTED LATE PAYMENTS\]\n\n/,
+              `DISPUTED ITEMS:\n${accountsSection}\n`
+            );
+          }
+        }
       } else {
-        // Generate a placeholder number if none exists
-        const placeholderNum = `xx-xxxx-${1000 + index}`;
-        letterContent += `Account Number: ${placeholderNum}\n`;
+        // For other issue types, use standard letter template
+        // Generate a properly formatted dispute letter
+        letterContent = `Credit Report #: CR${Math.floor(Math.random() * 10000000)}\nToday is ${new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })}\n\n`;
+        
+        // Add sender information
+        letterContent += `${userInfo.name}\n`;
+        letterContent += `${userInfo.address}\n`;
+        letterContent += `${userInfo.city}, ${userInfo.state} ${userInfo.zip}\n\n`;
+        
+        // Add recipient information
+        letterContent += `${bureau}\n`;
+        letterContent += `${bureauAddress}\n\n`;
+        
+        // Add subject line
+        letterContent += `Re: Dispute of Inaccurate Information - ${accountName}\n\n`;
+        
+        // Add salutation and introduction
+        letterContent += `To Whom It May Concern:\n\n`;
+        letterContent += `I am writing to dispute the following information in my credit report. I have identified the following item(s) that are inaccurate or incomplete:\n\n`;
+        
+        // Add account details
+        letterContent += `DISPUTED ITEM(S):\n`;
+        letterContent += `Account Name: ${accountName.toUpperCase()}\n`;
+        if (accountNumber) {
+          letterContent += `Account Number: ${'x'.repeat(Math.max(0, accountNumber.length - 4))}${accountNumber.slice(-4)}\n`;
+        } else {
+          // Generate a placeholder number if none exists
+          const placeholderNum = `xx-xxxx-${1000 + index}`;
+          letterContent += `Account Number: ${placeholderNum}\n`;
+        }
+        letterContent += `Reason for Dispute: ${disputeData.reason}\n\n`;
+        
+        // Add explanation
+        letterContent += `${disputeData.explanation}\n\n`;
+        
+        // Add legal basis with Metro 2 verbiage
+        letterContent += `According to the Fair Credit Reporting Act, Section 611 (15 U.S.C. § 1681i), you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified. Furthermore, under the CDIA Metro 2® Format which is MANDATED for all furnishers, all aspects of an account must be reported with precise accuracy, including proper use of specific codes that communicate payment status.\n\n`;
+        
+        letterContent += `Per CRSA enacted, CDIA implemented laws, ANY and ALL reporting must be deleted if not CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility, and also fully Metro 2 compliant. The information being reported fails to comply with these strict standards and must be removed immediately.\n\n`;
+        
+        // Add request
+        letterContent += `Please investigate this matter and correct your records within the 30-day timeframe provided by the FCRA. Additionally, please provide me with notification of the results of your investigation and a free updated copy of my credit report if changes are made, as required by law.\n\n`;
+        
+        // Add closing
+        letterContent += `Sincerely,\n\n`;
+        letterContent += `${userInfo.name}\n\n`;
+        
+        // Add enclosures
+        letterContent += `Enclosures:\n`;
+        letterContent += `- Copy of Driver's License\n`;
+        letterContent += `- Copy of Social Security Card\n`;
       }
-      letterContent += `Reason for Dispute: ${disputeData.reason}\n\n`;
-      
-      // Add explanation
-      letterContent += `${disputeData.explanation}\n\n`;
-      
-      // Add legal basis
-      letterContent += `According to the Fair Credit Reporting Act, Section 611 (15 U.S.C. § 1681i), you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified. Furthermore, as a consumer reporting agency, you are obligated to follow reasonable procedures to assure maximum possible accuracy of the information in consumer reports, as required by Section 607 (15 U.S.C. § 1681e).\n\n`;
-      
-      // Add request
-      letterContent += `Please investigate this matter and correct your records within the 30-day timeframe provided by the FCRA. Additionally, please provide me with notification of the results of your investigation and a free updated copy of my credit report if changes are made, as required by law.\n\n`;
-      
-      // Add closing
-      letterContent += `Sincerely,\n\n`;
-      letterContent += `${userInfo.name}\n\n`;
-      
-      // Add enclosures
-      letterContent += `Enclosures:\n`;
-      letterContent += `- Copy of Driver's License\n`;
-      letterContent += `- Copy of Social Security Card\n`;
       
       // Create basic letter structure with an incrementing ID to ensure each letter is unique
       return {

@@ -45,11 +45,13 @@ export const enhanceReportData = (data: CreditReportData): CreditReportData => {
       
       // If we couldn't match this account but have real accounts available,
       // use the first unused real account name as a fallback
-      return {
-        ...account,
-        accountName: accountMatches[0].name,
-        accountNumber: accountMatches[0].number || account.accountNumber
-      };
+      if (accountMatches[0]) {
+        return {
+          ...account,
+          accountName: accountMatches[0].name,
+          accountNumber: accountMatches[0].number || account.accountNumber
+        };
+      }
     }
     
     // Clean the existing account name as a last resort
