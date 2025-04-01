@@ -1,69 +1,39 @@
 
-// Text extraction utility for credit report files
-
 /**
- * Extract text from a file (PDF, HTML, or text)
- * @param file The file to extract text from
- * @param filename The name of the file (used to determine file type)
- * @returns The extracted text
+ * Advanced text extractor for credit reports
+ * Handles various file formats including PDF and text
  */
-export async function extract_text(file: Blob, filename: string): Promise<string> {
-  console.log(`Extracting text from file: ${filename}`);
-  
-  // Determine file type based on extension
-  const extension = filename.split('.').pop()?.toLowerCase();
-  
-  if (extension === 'pdf') {
-    return extract_pdf_text(file);
-  } else if (extension === 'html' || extension === 'htm') {
-    return extract_html_text(file);
-  } else {
-    // Assume it's a text file
-    return await file.text();
-  }
-}
 
-/**
- * Extract text from a PDF file
- * Note: In a real implementation, you would use a PDF parsing library
- * For Deno, options might be limited, so this is a placeholder
- */
-async function extract_pdf_text(file: Blob): Promise<string> {
-  // This is a simplified version
-  // In a real implementation, you would use a PDF parsing library
-  console.log("Extracting text from PDF");
+// Helper function to decode PDF text content
+function decodePdfText(buffer: ArrayBuffer): string {
+  // This is a simplified version - a real implementation would use a PDF parser library
+  // In Edge Functions we have limited access to libraries, so this is a basic approximation
   
-  // For now, we'll just convert the PDF to text using a basic approach
-  const text = await file.text();
+  const bytes = new Uint8Array(buffer);
+  let textContent = "";
   
-  // Look for text content in PDF format
+  // Look for text markers in PDF content
   const textMarkers = [
-    { start: "BT", end: "ET" }, // Begin Text/End Text markers
-    { start: "/Text", end: "EMC" }, // Text object markers
-    { start: "(", end: ")" }, // Text inside parentheses
-    { start: "<", end: ">" }, // Text inside angle brackets
-    { start: "/Contents", end: "endstream" }, // Content streams
+    { start: "BT", end: "ET" }, // Begin/End Text markers
+    { start: "(", end: ")" },   // Text in parentheses
+    { start: "<", end: ">" },   // Text in angle brackets
   ];
   
-  let extractedText = "";
+  // Convert the buffer to a string for searching
+  const content = Array.from(bytes).map(b => String.fromCharCode(b)).join("");
   
-  // First pass: Extract text using markers
   for (const marker of textMarkers) {
     let startPos = 0;
-    while ((startPos = text.indexOf(marker.start, startPos)) !== -1) {
+    while ((startPos = content.indexOf(marker.start, startPos)) !== -1) {
       const contentStart = startPos + marker.start.length;
-      const endPos = text.indexOf(marker.end, contentStart);
+      const endPos = content.indexOf(marker.end, contentStart);
       
       if (endPos !== -1) {
-        const potentialText = text.substring(contentStart, endPos);
-        
-        // Filter to only include printable ASCII characters and common separators
-        const cleanText = potentialText.replace(/[^\x20-\x7E\n\r\t]/g, "").trim();
-        
-        if (cleanText.length > 3) { // Only add if it seems like actual text
-          extractedText += cleanText + "\n";
+        const extractedText = content.substring(contentStart, endPos);
+        // Only add if it seems like actual text (filter out binary data)
+        if (/[a-zA-Z0-9\s]{3,}/.test(extractedText)) {
+          textContent += extractedText + "\n";
         }
-        
         startPos = endPos + marker.end.length;
       } else {
         break;
@@ -71,24 +41,56 @@ async function extract_pdf_text(file: Blob): Promise<string> {
     }
   }
   
-  // If we couldn't extract any text using the markers, just return the raw text
-  return extractedText || text;
+  // If we couldn't extract text from markers, look for specific credit report keywords
+  if (textContent.length < 100) {
+    const keywords = ["CREDIT REPORT", "ACCOUNT SUMMARY", "PERSONAL INFORMATION", 
+                     "EXPERIAN", "EQUIFAX", "TRANSUNION", "PAYMENT HISTORY",
+                     "CREDIT CARD", "MORTGAGE", "AUTO LOAN"];
+    
+    for (const keyword of keywords) {
+      if (content.includes(keyword)) {
+        // Extract a chunk of text around the keyword
+        const index = content.indexOf(keyword);
+        const chunkStart = Math.max(0, index - 200);
+        const chunkEnd = Math.min(content.length, index + 400);
+        textContent += content.substring(chunkStart, chunkEnd) + "\n";
+      }
+    }
+  }
+  
+  return textContent;
 }
 
-/**
- * Extract text from an HTML file
- */
-async function extract_html_text(file: Blob): Promise<string> {
-  console.log("Extracting text from HTML");
+// Main text extraction function
+export async function extract_text(file: Blob, filename: string): Promise<string> {
+  console.log(`Extracting text from ${filename} (${file.type})`);
   
-  const html = await file.text();
-  
-  // Simple regex-based HTML tag removal
-  // In a real implementation, you would use an HTML parsing library
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags and their contents
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags and their contents
-    .replace(/<[^>]+>/g, ' ') // Remove all HTML tags
-    .replace(/\s{2,}/g, ' ') // Replace multiple spaces with a single space
-    .trim();
+  try {
+    // Check if it's a PDF file by filename or mime type
+    const isPdf = filename.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
+    
+    if (isPdf) {
+      console.log("Processing PDF file");
+      // Read the PDF file as array buffer
+      const buffer = await file.arrayBuffer();
+      const extractedText = decodePdfText(buffer);
+      
+      if (extractedText.length > 100) {
+        console.log(`Extracted ${extractedText.length} characters from PDF`);
+        return extractedText;
+      } else {
+        console.log("PDF extraction yielded limited text, falling back to text extraction");
+        return await file.text();
+      }
+    } else {
+      // For text files, just read as text
+      console.log("Processing text file");
+      const text = await file.text();
+      console.log(`Extracted ${text.length} characters from text file`);
+      return text;
+    }
+  } catch (error) {
+    console.error("Error extracting text:", error);
+    throw new Error(`Failed to extract text from ${filename}: ${error.message}`);
+  }
 }

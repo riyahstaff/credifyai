@@ -1,333 +1,338 @@
-// Credit report issue detection
 
 /**
- * Issue types
+ * Advanced issue detector for credit reports
+ * Identifies potential dispute issues and extracts account information
  */
+
+import { extractPersonalInfo } from "./personal_info_extractor.ts";
+
 export type IssueType = 
-  | 'late_payment'
-  | 'collection'
-  | 'charge_off'
-  | 'inquiry'
-  | 'bankruptcy'
-  | 'public_record'
-  | 'high_balance'
-  | 'incorrect_name'
-  | 'incorrect_address'
-  | 'incorrect_account';
+  'late_payment' | 
+  'collection' | 
+  'inquiry' | 
+  'account_verification' | 
+  'balance_dispute' | 
+  'identity_theft' | 
+  'outdated_information' | 
+  'general';
 
-/**
- * Issue detected in a credit report
- */
+export interface Account {
+  accountName: string;
+  accountNumber?: string;
+  creditor?: string;
+  balance?: string;
+  openDate?: string;
+  status?: string;
+  paymentHistory?: string;
+  lastReportedDate?: string;
+}
+
 export interface CreditReportIssue {
   type: IssueType;
   description: string;
   bureau: string;
-  accounts: Array<{
-    accountName: string;
-    accountNumber?: string;
-    details: string;
-  }>;
-  raw_text?: string;
+  accounts: Account[];
 }
 
-/**
- * Detect issues in a credit report
- * @param text The text content of the credit report
- * @returns Array of detected issues
- */
-export function detect_issues(text: string): CreditReportIssue[] {
-  console.log("Detecting issues in credit report text");
+// Helper function to extract account information
+function extractAccounts(text: string): Account[] {
+  console.log("Extracting accounts from credit report");
   
-  const issues: CreditReportIssue[] = [];
+  const accounts: Account[] = [];
+  const accountSections: string[] = [];
   
-  // Detect late payments
-  const latePaymentIssues = detect_late_payments(text);
-  issues.push(...latePaymentIssues);
-  
-  // Detect collections
-  const collectionIssues = detect_collections(text);
-  issues.push(...collectionIssues);
-  
-  // Detect inquiries
-  const inquiryIssues = detect_inquiries(text);
-  issues.push(...inquiryIssues);
-  
-  // Detect charge-offs
-  const chargeOffIssues = detect_charge_offs(text);
-  issues.push(...chargeOffIssues);
-  
-  // Detect public records
-  const publicRecordIssues = detect_public_records(text);
-  issues.push(...publicRecordIssues);
-  
-  // Detect bankruptcy
-  const bankruptcyIssues = detect_bankruptcy(text);
-  issues.push(...bankruptcyIssues);
-  
-  // Detect high balance
-  const highBalanceIssues = detect_high_balance(text);
-  issues.push(...highBalanceIssues);
-  
-  console.log(`Detected ${issues.length} issues in credit report`);
-  
-  return issues;
-}
-
-/**
- * Detect late payments in a credit report
- */
-function detect_late_payments(text: string): CreditReportIssue[] {
-  const issues: CreditReportIssue[] = [];
-  const lowerText = text.toLowerCase();
-  
-  // Define patterns for late payments
-  const latePaymentPatterns = [
-    /(\d+)\s*days?\s*late/gi,
-    /late\s*payment/gi,
-    /past\s*due/gi,
-    /delinquent/gi,
-    /late\s*(\d+)\s*days?/gi,
+  // First, try to identify account sections
+  // Look for patterns that typically appear at the start of an account section
+  const accountStartPatterns = [
+    /(?:CREDITOR|ACCOUNT|TRADELINE)[\s:]+([A-Z0-9\s&\.,'"\-]+?)(?:\n|$)/gi,
+    /(?:Account Number|Account \#|Account No|Account ID)[\s:]+([A-Z0-9\s&\.,'"\-]+?)(?:\n|$)/gi
   ];
   
-  // Check if any late payment pattern is found
-  let hasLatePayment = false;
-  for (const pattern of latePaymentPatterns) {
-    if (pattern.test(lowerText)) {
-      hasLatePayment = true;
-      break;
-    }
-  }
-  
-  if (hasLatePayment) {
-    // Try to extract account information
-    const accounts = extract_account_info(text);
-    
-    // Determine which bureaus are mentioned
-    const bureaus = [];
-    if (lowerText.includes('experian')) bureaus.push('Experian');
-    if (lowerText.includes('equifax')) bureaus.push('Equifax');
-    if (lowerText.includes('transunion')) bureaus.push('TransUnion');
-    
-    // Create an issue for each bureau that has late payments
-    for (const bureau of bureaus.length ? bureaus : ['All Bureaus']) {
-      issues.push({
-        type: 'late_payment',
-        description: 'Late payment reported on credit report',
-        bureau,
-        accounts: accounts.length ? accounts : [{ 
-          accountName: 'Unknown Account', 
-          details: 'Late payment detected, but account details could not be extracted' 
-        }],
-      });
-    }
-  }
-  
-  return issues;
-}
-
-/**
- * Detect collections in a credit report
- */
-function detect_collections(text: string): CreditReportIssue[] {
-  const issues: CreditReportIssue[] = [];
-  const lowerText = text.toLowerCase();
-  
-  // Define patterns for collections
-  const collectionPatterns = [
-    /collection/gi,
-    /in\s*collections/gi,
-    /sent\s*to\s*collections/gi,
-    /account\s*in\s*collection/gi,
-    /placed\s*for\s*collection/gi,
-  ];
-  
-  // Check if any collection pattern is found
-  let hasCollection = false;
-  for (const pattern of collectionPatterns) {
-    if (pattern.test(lowerText)) {
-      hasCollection = true;
-      break;
-    }
-  }
-  
-  if (hasCollection) {
-    // Try to extract account information
-    const accounts = extract_account_info(text);
-    
-    // Determine which bureaus are mentioned
-    const bureaus = [];
-    if (lowerText.includes('experian')) bureaus.push('Experian');
-    if (lowerText.includes('equifax')) bureaus.push('Equifax');
-    if (lowerText.includes('transunion')) bureaus.push('TransUnion');
-    
-    // Create an issue for each bureau that has collections
-    for (const bureau of bureaus.length ? bureaus : ['All Bureaus']) {
-      issues.push({
-        type: 'collection',
-        description: 'Collection account reported on credit report',
-        bureau,
-        accounts: accounts.length ? accounts : [{ 
-          accountName: 'Unknown Collection Account', 
-          details: 'Collection account detected, but details could not be extracted' 
-        }],
-      });
-    }
-  }
-  
-  return issues;
-}
-
-/**
- * Detect inquiries in a credit report
- */
-function detect_inquiries(text: string): CreditReportIssue[] {
-  const issues: CreditReportIssue[] = [];
-  const lowerText = text.toLowerCase();
-  
-  // Define patterns for inquiries
-  const inquiryPatterns = [
-    /inquir(y|ies)/gi,
-    /credit\s*inquiry/gi,
-    /hard\s*inquiry/gi,
-    /recent\s*inquiry/gi,
-  ];
-  
-  // Check if any inquiry pattern is found
-  let hasInquiry = false;
-  for (const pattern of inquiryPatterns) {
-    if (pattern.test(lowerText)) {
-      hasInquiry = true;
-      break;
-    }
-  }
-  
-  if (hasInquiry) {
-    // Try to extract creditor information
-    const creditors = extract_inquiry_info(text);
-    
-    // Determine which bureaus are mentioned
-    const bureaus = [];
-    if (lowerText.includes('experian')) bureaus.push('Experian');
-    if (lowerText.includes('equifax')) bureaus.push('Equifax');
-    if (lowerText.includes('transunion')) bureaus.push('TransUnion');
-    
-    // Create an issue for each bureau that has inquiries
-    for (const bureau of bureaus.length ? bureaus : ['All Bureaus']) {
-      issues.push({
-        type: 'inquiry',
-        description: 'Inquiry detected on credit report',
-        bureau,
-        accounts: creditors.length ? creditors : [{ 
-          accountName: 'Unknown Creditor', 
-          details: 'Inquiry detected, but creditor details could not be extracted' 
-        }],
-      });
-    }
-  }
-  
-  return issues;
-}
-
-/**
- * Extract account information from credit report text
- */
-function extract_account_info(text: string): Array<{ accountName: string; accountNumber?: string; details: string }> {
-  const accounts = [];
-  
-  // Look for common account patterns in credit reports
-  const accountNamePatterns = [
-    /Account Name:\s*([^\n\r]+)/gi,
-    /Creditor:\s*([^\n\r]+)/gi,
-    /Account:\s*([^\n\r]+)/gi,
-  ];
-  
-  for (const pattern of accountNamePatterns) {
+  for (const pattern of accountStartPatterns) {
     let match;
+    let lastIndex = 0;
+    
     while ((match = pattern.exec(text)) !== null) {
-      if (match[1] && match[1].trim()) {
-        accounts.push({
-          accountName: match[1].trim(),
-          details: `Account found near ${match.index} in text`,
-        });
+      const startIndex = Math.max(0, match.index - 100); // Include some context before the match
+      const endIndex = Math.min(text.length, match.index + 1000); // Include a good chunk after the match
+      
+      // Avoid overlapping sections
+      if (startIndex > lastIndex) {
+        const section = text.substring(startIndex, endIndex);
+        accountSections.push(section);
+        lastIndex = endIndex;
       }
     }
   }
   
-  // Try to match account numbers to already found accounts
-  const accountNumberPatterns = [
-    /Account\s*#:\s*([^\n\r]+)/gi,
-    /Account\s*Number:\s*([^\n\r]+)/gi,
-    /Account\s*No:\s*([^\n\r]+)/gi,
-  ];
+  console.log(`Found ${accountSections.length} potential account sections`);
   
-  for (const pattern of accountNumberPatterns) {
-    let match;
-    let matchIndex = 0;
-    while ((match = pattern.exec(text)) !== null) {
-      if (match[1] && match[1].trim()) {
-        const accountNumber = match[1].trim();
-        
-        // If we have an account at the same index, add the account number to it
-        if (accounts[matchIndex]) {
-          accounts[matchIndex].accountNumber = accountNumber;
-          matchIndex++;
-        } else {
-          // Otherwise, create a new account
-          accounts.push({
-            accountName: 'Unknown Account',
-            accountNumber,
-            details: `Account number found near ${match.index} in text`,
-          });
-        }
+  // If we couldn't identify clear account sections, fall back to splitting by keywords
+  if (accountSections.length < 3) {
+    // Split the text into chunks around account indicators
+    const chunks = text.split(/(?:ACCOUNT INFORMATION|TRADELINE|ACCOUNT HISTORY|CREDIT CARD|PERSONAL LOAN|MORTGAGE|AUTO LOAN)/i);
+    
+    for (let i = 1; i < chunks.length; i++) { // Skip the first chunk (usually intro text)
+      if (chunks[i].length > 100) { // Only process meaningful chunks
+        accountSections.push(chunks[i].substring(0, 1000)); // Limit chunk size
       }
+    }
+    
+    console.log(`After fallback splitting, found ${accountSections.length} potential account sections`);
+  }
+  
+  // Process each account section
+  for (const section of accountSections) {
+    // Skip sections that don't look like account data
+    if (section.length < 100 || !section.match(/(?:ACCOUNT|BALANCE|PAYMENT|CREDIT|LOAN|MORTGAGE|CARD)/i)) {
+      continue;
+    }
+    
+    const account: Account = {
+      accountName: "Unknown Account"
+    };
+    
+    // Extract account name
+    const nameMatches = section.match(/(?:CREDITOR|ACCOUNT|TRADELINE)[\s:]+([A-Z0-9\s&\.,'"\-]+?)(?:\n|$)/i) ||
+                         section.match(/([A-Z0-9\s&\.,'"\-]{5,30})(?:\n|ACCOUNT|\d{4})/i);
+    
+    if (nameMatches && nameMatches[1]) {
+      account.accountName = nameMatches[1].trim();
+    }
+    
+    // Extract account number (last 4 digits for security)
+    const accountNumMatches = section.match(/(?:Account Number|Account \#|Account No|Account ID)[\s:]+[*xX]+(\d{4})/i) ||
+                             section.match(/(?:Account Number|Account \#|Account No|Account ID)[\s:]+(\d{4})/i) ||
+                             section.match(/(?:Account)[\s:]+[*xX]+(\d{4})/i);
+    
+    if (accountNumMatches && accountNumMatches[1]) {
+      account.accountNumber = `xxxx-xxxx-xxxx-${accountNumMatches[1]}`;
+    }
+    
+    // Extract creditor name if different from account name
+    const creditorMatches = section.match(/(?:Creditor|Furnisher|Reported By|Reported From)[\s:]+([A-Z0-9\s&\.,'"\-]+?)(?:\n|$)/i);
+    
+    if (creditorMatches && creditorMatches[1] && creditorMatches[1] !== account.accountName) {
+      account.creditor = creditorMatches[1].trim();
+    }
+    
+    // Extract balance
+    const balanceMatches = section.match(/(?:Balance|Current Balance|Amount)[\s:]+\$?([\d,\.]+)/i);
+    
+    if (balanceMatches && balanceMatches[1]) {
+      account.balance = balanceMatches[1].trim();
+    }
+    
+    // Extract open date
+    const openDateMatches = section.match(/(?:Open Date|Date Opened|Opened)[\s:]+(\w+\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+    
+    if (openDateMatches && openDateMatches[1]) {
+      account.openDate = openDateMatches[1].trim();
+    }
+    
+    // Extract account status
+    const statusMatches = section.match(/(?:Status|Account Status|Current Status)[\s:]+([A-Za-z0-9\s]+?)(?:\n|$)/i);
+    
+    if (statusMatches && statusMatches[1]) {
+      account.status = statusMatches[1].trim();
+    }
+    
+    // Extract last reported date
+    const reportedDateMatches = section.match(/(?:Last Reported|Date Reported|Updated|As Of)[\s:]+(\w+\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+    
+    if (reportedDateMatches && reportedDateMatches[1]) {
+      account.lastReportedDate = reportedDateMatches[1].trim();
+    }
+    
+    // Only add accounts that have at least a name and one other piece of information
+    if (account.accountName !== "Unknown Account" && 
+        (account.accountNumber || account.balance || account.status || account.openDate)) {
+      accounts.push(account);
+      console.log(`Extracted account: ${account.accountName}`);
     }
   }
   
   return accounts;
 }
 
-/**
- * Extract inquiry information from credit report text
- */
-function extract_inquiry_info(text: string): Array<{ accountName: string; details: string }> {
-  const inquiries = [];
+// Main issue detection function
+export function detect_issues(text: string): CreditReportIssue[] {
+  console.log("Detecting issues in credit report");
   
-  // Look for common inquiry patterns in credit reports
-  const inquiryPatterns = [
-    /Inquir(?:y|ies) by:\s*([^\n\r]+)/gi,
-    /Creditor:\s*([^\n\r]+)/gi,
-    /Inquiry from:\s*([^\n\r]+)/gi,
-  ];
+  // Extract all accounts first
+  const accounts = extractAccounts(text);
+  console.log(`Extracted ${accounts.length} accounts from credit report`);
   
-  for (const pattern of inquiryPatterns) {
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      if (match[1] && match[1].trim()) {
-        inquiries.push({
-          accountName: match[1].trim(),
-          details: `Inquiry found near ${match.index} in text`,
-        });
-      }
+  const issues: CreditReportIssue[] = [];
+  const lowerText = text.toLowerCase();
+  
+  // Detect which bureaus are mentioned
+  const bureaus = {
+    experian: lowerText.includes('experian'),
+    equifax: lowerText.includes('equifax'),
+    transunion: lowerText.includes('transunion')
+  };
+  
+  let defaultBureau = 'All Bureaus';
+  if (bureaus.experian) defaultBureau = 'Experian';
+  else if (bureaus.equifax) defaultBureau = 'Equifax';
+  else if (bureaus.transunion) defaultBureau = 'TransUnion';
+  
+  console.log(`Detected credit bureaus: ${Object.entries(bureaus)
+    .filter(([_, present]) => present)
+    .map(([bureau]) => bureau)
+    .join(', ')}`);
+  
+  // Issue 1: Late Payments
+  if (lowerText.includes('late') || 
+      lowerText.includes('past due') || 
+      lowerText.includes('delinquent') || 
+      lowerText.includes('30 day') || 
+      lowerText.includes('60 day') || 
+      lowerText.includes('90 day')) {
+    
+    // Find accounts with late payments
+    const latePaymentAccounts = accounts.filter(account => {
+      const accountText = JSON.stringify(account).toLowerCase();
+      return accountText.includes('late') || 
+             accountText.includes('past due') || 
+             accountText.includes('delinquent') ||
+             accountText.includes('30 day') || 
+             accountText.includes('60 day') || 
+             accountText.includes('90 day');
+    });
+    
+    if (latePaymentAccounts.length > 0) {
+      issues.push({
+        type: 'late_payment',
+        description: 'Late payments reported on your credit report',
+        bureau: defaultBureau,
+        accounts: latePaymentAccounts
+      });
+      console.log(`Found late payment issue with ${latePaymentAccounts.length} accounts`);
+    } else if (accounts.length > 0) {
+      // If we detect late payments in text but couldn't link to specific accounts
+      issues.push({
+        type: 'late_payment',
+        description: 'Late payments reported on your credit report',
+        bureau: defaultBureau,
+        accounts: [accounts[0]] // Use the first account as an example
+      });
+      console.log('Found late payment issue but could not link to specific accounts');
     }
   }
   
-  return inquiries;
-}
-
-// Implement additional issue detection functions
-function detect_charge_offs(text: string): CreditReportIssue[] {
-  // Similar implementation as other detection functions
-  return [];
-}
-
-function detect_public_records(text: string): CreditReportIssue[] {
-  return [];
-}
-
-function detect_bankruptcy(text: string): CreditReportIssue[] {
-  return [];
-}
-
-function detect_high_balance(text: string): CreditReportIssue[] {
-  return [];
+  // Issue 2: Collections
+  if (lowerText.includes('collection') || 
+      lowerText.includes('charged off') || 
+      lowerText.includes('charge-off') || 
+      lowerText.includes('sold to') || 
+      lowerText.includes('transferred to')) {
+    
+    // Find collection accounts
+    const collectionAccounts = accounts.filter(account => {
+      const accountText = JSON.stringify(account).toLowerCase();
+      return accountText.includes('collection') || 
+             accountText.includes('charged off') || 
+             accountText.includes('charge-off') ||
+             accountText.includes('charged-off') || 
+             accountText.includes('sold to') || 
+             accountText.includes('transferred to');
+    });
+    
+    if (collectionAccounts.length > 0) {
+      issues.push({
+        type: 'collection',
+        description: 'Collection accounts found on your credit report',
+        bureau: defaultBureau,
+        accounts: collectionAccounts
+      });
+      console.log(`Found collection issue with ${collectionAccounts.length} accounts`);
+    }
+  }
+  
+  // Issue 3: Inquiries
+  if (lowerText.includes('inquiry') || 
+      lowerText.includes('inquiries') || 
+      lowerText.includes('credit check')) {
+    
+    // For inquiries, we may not have full account details
+    // Create simplified account objects for inquiries
+    const inquiryAccounts: Account[] = [];
+    
+    // Try to extract inquiry information using regex
+    const inquiryPattern = /(?:INQUIRY|INQUIRIES).*?((?:[A-Z][A-Za-z\s\.&'\-,]{2,30})\s+(?:\d{1,2}\/\d{1,2}\/\d{2,4}|\w+\s+\d{1,2},?\s+\d{4}))/gi;
+    let match;
+    
+    while ((match = inquiryPattern.exec(text)) !== null) {
+      // Each match might contain both the creditor name and the date
+      if (match[1]) {
+        const inquiryText = match[1];
+        const parts = inquiryText.split(/\s+(?=\d{1,2}\/|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i);
+        
+        if (parts.length >= 1) {
+          inquiryAccounts.push({
+            accountName: parts[0].trim(),
+            lastReportedDate: parts.length > 1 ? parts[1].trim() : undefined
+          });
+        }
+      }
+    }
+    
+    // If we couldn't extract specific inquiries but know they exist, create a generic entry
+    if (inquiryAccounts.length === 0 && lowerText.includes('inquiry')) {
+      inquiryAccounts.push({
+        accountName: 'Recent Inquiries',
+        status: 'Multiple inquiries detected'
+      });
+    }
+    
+    if (inquiryAccounts.length > 0) {
+      issues.push({
+        type: 'inquiry',
+        description: 'Inquiries found on your credit report',
+        bureau: defaultBureau,
+        accounts: inquiryAccounts
+      });
+      console.log(`Found inquiry issue with ${inquiryAccounts.length} inquiries`);
+    }
+  }
+  
+  // Issue 4: Account Verification (for all accounts)
+  if (accounts.length > 0) {
+    issues.push({
+      type: 'account_verification',
+      description: 'Account verification required under FCRA',
+      bureau: defaultBureau,
+      accounts: accounts.slice(0, 3) // Limit to first 3 accounts to avoid too many letters
+    });
+    console.log('Added account verification issue');
+  }
+  
+  // If no issues were found but we have accounts, add a generic issue
+  if (issues.length === 0 && accounts.length > 0) {
+    issues.push({
+      type: 'general',
+      description: 'Potential inaccuracies in credit report',
+      bureau: defaultBureau,
+      accounts: accounts.slice(0, 2) // Limit to first 2 accounts
+    });
+    console.log('Added generic credit report issue');
+  }
+  
+  // If still no issues or accounts, create a fallback issue
+  if (issues.length === 0) {
+    issues.push({
+      type: 'general',
+      description: 'Potential inaccuracies in credit report',
+      bureau: defaultBureau,
+      accounts: [{
+        accountName: 'Credit Report Accounts',
+        status: 'Request full verification of all accounts'
+      }]
+    });
+    console.log('Added fallback generic issue');
+  }
+  
+  return issues;
 }

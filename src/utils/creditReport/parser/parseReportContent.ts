@@ -40,8 +40,9 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
   
   console.log("Detected bureaus:", reportData.bureaus);
   
-  // Extract personal information
+  // Extract personal information - this is critical for letter generation
   reportData.personalInfo = extractPersonalInfo(content);
+  console.log("Extracted personal information:", reportData.personalInfo);
   
   // Extract account information
   reportData.accounts = extractAccounts(content, reportData.bureaus);

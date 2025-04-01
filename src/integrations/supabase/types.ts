@@ -9,6 +9,113 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      credit_reports: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_path: string
+          id: string
+          processed: boolean | null
+          processing_error: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          processed?: boolean | null
+          processing_error?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          processed?: boolean | null
+          processing_error?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      dispute_letters: {
+        Row: {
+          account_number: string | null
+          bureau: string | null
+          credit_report_id: string | null
+          creditor_name: string | null
+          generated_at: string | null
+          id: string
+          issue_type: string
+          letter_content: string
+          sent: boolean | null
+          sent_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_number?: string | null
+          bureau?: string | null
+          credit_report_id?: string | null
+          creditor_name?: string | null
+          generated_at?: string | null
+          id?: string
+          issue_type: string
+          letter_content: string
+          sent?: boolean | null
+          sent_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_number?: string | null
+          bureau?: string | null
+          credit_report_id?: string | null
+          creditor_name?: string | null
+          generated_at?: string | null
+          id?: string
+          issue_type?: string
+          letter_content?: string
+          sent?: boolean | null
+          sent_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispute_letters_credit_report_id_fkey"
+            columns: ["credit_report_id"]
+            isOneToOne: false
+            referencedRelation: "credit_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      letter_templates: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          issue_type: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          issue_type: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          issue_type?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null

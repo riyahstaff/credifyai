@@ -1,28 +1,31 @@
 
 /**
- * Personal Information Extractor
- * This module extracts personal information from credit reports
+ * Advanced personal information extractor
+ * Extracts user details from credit report text
  */
 
-interface PersonalInfo {
-  name?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
+export interface PersonalInfo {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
   ssn?: string;
-  phone?: string;
   dob?: string;
+  phone?: string;
 }
 
-/**
- * Extract personal information from credit report text
- */
 export function extractPersonalInfo(content: string): PersonalInfo {
   console.log("Extracting personal information from credit report");
   
-  // Initialize personal info object
-  const personalInfo: PersonalInfo = {};
+  // Initialize with default values
+  const personalInfo: PersonalInfo = {
+    name: "",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+  };
   
   // Clean up the content (remove excess whitespace, normalize newlines)
   const cleanContent = content.replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
@@ -99,16 +102,6 @@ export function extractPersonalInfo(content: string): PersonalInfo {
   if (dobMatch && dobMatch[1]) {
     personalInfo.dob = dobMatch[1];
     console.log(`Found DOB: ${personalInfo.dob}`);
-  }
-  
-  // Store the extracted personal info in localStorage for future use
-  if (typeof localStorage !== 'undefined') {
-    if (personalInfo.name) localStorage.setItem('userName', personalInfo.name);
-    if (personalInfo.address) localStorage.setItem('userAddress', personalInfo.address);
-    if (personalInfo.city) localStorage.setItem('userCity', personalInfo.city);
-    if (personalInfo.state) localStorage.setItem('userState', personalInfo.state);
-    if (personalInfo.zip) localStorage.setItem('userZip', personalInfo.zip);
-    if (personalInfo.phone) localStorage.setItem('userPhone', personalInfo.phone);
   }
   
   return personalInfo;
