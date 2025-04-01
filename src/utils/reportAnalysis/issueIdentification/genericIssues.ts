@@ -4,7 +4,7 @@
  * Functions for identifying generic credit report issues
  */
 
-import { CreditReportAccount, CreditReportData } from '@/utils/creditReportParser';
+import { CreditReportAccount } from '@/utils/creditReport/types';
 
 /**
  * Add personal information issues
@@ -47,7 +47,7 @@ export const addPersonalInfoIssues = (): Array<{
  * Add generic issues when no specific issues are found
  */
 export const addGenericIssues = (
-  cleanedAccounts: CreditReportAccount[]
+  cleanedAccounts: CreditReportAccount[] = []
 ): Array<{
   type: string;
   title: string;
@@ -138,44 +138,60 @@ export const addFallbackGenericIssues = (): Array<{
 }> => {
   return [
     {
-      type: 'generic',
-      title: 'Credit Report Accuracy Review',
-      description: 'Under FCRA §611, you have the right to dispute any information in your credit report. This letter requests verification of all credit data for accuracy and completeness.',
+      type: 'fcra_rights',
+      title: 'FCRA Rights Verification',
+      description: 'Under the Fair Credit Reporting Act (FCRA), you have the right to dispute any information in your credit report that you believe is inaccurate or incomplete.',
       impact: 'High Impact',
       impactColor: 'orange',
       laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
     },
     {
-      type: 'inquiry_verification',
-      title: 'Hard Inquiry Verification',
-      description: 'All hard inquiries on your credit report must be authorized by you. This letter disputes any inquiries that may have been made without proper authorization.',
+      type: 'late_payments',
+      title: 'Late Payment Verification',
+      description: 'Late payments on your credit report must be reported with 100% accuracy. Any discrepancies in dates, amounts, or frequency can be grounds for dispute.',
+      impact: 'Critical Impact',
+      impactColor: 'red',
+      laws: ['FCRA § 611', 'FCRA § 623']
+    },
+    {
+      type: 'inquiries',
+      title: 'Unauthorized Hard Inquiries',
+      description: 'Hard inquiries on your credit report that were made without your explicit permission are violations of the FCRA and can be disputed.',
       impact: 'Medium Impact',
       impactColor: 'yellow',
-      laws: ['FCRA § 604 (Permissible purposes of consumer reports)']
+      laws: ['FCRA § 604', 'FCRA § 611']
     },
     {
       type: 'account_verification',
       title: 'Account Information Verification',
-      description: 'This letter disputes potential inaccuracies in account information, including balances, payment history, and account status across all reported accounts.',
-      impact: 'Critical Impact',
-      impactColor: 'red',
-      laws: ['FCRA § 623 (Responsibilities of furnishers of information)']
+      description: 'Credit reporting agencies must verify that all account information is accurate, including balances, payment history, credit limits, and account status.',
+      impact: 'High Impact',
+      impactColor: 'orange',
+      laws: ['FCRA § 611', 'FCRA § 623']
     },
     {
       type: 'personal_info',
       title: 'Personal Information Verification',
-      description: 'Personal information on your credit report must be accurate. This letter disputes any potential errors in your reported name, addresses, employment, or other personal details.',
+      description: 'Personal information on your credit report must be accurate. This includes your name, addresses, employment history, and other identifying information.',
       impact: 'Medium Impact',
       impactColor: 'yellow',
-      laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
+      laws: ['FCRA § 605']
     },
     {
-      type: 'credit_age',
-      title: 'Account Age Verification',
-      description: 'The age of your credit accounts significantly impacts your score. This letter disputes any inaccuracies in account opening dates that may be affecting your credit history length.',
-      impact: 'High Impact',
-      impactColor: 'orange',
-      laws: ['FCRA § 623 (Responsibilities of furnishers of information)']
+      type: 'outdated_information',
+      title: 'Outdated Negative Information',
+      description: 'Most negative information must be removed after 7 years (10 years for bankruptcies). Ensure that old negative items have been properly removed.',
+      impact: 'Critical Impact',
+      impactColor: 'red',
+      laws: ['FCRA § 605']
+    },
+    {
+      type: 'account_ownership',
+      title: 'Account Ownership Verification',
+      description: 'All accounts on your credit report must be verified as belonging to you. Inaccurate reporting of accounts that are not yours should be disputed.',
+      impact: 'Critical Impact',
+      impactColor: 'red',
+      laws: ['FCRA § 611', 'FCRA § 623']
     }
   ];
 };

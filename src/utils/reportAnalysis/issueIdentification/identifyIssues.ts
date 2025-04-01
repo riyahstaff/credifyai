@@ -4,7 +4,7 @@
  * Functions for identifying potential credit report issues
  */
 
-import { CreditReportData } from '@/utils/creditReportParser';
+import { CreditReportData } from '@/utils/creditReport/types';
 import { identifyTextIssues } from './textIssues';
 import { identifyAccountIssues } from './accountIssues';
 import { addPersonalInfoIssues, addGenericIssues, addFallbackGenericIssues } from './genericIssues';
@@ -98,7 +98,10 @@ export const identifyIssues = (data: CreditReportData): Array<{
     const lowerText = data.rawText.toLowerCase();
     
     // Force identification of collections
-    if (lowerText.includes('collection') || lowerText.includes('charged off') || lowerText.includes('charge-off') || lowerText.includes('charged-off')) {
+    if (lowerText.includes('collection') || 
+        lowerText.includes('charged off') || 
+        lowerText.includes('charge-off') || 
+        lowerText.includes('charged-off')) {
       console.log("Found collection or charge-off indicators in raw text");
       issues.push({
         type: 'collection',
@@ -107,19 +110,6 @@ export const identifyIssues = (data: CreditReportData): Array<{
         impact: 'Critical Impact',
         impactColor: 'red',
         laws: ['FCRA § 611', 'FDCPA § 809']
-      });
-    }
-    
-    // Force identification of high account balances
-    if (lowerText.includes('high balance') || lowerText.includes('credit limit') || lowerText.includes('balance')) {
-      console.log("Found high balance indicators in raw text");
-      issues.push({
-        type: 'high_balance',
-        title: 'High Credit Utilization',
-        description: 'Your credit report shows high utilization of available credit. High balances relative to credit limits can negatively impact your score. If these balance amounts are inaccurate, they can be disputed under the FCRA.',
-        impact: 'High Impact',
-        impactColor: 'orange',
-        laws: ['FCRA § 611']
       });
     }
     
@@ -132,50 +122,29 @@ export const identifyIssues = (data: CreditReportData): Array<{
   
   // Identify issues based on account analysis if accounts are available
   if (data.accounts && data.accounts.length > 0) {
-    const { issues: accountIssues, validAccounts, cleanedAccounts } = identifyAccountIssues(data.accounts, data.rawText);
-    issues.push(...accountIssues);
-    console.log(`Found ${accountIssues.length} account-based issues from ${validAccounts.length} valid accounts`);
-    
-    // Check for personal information issues
-    if (data.personalInfo) {
-      const personalIssues = addPersonalInfoIssues();
-      issues.push(...personalIssues);
-      console.log(`Added ${personalIssues.length} personal information issues`);
+    try {
+      const { issues: accountIssues, validAccounts, cleanedAccounts } = identifyAccountIssues(data.accounts, data.rawText);
+      issues.push(...accountIssues);
+      console.log(`Found ${accountIssues.length} account-based issues from ${validAccounts.length} valid accounts`);
+      
+      // Add generic issues regardless of whether specific issues were found
+      const genericIssues = addGenericIssues(cleanedAccounts);
+      issues.push(...genericIssues);
+      console.log(`Added ${genericIssues.length} generic issues`);
+    } catch (error) {
+      console.error("Error identifying account issues:", error);
+      
+      // If we encounter an error with account analysis, add fallback issues
+      const fallbackAccountIssues = addFallbackGenericIssues();
+      issues.push(...fallbackAccountIssues);
+      console.log(`Added ${fallbackAccountIssues.length} fallback issues due to account analysis error`);
     }
-    
-    // Add generic issues regardless of whether specific issues were found
-    const genericIssues = addGenericIssues(cleanedAccounts);
-    issues.push(...genericIssues);
-    console.log(`Added ${genericIssues.length} generic issues`);
   } else {
     // If we couldn't find any accounts, ensure we have fallback issues
     const fallbackIssues = addFallbackGenericIssues();
     issues.push(...fallbackIssues);
     console.log(`Added ${fallbackIssues.length} fallback issues due to no accounts`);
   }
-  
-  // ADD THESE ADDITIONAL ISSUES TO GUARANTEE WE HAVE ENOUGH
-  console.log("Adding additional guaranteed issues");
-  
-  // Age of negative information
-  issues.push({
-    type: 'outdated_information',
-    title: 'Outdated Negative Information',
-    description: 'Most negative information must be removed after 7 years (10 years for bankruptcies). Your report might contain outdated negative items that should be removed under FCRA Section 605.',
-    impact: 'High Impact',
-    impactColor: 'orange',
-    laws: ['FCRA § 605', 'FCRA § 611']
-  });
-  
-  // Multiple bureau reporting
-  issues.push({
-    type: 'bureau_discrepancies',
-    title: 'Multi-Bureau Reporting Discrepancies',
-    description: 'Information often varies between credit bureaus. Items reported to one bureau but not others should be verified for accuracy and consistency across all three major bureaus.',
-    impact: 'Medium Impact',
-    impactColor: 'yellow',
-    laws: ['FCRA § 611']
-  });
   
   // Remove any duplicates based on title
   const uniqueIssues = issues.filter((issue, index, self) =>

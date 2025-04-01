@@ -4,7 +4,7 @@
  * Functions for identifying issues from raw text in credit reports
  */
 
-import { CreditReportData } from '@/utils/creditReportParser';
+import { CreditReportData } from '@/utils/creditReport/types';
 
 /**
  * Identify issues based on raw text analysis
@@ -75,7 +75,7 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
     issues.push({
       type: 'payment',
       title: 'Late Payment Records Detected',
-      description: 'Your report appears to contain late payment information. These negative items have a significant impact on your score and should be verified for accuracy.',
+      description: 'Your report appears to contain Late Payment Information. These negative items have a significant impact on your score and should be verified for accuracy.',
       impact: 'Critical Impact',
       impactColor: 'red',
       laws: ['FCRA § 623 (Responsibilities of furnishers of information)', 'FCRA § 611 (Procedure in case of disputed accuracy)']
@@ -100,7 +100,7 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
     issues.push({
       type: 'name',
       title: 'Name Variations Review',
-      description: 'Your report may contain name variations or possible spelling errors. These should be corrected to maintain accurate records.',
+      description: 'Your report may contain name Variations or Possible spelling Errors. These should be corrected to maintain accurate Records.',
       impact: 'Medium Impact',
       impactColor: 'yellow',
       laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
@@ -151,6 +151,23 @@ export const identifyTextIssues = (data: CreditReportData): Array<{
     impactColor: 'orange',
     laws: ['FCRA § 623 (Responsibilities of furnishers of information)']
   });
+  
+  // Look for medical collections or bills
+  if (data.rawText.toLowerCase().includes('medical') || 
+      data.rawText.toLowerCase().includes('hospital') ||
+      data.rawText.toLowerCase().includes('healthcare') ||
+      data.rawText.toLowerCase().includes('clinic') ||
+      data.rawText.toLowerCase().includes('physician') ||
+      data.rawText.toLowerCase().includes('doctor')) {
+    issues.push({
+      type: 'medical',
+      title: 'Medical Collections Review',
+      description: 'Your report may contain medical collections or bills. These have special treatment under recent credit scoring models and reporting regulations, and should be carefully reviewed.',
+      impact: 'High Impact',
+      impactColor: 'orange',
+      laws: ['FCRA § 623', 'FCRA § 604c (Medical information disclosure restrictions)']
+    });
+  }
   
   return issues;
 };

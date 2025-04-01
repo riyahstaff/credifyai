@@ -4,9 +4,85 @@
  * Functions for identifying issues from credit report accounts
  */
 
-import { CreditReportAccount } from '@/utils/creditReportParser';
-import { isValidAccountName, cleanAccountName } from '../validation';
-import { extractAccountsFromRawText } from '../accountExtraction';
+import { CreditReportAccount } from '@/utils/creditReport/types';
+
+// Helper functions for validating and cleaning account data
+export const isValidAccountName = (name?: string): boolean => {
+  if (!name) return false;
+  return name.length > 2 && name !== 'Unknown Account';
+};
+
+export const cleanAccountName = (name: string): string => {
+  return name.replace(/\s+/g, ' ').trim();
+};
+
+// Extract accounts from raw text when account parsing fails
+export const extractAccountsFromRawText = (rawText: string): Array<{name: string, number?: string}> => {
+  const accounts: Array<{name: string, number?: string}> = [];
+  
+  // Look for account indicators followed by possible account names
+  const accountNameRegexes = [
+    /CREDITOR[:\s]+([A-Z0-9 .,&-]{3,30})/gi,
+    /ACCOUNT[:\s]+([A-Z0-9 .,&-]{3,30})/gi,
+    /([A-Z0-9 .,&-]{5,30})[:\s]+ACCOUNT/gi,
+    /([A-Z]{3,}(?:\s+[A-Z]+){0,3})[:\s]+\d{4}/gi
+  ];
+  
+  accountNameRegexes.forEach(regex => {
+    let match;
+    while ((match = regex.exec(rawText)) !== null) {
+      if (match[1] && match[1].length > 3) {
+        accounts.push({ name: match[1].trim() });
+      }
+    }
+  });
+  
+  // Look for account numbers (last 4 digits)
+  const accountNumberRegex = /(?:ACCOUNT|ACCT)[.\s:#]+(?:[X*\d-]+)(\d{4})/gi;
+  let numberMatch;
+  while ((numberMatch = accountNumberRegex.exec(rawText)) !== null) {
+    if (numberMatch[1]) {
+      // Try to associate with the closest account name
+      if (accounts.length > 0) {
+        const lastAccount = accounts[accounts.length - 1];
+        if (!lastAccount.number) {
+          lastAccount.number = numberMatch[1];
+        } else {
+          accounts.push({ name: `Account ending in ${numberMatch[1]}`, number: numberMatch[1] });
+        }
+      } else {
+        accounts.push({ name: `Account ending in ${numberMatch[1]}`, number: numberMatch[1] });
+      }
+    }
+  }
+  
+  // If we found no accounts but have credit card related text, create a generic credit card account
+  if (accounts.length === 0 && 
+      (rawText.toLowerCase().includes('credit card') || 
+       rawText.toLowerCase().includes('visa') || 
+       rawText.toLowerCase().includes('mastercard') || 
+       rawText.toLowerCase().includes('discover') || 
+       rawText.toLowerCase().includes('amex'))) {
+    accounts.push({ name: 'Credit Card Account' });
+  }
+  
+  // If we found no accounts but have loan related text, create a generic loan account
+  if (accounts.length === 0 && 
+      (rawText.toLowerCase().includes('loan') || 
+       rawText.toLowerCase().includes('mortgage') || 
+       rawText.toLowerCase().includes('auto') || 
+       rawText.toLowerCase().includes('vehicle') || 
+       rawText.toLowerCase().includes('car'))) {
+    accounts.push({ name: 'Loan Account' });
+  }
+  
+  // Add a fallback account if nothing else was found
+  if (accounts.length === 0) {
+    accounts.push({ name: 'Unidentified Account' });
+  }
+  
+  return accounts;
+};
 
 /**
  * Identify issues based on account analysis
@@ -147,6 +223,23 @@ export const identifyAccountIssues = (
         impactColor: 'red',
         account: account,
         laws: ['FCRA § 605 (Requirements relating to information contained in consumer reports)']
+      });
+    }
+    
+    // Check for high utilization
+    if (typeof account.currentBalance === 'number' && 
+        typeof account.creditLimit === 'number' && 
+        account.creditLimit > 0 && 
+        (account.currentBalance / account.creditLimit) > 0.7) {
+      const utilRate = Math.round((account.currentBalance / account.creditLimit) * 100);
+      issues.push({
+        type: 'utilization',
+        title: `High Credit Utilization (${account.accountName})`,
+        description: `Your ${account.accountName} account shows ${utilRate}% utilization. High utilization can significantly impact your credit score. Any inaccuracies in balance or limit should be disputed.`,
+        impact: 'High Impact',
+        impactColor: 'orange',
+        account: account,
+        laws: ['FCRA § 611 (Procedure in case of disputed accuracy)']
       });
     }
     
