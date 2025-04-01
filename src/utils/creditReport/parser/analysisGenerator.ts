@@ -1,129 +1,109 @@
 
+import { CreditReportData, CreditReportAccount, CreditReportAnalysisResults } from '../types';
+
 /**
- * Credit Report Analysis Generator
- * This module generates analysis results based on parsed credit report data
+ * Generate analysis results from credit report data
  */
-
-import { CreditReportData, RecommendedDispute } from '../types';
-import { extractPersonalInfo } from './extractPersonalInfo';
-
-export const generateAnalysisResults = (data: CreditReportData) => {
-  console.log("Generating analysis results from credit report data");
+export const generateAnalysisResults = (reportData: CreditReportData): CreditReportAnalysisResults => {
+  const { accounts, inquiries, publicRecords } = reportData;
   
-  // Extract and save personal information
-  if (data.rawText) {
-    const personalInfo = extractPersonalInfo(data.rawText);
-    console.log("Extracted personal information from report:", personalInfo);
-    
-    // Save this information to the report data
-    data.personalInfo = personalInfo;
-  }
-  
-  // Generate account type summary
+  // Count account types
   const accountTypeSummary: Record<string, number> = {};
+  const accountTypes = accounts.map(account => account.accountType?.toLowerCase() || "unknown");
   
-  data.accounts.forEach(account => {
-    if (account.accountType) {
-      accountTypeSummary[account.accountType] = (accountTypeSummary[account.accountType] || 0) + 1;
+  // Count each account type
+  accountTypes.forEach(type => {
+    if (!accountTypeSummary[type]) {
+      accountTypeSummary[type] = 1;
+    } else {
+      accountTypeSummary[type] += 1;
     }
   });
   
-  // Calculate open and closed accounts
-  const openAccounts = data.accounts.filter(a => 
-    (a.status && a.status.toLowerCase().includes('open')) || 
-    (!a.status && !a.lastActivity) // Use lastActivity instead of dateClosed
-  ).length;
+  // Calculate total credit used and limits
+  let totalBalance = 0;
+  let totalCreditLimit = 0;
   
-  const closedAccounts = data.accounts.filter(a => 
-    (a.status && a.status.toLowerCase().includes('closed')) || 
-    a.lastActivity // Use lastActivity instead of dateClosed
-  ).length;
+  accounts.forEach(account => {
+    const balance = account.currentBalance || account.balance || 0;
+    const limit = account.creditLimit || 0;
+    
+    if (typeof balance === 'number') {
+      totalBalance += balance;
+    }
+    
+    if (typeof limit === 'number') {
+      totalCreditLimit += limit;
+    }
+  });
   
-  // Calculate negative items
-  const negativeItems = data.accounts.filter(a => 
-    a.isNegative || 
-    (a.paymentStatus && (
-      a.paymentStatus.toLowerCase().includes('late') || 
-      a.paymentStatus.toLowerCase().includes('collection') || 
-      a.paymentStatus.toLowerCase().includes('charged off')
-    ))
-  ).length;
+  // Find potential issues and create recommended disputes
+  const accountsWithIssues = accounts.filter(account => {
+    const hasPaymentIssue = account.paymentStatus && account.paymentStatus.toLowerCase().includes('late');
+    const isHighUtilization = account.creditLimit && account.currentBalance && 
+      (account.currentBalance / account.creditLimit > 0.8);
+    const recentlyClosed = account.status?.toLowerCase().includes('closed') && 
+      account.lastActivity && isRecentActivity(account.lastActivity);
+    
+    return hasPaymentIssue || isHighUtilization || recentlyClosed;
+  });
   
-  // Calculate total balances
-  const totalBalances = data.accounts.reduce((sum, account) => {
-    // Convert string to number and handle both currentBalance and balance properties
-    const balanceStr = account.currentBalance || account.balance || '0';
-    // Use Number() instead of parseFloat on a String object
-    const balance = typeof balanceStr === 'string' ? parseFloat(balanceStr) : Number(balanceStr);
-    return isNaN(balance) ? sum : sum + balance;
-  }, 0);
-  
-  // Generate recommended disputes
-  const recommendedDisputes: RecommendedDispute[] = [];
-  
-  // Look for late payments
-  const lateAccounts = data.accounts.filter(a => 
-    (a.paymentStatus && a.paymentStatus.toLowerCase().includes('late')) ||
-    (a.paymentHistory && a.paymentHistory.toLowerCase?.includes('late'))
-  );
-  
-  for (const account of lateAccounts) {
-    recommendedDisputes.push({
-      id: `late-${account.accountNumber || Math.random().toString(36).substring(2, 10)}`,
-      type: 'late_payment',
-      title: 'Late Payment Dispute',
+  // Generate recommendations
+  const recommendedDisputes = accountsWithIssues.map(account => {
+    const accountName = account.accountName || 'Unknown account';
+    let reason = '';
+    let impact = '';
+    
+    if (account.paymentStatus && account.paymentStatus.toLowerCase().includes('late')) {
+      reason = `Late payment reported for ${accountName}`;
+      impact = 'high';
+    } else if (account.creditLimit && account.currentBalance && 
+      (account.currentBalance / account.creditLimit > 0.8)) {
+      reason = `High utilization (${Math.round((account.currentBalance / account.creditLimit) * 100)}%) on ${accountName}`;
+      impact = 'medium';
+    } else if (account.status?.toLowerCase().includes('closed') && 
+      account.lastActivity && isRecentActivity(account.lastActivity)) {
+      reason = `Recently closed account (${accountName}) still showing impact`;
+      impact = 'medium';
+    }
+    
+    return {
       accountName: account.accountName,
       accountNumber: account.accountNumber,
-      reason: 'Late Payment Dispute',
-      description: `Dispute late payments for ${account.accountName} account`,
-      bureau: account.bureau || 'Experian',
-      impact: 'High'
-    });
-  }
+      reason,
+      impact
+    };
+  });
   
-  // Look for collections
-  const collectionAccounts = data.accounts.filter(a => 
-    a.accountType?.toLowerCase().includes('collection') ||
-    a.paymentStatus?.toLowerCase().includes('collection') ||
-    a.accountName?.toLowerCase().includes('collection')
-  );
-  
-  for (const account of collectionAccounts) {
-    recommendedDisputes.push({
-      id: `collection-${account.accountNumber || Math.random().toString(36).substring(2, 10)}`,
-      type: 'collection',
-      title: 'Collection Account Dispute',
-      accountName: account.accountName,
-      accountNumber: account.accountNumber,
-      reason: 'Collection Account Dispute',
-      description: `Dispute collection account ${account.accountName}`,
-      bureau: account.bureau || 'Experian',
-      impact: 'High'
-    });
-  }
-  
-  // Look for inquiries
-  if (data.inquiries && data.inquiries.length > 0) {
-    recommendedDisputes.push({
-      id: `inquiry-${Math.random().toString(36).substring(2, 10)}`,
-      type: 'inquiry',
-      title: 'Unauthorized Inquiry Dispute',
-      accountName: 'Recent Inquiries',
-      reason: 'Unauthorized Inquiry Dispute',
-      description: 'Dispute unauthorized inquiries on your credit report',
-      bureau: data.inquiries[0].bureau || 'Experian',
-      impact: 'Medium'
-    });
-  }
-  
+  // Generate final analysis results
   return {
-    totalAccounts: data.accounts.length,
-    openAccounts,
-    closedAccounts,
-    negativeItems,
+    totalAccounts: accounts.length,
+    openAccounts: accounts.filter(a => a.status?.toLowerCase().includes('open')).length,
+    closedAccounts: accounts.filter(a => a.status?.toLowerCase().includes('closed')).length,
+    negativeItems: accounts.filter(a => a.isNegative).length,
+    inquiryCount: inquiries.length,
+    publicRecordCount: publicRecords.length,
     accountTypeSummary,
-    totalBalances,
-    recommendedDisputes,
-    personalInfo: data.personalInfo
+    creditUtilization: totalCreditLimit > 0 ? (totalBalance / totalCreditLimit) * 100 : 0,
+    totalCreditLimit,
+    totalBalance,
+    totalDiscrepancies: accountsWithIssues.length,
+    highSeverityIssues: accountsWithIssues.filter(a => a.isNegative).length,
+    accountsWithIssues: accountsWithIssues.length,
+    recommendedDisputes
   };
+};
+
+// Helper function to check if a date is recent (within last 6 months)
+const isRecentActivity = (dateString: string): boolean => {
+  try {
+    const activityDate = new Date(dateString);
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    return activityDate > sixMonthsAgo;
+  } catch (e) {
+    // If date parsing fails, return false
+    return false;
+  }
 };

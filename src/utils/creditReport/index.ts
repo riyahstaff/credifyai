@@ -1,27 +1,35 @@
 
 /**
- * Credit Report Parser Module
- * This module processes and analyzes credit reports for dispute identification
+ * Credit Report Module
+ * Main entry point for credit report processing utilities
  */
+import { parseReportContent, parseReportFile } from './parser/parseReportContent';
+import { extractAccounts } from './parser/accounts';
+import { extractTextFromPDF } from './extractors/pdfExtractor';
+import { convertReportToHtml } from './formatters';
 
-// Re-export types
-export * from './types';
+// Export types
+export type {
+  CreditReportData,
+  CreditReportAccount,
+  CreditReportInquiry,
+  CreditReportPublicRecord,
+  CreditReportAnalysisResults,
+} from './types';
 
-// Re-export legal references
-export * from './legalReferences';
+// Export the extractPersonalInfo functionality directly to avoid ambiguity
+import { extractPersonalInfo as extractInfo } from './parser/extractPersonalInfo';
+export { extractInfo as extractPersonalInfo };
 
-// Re-export text extractors
-export * from './extractors';
+// Export main functionality
+export {
+  parseReportContent,
+  parseReportFile,
+  extractAccounts,
+  extractTextFromPDF,
+  convertReportToHtml
+};
 
-// Re-export parser functions
-export * from './parser';
-
-// Re-export dispute letter generators
+// Re-export utilities and dispute letters
+export * from './helpers';
 export * from './disputeLetters';
-
-// Re-export sample report loaders
-export * from './sampleReports';
-
-// Main processing function
-import { processCreditReport } from './sampleReports';
-export { processCreditReport };
