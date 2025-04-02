@@ -1,3 +1,4 @@
+
 export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
@@ -19,6 +20,9 @@ export interface CreditReportAccount {
   creditLimit?: number | string;
   accountHolderName?: string;
   ssn?: string;
+  remarks?: string[];
+  lastActivity?: string;
+  highBalance?: number | string;
 }
 
 export interface CreditReportInquiry {

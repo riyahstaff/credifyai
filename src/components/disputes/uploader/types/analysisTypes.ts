@@ -1,18 +1,10 @@
 
-import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
+import { CreditReportData, CreditReportAccount, IdentifiedIssue } from '@/utils/creditReport/types';
 
 export interface AnalysisProcessorProps {
   uploadedFile: File | null;
   setReportData: (data: CreditReportData) => void;
-  setIssues: (issues: Array<{
-    type: string;
-    title: string;
-    description: string;
-    impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
-    impactColor: string;
-    account?: CreditReportAccount;
-    laws: string[];
-  }>) => void;
+  setIssues: (issues: IdentifiedIssue[]) => void;
   setLetterGenerated: (generated: boolean) => void;
   setAnalysisError: (error: string | null) => void;
   setAnalyzing: (analyzing: boolean) => void;
@@ -23,12 +15,4 @@ export interface AnalysisHandlerProps extends AnalysisProcessorProps {
   toast: ReturnType<typeof import('@/hooks/use-toast').useToast>;
 }
 
-export interface IssueItem {
-  type: string;
-  title: string;
-  description: string;
-  impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
-  impactColor: string;
-  account?: CreditReportAccount;
-  laws: string[];
-}
+export type IssueItem = IdentifiedIssue;
