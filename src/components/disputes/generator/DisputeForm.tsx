@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   CreditReportData, 
@@ -122,7 +123,8 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
       
       allAccounts: reportData?.accounts || [],
       
-      reportDataId: reportData?.id || null,
+      // Fix: Change reportData?.id to a string ID or null since id doesn't exist in CreditReportData
+      reportDataId: null,
       
       personalInfo: reportData?.personalInfo || null
     };
