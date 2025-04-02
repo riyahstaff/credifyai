@@ -51,7 +51,12 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
       // TransUnion specific patterns
       /credit report for\n([\w\s.'-]{3,30})/i,
       /(\w+\s+\w+)(?:\s+Report Number:)/i,
-      /Personal Information\n([\w\s.'-]{3,30})/i
+      /Personal Information\n([\w\s.'-]{3,30})/i,
+      // Additional patterns to catch consumer names
+      /(?:CONFIDENTIAL|SENSITIVE)\s+INFORMATION\s+(?:FOR|OF)?\s+([\w\s.'-]{3,30})\b/i,
+      /Your\s+TransUnion\s+[^\n]*\n([\w\s.'-]{3,30})\b/i,
+      /(?:CREDIT\s+)?REPORT\s+(?:FOR|OF)?\s+([\w\s.'-]{3,30})\b/i,
+      /(?:\b|^)((?:[A-Z][a-z]+\s+){1,2}[A-Z][a-z]+)(?:\n|,|\s{2}|$)/
     ];
     
     for (const pattern of namePatterns) {
@@ -62,7 +67,9 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
         if (!potentialName.includes('.com') && 
             !potentialName.includes('.gov') && 
             !potentialName.toLowerCase().includes('credit') && 
-            !potentialName.toLowerCase().includes('report')) {
+            !potentialName.toLowerCase().includes('report') &&
+            !potentialName.toLowerCase().includes('finance') &&
+            !potentialName.toLowerCase().includes('www')) {
           personalInfo.name = potentialName;
           console.log("Found name:", personalInfo.name);
           break;
@@ -81,7 +88,10 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
       /\b(\d+(?:\s*[A-Za-z]+){1,4}(?:\s*\w+\.?){0,2}(?:\s+[A-Za-z]+){0,2})\b/i,
       // TransUnion specific patterns
       /Current Address:\n([A-Za-z0-9\s.#,-]{5,60})/i,
-      /Address:\n([A-Za-z0-9\s.#,-]{5,60})/i
+      /Address(?:es)?:\n([A-Za-z0-9\s.#,-]{5,60})/i,
+      /Residence:\n([A-Za-z0-9\s.#,-]{5,60})/i,
+      // More specific address patterns with house numbers
+      /\b(\d+(?:\s*[A-Za-z]+){1,5}(?:\s+(?:St(?:reet)?|Ave(?:nue)?|Rd|Road|Dr(?:ive)?|Ln|Lane|Blvd|Boulevard|Pkwy|Parkway|Pl|Place|Cir|Circle|Ct|Court|Way|Ter(?:race)?)\.?))\b/i
     ];
     
     for (const pattern of addressPatterns) {
@@ -105,7 +115,10 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
       /STATE(?:[^\n]{0,20})?:?\s*([A-Z]{2})/i,
       /ZIP(?:[^\n]{0,20})?:?\s*(\d{5}(?:-\d{4})?)/i,
       // TransUnion specific patterns
-      /Current Address:(?:.*\n){1,2}([A-Za-z\s.'-]{2,25}),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i
+      /Current Address:(?:.*\n){1,2}([A-Za-z\s.'-]{2,25}),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i,
+      /Address(?:es)?:(?:.*\n){1,2}([A-Za-z\s.'-]{2,25}),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i,
+      // Address line followed by city, state zip
+      /(?:^|\n)(?:\d+[^,\n]+)(?:\n|\s{2,})([A-Za-z\s.'-]{2,25})\s*,?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i
     ];
     
     // Try city, state, zip as a group first

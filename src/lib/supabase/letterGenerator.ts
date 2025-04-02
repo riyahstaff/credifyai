@@ -43,6 +43,17 @@ export async function generateEnhancedDisputeLetter(
       }
     });
     
+    // Skip generation if critical information is missing
+    if (!accountDetails.bureau) {
+      console.error("Cannot generate letter - bureau information missing");
+      return "ERROR: Bureau information is missing from the credit report. Please ensure you've uploaded a valid credit report.";
+    }
+    
+    if (!userInfo.name || userInfo.name === "[YOUR NAME]") {
+      console.error("Cannot generate letter - consumer name missing");
+      return "ERROR: Consumer name information is missing from the credit report. Please ensure you've uploaded a valid credit report.";
+    }
+    
     // Determine the dispute category and type based on the input
     let disputeCategory: keyof typeof DISPUTE_TEMPLATES = 'general';
     let templateType = 'GENERAL_DISPUTE';
@@ -86,13 +97,14 @@ export async function generateEnhancedDisputeLetter(
       }
     }
     
-    // Bureau addresses
+    // Bureau addresses - ONLY use these if we have a valid bureau
     const bureauAddresses = {
       'experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
       'equifax': 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374',
       'transunion': 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016'
     };
     
+    // Normalize bureau name for address lookup
     const bureau = accountDetails.bureau.toLowerCase();
     let bureauAddress = '';
     
@@ -100,29 +112,32 @@ export async function generateEnhancedDisputeLetter(
       bureauAddress = bureauAddresses.experian;
     } else if (bureau.includes('equifax')) {
       bureauAddress = bureauAddresses.equifax;
-    } else if (bureau.includes('transunion')) {
+    } else if (bureau.includes('transunion') || bureau.includes('trans union')) {
       bureauAddress = bureauAddresses.transunion;
     } else {
-      // Default to the bureau name and generic address
-      bureauAddress = `${accountDetails.bureau}\n[BUREAU ADDRESS]`;
+      // Just use the bureau name directly with no address
+      bureauAddress = `${accountDetails.bureau}`;
+      console.error("Unknown bureau for address lookup:", accountDetails.bureau);
     }
     
     // Clean up account name and number
-    const accountName = accountDetails.accountName || 'Unknown Account';
-    // Format account number with masked format if available
-    const accountNumber = accountDetails.accountNumber 
-      ? (accountDetails.accountNumber.length > 4 
-          ? 'xx-xxxx-' + accountDetails.accountNumber.slice(-4) 
-          : 'xx-xxxx-' + accountDetails.accountNumber)
-      : 'xx-xxxx-1000';
+    const accountName = accountDetails.accountName || '';
     
-    // Format the account section in the requested format
-    const accountSection = `
+    // Format account number with masked format if available, but don't use a placeholder
+    let accountNumber = '';
+    if (accountDetails.accountNumber) {
+      accountNumber = accountDetails.accountNumber.length > 4 
+        ? 'xx-xxxx-' + accountDetails.accountNumber.slice(-4) 
+        : accountDetails.accountNumber;
+    }
+    
+    // Format the account section with real information ONLY
+    const accountSection = accountName ? `
 DISPUTED ITEM(S):
 Account Name: ${accountName.toUpperCase()}
-Account Number: ${accountNumber}
+${accountNumber ? `Account Number: ${accountNumber}` : ''}
 Reason for Dispute: ${disputeType}
-`;
+` : 'I am disputing information in my credit report that may be inaccurate.';
 
     // Use personal info from credit report if available
     let finalUserInfo = { ...userInfo };
@@ -152,65 +167,67 @@ Reason for Dispute: ${disputeType}
       }
     }
     
-    // Format address with proper line breaks
-    let formattedAddress = '';
-    if (finalUserInfo.address && finalUserInfo.address !== "[YOUR ADDRESS]") {
-      formattedAddress = finalUserInfo.address;
-    } else {
-      formattedAddress = "[YOUR ADDRESS]";
+    // Format address only with real data - NO PLACEHOLDERS
+    const formattedAddress = finalUserInfo.address || '';
+    
+    // Only format location info if ALL parts exist
+    let locationInfo = '';
+    if (finalUserInfo.city && finalUserInfo.state && finalUserInfo.zip) {
+      locationInfo = `${finalUserInfo.city}, ${finalUserInfo.state} ${finalUserInfo.zip}`;
+    }
+
+    // Generate the final letter - ONLY include sections if we have the necessary data
+    let letterContent = '';
+    
+    // Only include header and consumer info if available
+    if (finalUserInfo.name) {
+      letterContent += `${finalUserInfo.name}\n`;
+      
+      if (formattedAddress) {
+        letterContent += `${formattedAddress}\n`;
+      }
+      
+      if (locationInfo) {
+        letterContent += `${locationInfo}\n`;
+      }
+      
+      letterContent += `${currentDate}\n\n`;
     }
     
-    let locationInfo = '';
-    if (finalUserInfo.city && finalUserInfo.state && finalUserInfo.zip && 
-        finalUserInfo.city !== "[CITY]" && 
-        finalUserInfo.state !== "[STATE]" && 
-        finalUserInfo.zip !== "[ZIP]") {
-      locationInfo = `${finalUserInfo.city}, ${finalUserInfo.state} ${finalUserInfo.zip}`;
-    } else {
-      locationInfo = "[CITY], [STATE] [ZIP]";
+    // Only include bureau section if we have it
+    if (bureauAddress) {
+      letterContent += `${bureauAddress}\n\n`;
     }
-
-    // Generate the final letter
-    let letterContent = `Credit Report #: ${creditReportNumber}
-Today is ${currentDate}
-
-${finalUserInfo.name || '[YOUR NAME]'}
-${formattedAddress}
-${locationInfo}
-
-${accountDetails.bureau}
-${bureauAddress}
-
-Re: Dispute of Inaccurate Information - ${disputeType} Account #1
-
-To Whom It May Concern:
-
-I am writing to dispute the following information in my credit report. I have identified the following item(s) that are inaccurate or incomplete:
-
-${accountSection}
-
-Under the Fair Credit Reporting Act (FCRA), you are required to:
-1. Conduct a reasonable investigation into the information I am disputing
-2. Forward all relevant information that I provide to the furnisher
-3. Review and consider all relevant information
-4. Provide me the results of your investigation
-5. Delete the disputed information if it cannot be verified
-
-I am disputing this information as it is inaccurate and the creditor may be unable to provide adequate verification as required by law. The industry standard Metro 2 format requires specific, accurate reporting practices that have not been followed in this case.
-
-${accountDetails.errorDescription || "The information appears to be incorrect and should be verified or removed from my credit report."}
-
-Please investigate this matter and provide me with the results within 30 days as required by the FCRA.
-
-Sincerely,
-
-${finalUserInfo.name || '[YOUR NAME]'}
-
-Enclosures:
-- Copy of ID
-- Copy of social security card
-- Copy of utility bill
-`;
+    
+    // Only include other sections if we have a valid bureau
+    if (bureauAddress) {
+      letterContent += `Re: Dispute of Inaccurate Information - ${disputeType}\n\n`;
+      letterContent += `To Whom It May Concern:\n\n`;
+      letterContent += `I am writing to dispute the following information in my credit report. I have identified the following item(s) that are inaccurate or incomplete:\n\n`;
+      letterContent += `${accountSection}\n\n`;
+      letterContent += `Under the Fair Credit Reporting Act (FCRA), you are required to:\n`;
+      letterContent += `1. Conduct a reasonable investigation into the information I am disputing\n`;
+      letterContent += `2. Forward all relevant information that I provide to the furnisher\n`;
+      letterContent += `3. Review and consider all relevant information\n`;
+      letterContent += `4. Provide me the results of your investigation\n`;
+      letterContent += `5. Delete the disputed information if it cannot be verified\n\n`;
+      letterContent += `I am disputing this information as it is inaccurate and the creditor may be unable to provide adequate verification as required by law. The industry standard Metro 2 format requires specific, accurate reporting practices that have not been followed in this case.\n\n`;
+      letterContent += `${accountDetails.errorDescription || "The information appears to be incorrect and should be verified or removed from my credit report."}\n\n`;
+      letterContent += `Please investigate this matter and provide me with the results within 30 days as required by the FCRA.\n\n`;
+      letterContent += `Sincerely,\n\n`;
+      
+      if (finalUserInfo.name) {
+        letterContent += `${finalUserInfo.name}\n\n`;
+      }
+      
+      letterContent += `Enclosures:\n`;
+      letterContent += `- Copy of ID\n`;
+      letterContent += `- Copy of social security card\n`;
+      letterContent += `- Copy of utility bill\n`;
+    } else {
+      // If we don't have a bureau, provide an error message
+      letterContent = "ERROR: Could not generate letter because bureau information is missing from the credit report.";
+    }
 
     // Ensure the KEY explanation is removed
     letterContent = letterContent.replace(

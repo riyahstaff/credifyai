@@ -22,5 +22,6 @@ export interface Letter {
  * Returns empty array to ensure no more mock letters are used
  */
 export const getSampleLetters = (): Letter[] => {
+  console.log("getSampleLetters called - returning EMPTY array - NO MOCK DATA");
   return [];
 };

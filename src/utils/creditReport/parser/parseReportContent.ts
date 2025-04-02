@@ -33,29 +33,39 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
     htmlContent: convertReportToHtml(content, isPdf) // Add HTML formatted content with PDF flag
   };
   
-  // Conduct more thorough search for bureau identification
+  // Stronger detection of bureau information - first by specific header patterns
   const lowerContent = content.toLowerCase();
   
-  // More comprehensive checks for each bureau
+  // Look for very explicit bureau headers/logos first
+  const experianLogo = /(e+\s*x+\s*p+\s*e+\s*r+\s*i+\s*a+\s*n+|e\s*x\s*p\s*e\s*r\s*i\s*a\s*n)/i;
+  const equifaxLogo = /(e+\s*q+\s*u+\s*i+\s*f+\s*a+\s*x+|e\s*q\s*u\s*i\s*f\s*a\s*x)/i;
+  const transunionLogo = /(t+\s*r+\s*a+\s*n+\s*s+\s*u+\s*n+\s*i+\s*o+\s*n+|t\s*r\s*a\s*n\s*s\s*u\s*n\s*i\s*o\s*n|trans\s*union)/i;
+  
   reportData.bureaus.experian = 
-    lowerContent.includes('experian') || 
+    experianLogo.test(lowerContent) || 
+    content.includes('EXPERIAN') || 
     lowerContent.includes('experian credit report') ||
     lowerContent.includes('experian.com');
     
   reportData.bureaus.equifax = 
-    lowerContent.includes('equifax') || 
+    equifaxLogo.test(lowerContent) || 
+    content.includes('EQUIFAX') || 
     lowerContent.includes('equifax credit report') ||
     lowerContent.includes('equifax.com');
     
   reportData.bureaus.transunion = 
-    lowerContent.includes('transunion') || 
-    lowerContent.includes('trans union') ||
+    transunionLogo.test(lowerContent) || 
+    content.includes('TRANSUNION') || 
+    content.includes('TRANS UNION') || 
     lowerContent.includes('transunion credit report') ||
-    lowerContent.includes('transunion.com');
+    lowerContent.includes('transunion.com') ||
+    lowerContent.includes('tuc.com') ||
+    lowerContent.includes('tu credit') ||
+    lowerContent.includes('trans union');
   
   console.log("Detected bureaus:", reportData.bureaus);
   
-  // Determine primary bureau with proper capitalization for dispute letters
+  // Determine primary bureau with NO default - we must identify it from the report
   if (reportData.bureaus.transunion) {
     reportData.primaryBureau = "TransUnion";
   } else if (reportData.bureaus.equifax) {
@@ -71,13 +81,27 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
       reportData.bureaus.transunion = true;
       reportData.primaryBureau = "TransUnion";
     } else {
-      // Default to TransUnion as you specified; removed "Experian" default
-      reportData.primaryBureau = "TransUnion";
+      // Look for score types that might indicate the bureau
+      if (lowerContent.includes('fico score 8 tu')) {
+        reportData.bureaus.transunion = true;
+        reportData.primaryBureau = "TransUnion";
+      } else if (lowerContent.includes('fico score 8 eq')) {
+        reportData.bureaus.equifax = true;
+        reportData.primaryBureau = "Equifax";
+      } else if (lowerContent.includes('fico score 8 ex')) {
+        reportData.bureaus.experian = true;
+        reportData.primaryBureau = "Experian";
+      } else {
+        // Leave primaryBureau undefined if we couldn't detect it
+        // DO NOT SET A DEFAULT
+        reportData.primaryBureau = undefined;
+        console.log("WARNING: Could not determine primary bureau from credit report");
+      }
     }
   }
   
   // Log the determined primary bureau
-  console.log(`Determined primary bureau: ${reportData.primaryBureau}`);
+  console.log(`Determined primary bureau: ${reportData.primaryBureau || "UNKNOWN"}`);
   
   // Extract personal information - this is critical for letter generation
   reportData.personalInfo = extractPersonalInfo(content);
@@ -151,7 +175,7 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
           id: `dispute-${index}`,
           type: type,
           title: `Issue with ${account.accountName}`,
-          bureau: reportData.primaryBureau || account.bureau || "TransUnion",
+          bureau: reportData.primaryBureau || account.bureau || "Unknown",
           accountName: account.accountName,
           accountNumber: account.accountNumber || "",
           reason: reason,

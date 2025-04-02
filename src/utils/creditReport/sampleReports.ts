@@ -12,7 +12,7 @@ let sampleReportsCache: CreditReportData[] = [];
  * This function now returns an empty array to ensure no mock data is used
  */
 export const loadSampleReports = async (): Promise<CreditReportData[]> => {
-  console.log("No sample reports will be loaded - only using real data");
+  console.log("DISABLED: No sample reports will be loaded - only using real data");
   return [];
 };
 
