@@ -1,49 +1,50 @@
 
+import { IdentifiedIssue } from '@/utils/creditReport/types';
+
 /**
- * Provides fallback generic issues when no specific issues are found
- * These are based on common credit report issues
+ * Provides fallback generic issues when no specific issues are found in a credit report
  */
-export const addFallbackGenericIssues = () => {
+export function addFallbackGenericIssues(): IdentifiedIssue[] {
   return [
     {
       type: 'Personal Info',
       title: 'Verify Personal Information',
-      description: 'Review your personal information for accuracy. Incorrect personal details can affect your credit report and score.',
-      impact: "Medium Impact" as const,
+      description: 'Review your personal information for accuracy. Incorrect personal details can affect your credit history.',
+      impact: "Medium Impact",
       impactColor: 'text-amber-500',
-      laws: ['15 USC 1681c', '15 USC 1681g']
+      laws: []
     },
     {
-      type: 'Account Status',
-      title: 'Verify Account Statuses',
-      description: 'Check all account statuses for accuracy. Accounts may be incorrectly reported as open, closed, or delinquent.',
-      impact: "High Impact" as const,
+      type: 'Accounts',
+      title: 'Check Account Balances',
+      description: 'Verify that all account balances are accurate and reflect your current financial situation.',
+      impact: "Medium Impact",
+      impactColor: 'text-amber-500',
+      laws: []
+    },
+    {
+      type: 'Inquiries',
+      title: 'Review Recent Inquiries',
+      description: 'Examine recent inquiries to ensure they were authorized by you. Unauthorized inquiries may indicate identity theft.',
+      impact: "Medium Impact",
+      impactColor: 'text-amber-500',
+      laws: []
+    },
+    {
+      type: 'Public Records',
+      title: 'Check Public Records',
+      description: 'Review any public records for accuracy. Incorrect public records can significantly impact your credit score.',
+      impact: "High Impact",
       impactColor: 'text-red-500',
-      laws: ['15 USC 1681e(b)', '15 USC 1681i']
+      laws: []
     },
     {
-      type: 'Inquiry',
-      title: 'Review Credit Inquiries',
-      description: 'Examine all credit inquiries to confirm you authorized them. Unauthorized inquiries may indicate identity theft or fraud.',
-      impact: "Medium Impact" as const,
+      type: 'Credit Mix',
+      title: 'Evaluate Credit Mix',
+      description: 'Assess your credit mix for a healthy balance of different credit types to improve your credit score.',
+      impact: "Medium Impact",
       impactColor: 'text-amber-500',
-      laws: ['15 USC 1681b(a)(2)', '15 USC 1681m']
-    },
-    {
-      type: 'Late Payment',
-      title: 'Check Payment History',
-      description: 'Verify your payment history for all accounts. Late payments could be reported in error.',
-      impact: "High Impact" as const,
-      impactColor: 'text-red-500',
-      laws: ['15 USC 1681s-2(a)(3)', '15 USC 1681e(b)']
-    },
-    {
-      type: 'Balance',
-      title: 'Verify Account Balances',
-      description: 'Check all account balances for accuracy. Incorrect balances can impact your credit utilization ratio.',
-      impact: "Medium Impact" as const,
-      impactColor: 'text-amber-500',
-      laws: ['15 USC 1681e(b)', '15 USC 1681i']
+      laws: []
     }
   ];
-};
+}
