@@ -26,7 +26,8 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
     selectedLetter, 
     setSelectedLetter, 
     isLoading,
-    saveLetter
+    saveLetter,
+    profile
   } = useDisputeLettersData(testMode);
   
   // States for letter generation
@@ -99,6 +100,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
                 isLoading={isLoading}
                 onCreateLetter={handleCreateLetterFromIssues}
                 testMode={testMode}
+                userProfile={profile}
               />
             </div>
             
@@ -107,6 +109,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
                 letter={selectedLetter}
                 isLoading={isLoading}
                 testMode={testMode}
+                userProfile={profile}
               />
             </div>
           </div>
