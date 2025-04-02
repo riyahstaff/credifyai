@@ -4,10 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../../layout/Navbar';
 import Footer from '../../layout/Footer';
 import { useDisputeLettersData } from './hooks/useDisputeLettersData';
-import DisputeLetterGenerator from './DisputeLetterGenerator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, FileText, Info } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 // Import existing components
 import DisputeLettersList from './DisputeLettersList';  
@@ -27,8 +26,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
     selectedLetter, 
     setSelectedLetter, 
     isLoading,
-    saveLetter,
-    usingSampleData
+    saveLetter
   } = useDisputeLettersData(testMode);
   
   // States for letter generation
@@ -71,15 +69,15 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
         <div className="container mx-auto px-4 md:px-6">
           <DisputeLetterHeader testMode={testMode} />
           
-          {usingSampleData && (
+          {letters.length === 0 && !isLoading && (
             <Alert className="mb-8 border-amber-300 bg-amber-50 dark:bg-amber-900/30 dark:border-amber-800/50">
-              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500" />
+              <FileText className="h-5 w-5 text-amber-600 dark:text-amber-500" />
               <AlertTitle className="text-amber-800 dark:text-amber-400 font-semibold">
-                Sample Letters Displayed
+                No Dispute Letters Found
               </AlertTitle>
               <AlertDescription className="text-amber-700 dark:text-amber-300">
-                You're currently viewing sample dispute letters, not ones generated from your credit report.
-                To generate actual dispute letters based on your report, please upload and analyze your credit report first.
+                You don't have any dispute letters yet. To generate dispute letters based on your credit report, 
+                please upload and analyze your credit report first.
               </AlertDescription>
               <Button 
                 variant="outline" 

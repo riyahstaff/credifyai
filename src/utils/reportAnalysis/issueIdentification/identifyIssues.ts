@@ -1,270 +1,293 @@
 
-/**
- * Issue Identification
- * Main functionality for identifying and categorizing credit report issues
- */
-
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
-import { addPersonalInfoIssues, addGenericIssues, addFallbackGenericIssues } from './genericIssues';
-import { identifyAccountIssues } from './accountIssues';
-import { identifyTextIssues } from './textIssues';
 
-// Define impact types for consistency
-type ImpactLevel = 'High Impact' | 'Critical Impact' | 'Medium Impact';
+// FCRA Laws reference for different dispute types
+const FCRA_LAWS = {
+  latePayments: ['15 USC 1681s-2(a)(3)', '15 USC 1681e(b)'],
+  collections: ['15 USC 1692c', '15 USC 1681s-2(a)(3)'],
+  inaccuracies: ['15 USC 1681e(b)', '15 USC 1681i'],
+  inquiries: ['15 USC 1681b(a)(2)', '15 USC 1681m'],
+  personalInfo: ['15 USC 1681c', '15 USC 1681g'],
+  metro2: ['Metro 2® Compliance Guidelines'],
+  consumerRights: ['12 CFR 1026.13', '18 USC 1028a']
+};
 
-// Issue interface for type safety
-interface Issue {
+interface IdentifiedIssue {
   type: string;
   title: string;
   description: string;
-  impact: ImpactLevel;
+  impact: "High Impact" | "Critical Impact" | "Medium Impact";
   impactColor: string;
   account?: CreditReportAccount;
   laws: string[];
 }
 
 /**
- * Main function to identify issues in a credit report
+ * Identify issues in a credit report for dispute generation
  */
-export const identifyIssues = (reportData: CreditReportData): Issue[] => {
-  try {
-    console.log("Starting issue identification on credit report data");
+export const identifyIssues = (reportData: CreditReportData): IdentifiedIssue[] => {
+  if (!reportData) {
+    console.error("No report data provided to identifyIssues");
+    return [];
+  }
+
+  const issues: IdentifiedIssue[] = [];
+  
+  // Issue #1: Multiple names in personal information
+  if (reportData.personalInfo?.name) {
+    const nameText = reportData.rawText?.toLowerCase() || '';
+    const nameVariants = extractNameVariants(nameText, reportData.personalInfo.name);
     
-    // Initialize issues array
-    const issues: Issue[] = [];
+    if (nameVariants.length > 1) {
+      issues.push({
+        type: 'Personal Info',
+        title: 'Multiple Names Listed',
+        description: `Your credit report contains multiple variations of your name: ${nameVariants.join(', ')}. This may indicate errors in reporting.`,
+        impact: "Medium Impact",
+        impactColor: 'text-amber-500',
+        laws: FCRA_LAWS.personalInfo
+      });
+    }
+  }
+  
+  // Issue #2: Multiple addresses in personal information
+  if (reportData.personalInfo?.address) {
+    const addressText = reportData.rawText?.toLowerCase() || '';
+    const addressVariants = extractAddressVariants(addressText);
     
-    // Extract accounts and raw text
-    const { accounts = [], rawText = '' } = reportData;
+    if (addressVariants.length > 1) {
+      issues.push({
+        type: 'Personal Info',
+        title: 'Multiple Addresses Listed',
+        description: `Your credit report shows multiple addresses. Addresses other than your current one should be removed.`,
+        impact: "Medium Impact",
+        impactColor: 'text-amber-500',
+        laws: FCRA_LAWS.personalInfo
+      });
+    }
+  }
+  
+  // Issue #3: Multiple employers listed
+  const employerVariants = extractEmployerVariants(reportData.rawText || '');
+  if (employerVariants.length > 1) {
+    issues.push({
+      type: 'Personal Info',
+      title: 'Multiple Employers Listed',
+      description: `Your credit report lists multiple employers: ${employerVariants.join(', ')}. Outdated employer information should be removed.`,
+      impact: "Medium Impact",
+      impactColor: 'text-amber-500',
+      laws: FCRA_LAWS.personalInfo
+    });
+  }
+  
+  // Issue #4: Social Security Number issues
+  if (reportData.personalInfo?.ssn) {
+    const ssnText = reportData.rawText?.toLowerCase() || '';
+    const ssnVariants = extractSSNVariants(ssnText);
     
-    // Add personal information issues
-    const personalInfoIssues = addPersonalInfoIssues();
-    issues.push(...personalInfoIssues);
-    
-    // Analyze accounts for issues
-    const { issues: accountIssues, cleanedAccounts } = identifyAccountIssues(accounts, rawText);
-    
-    // Add account-specific issues
-    issues.push(...accountIssues);
-    
-    // Identify issues from text content
-    const textIssues = identifyTextIssues(reportData);
-    issues.push(...textIssues);
-    
-    // Ensure we have a minimum set of issues
-    if (issues.length < 5) {
-      console.log("Less than 5 issues found, adding generic issues");
+    if (ssnVariants.length > 1) {
+      issues.push({
+        type: 'Personal Info',
+        title: 'Multiple SSNs Listed',
+        description: `Your credit report contains multiple Social Security Numbers. This is a serious error that requires immediate correction.`,
+        impact: "Critical Impact",
+        impactColor: 'text-red-600',
+        laws: [...FCRA_LAWS.personalInfo, '18 USC 1028a']
+      });
+    }
+  }
+  
+  // Issue #5: Check each negative account for inaccuracies
+  reportData.accounts.forEach(account => {
+    if (account.isNegative) {
+      // Check for missing dates
+      if (!account.dateOpened && !account.openDate) {
+        issues.push({
+          type: 'Account Error',
+          title: `Missing Open Date: ${account.accountName}`,
+          description: `This account is missing the date it was opened, which violates credit reporting requirements.`,
+          impact: "High Impact",
+          impactColor: 'text-red-500',
+          account: account,
+          laws: FCRA_LAWS.inaccuracies
+        });
+      }
       
-      // Add generic fallback issues
-      const fallbackIssues = addFallbackGenericIssues();
-      
-      // Add fallback issues until we have at least 5
-      for (const issue of fallbackIssues) {
-        // Check if we already have a similar issue
-        if (!issues.some(i => i.type === issue.type)) {
-          issues.push(issue);
-          if (issues.length >= 10) {
-            break;
-          }
-        }
+      // Check for late payments
+      if (account.paymentStatus && /late|past due|delinquent/i.test(account.paymentStatus)) {
+        issues.push({
+          type: 'Late Payment',
+          title: `Late Payment Reporting: ${account.accountName}`,
+          description: `This account shows late payments that may be inaccurate and should be verified.`,
+          impact: "High Impact",
+          impactColor: 'text-red-500',
+          account: account,
+          laws: FCRA_LAWS.latePayments
+        });
       }
     }
-    
-    // Credit repair specific issues based on keywords in the text
-    addCreditRepairSpecificIssues(issues, reportData);
-    
-    // Return the identified issues
-    return issues;
-  } catch (error) {
-    console.error("Error identifying issues:", error);
-    
-    // Return fallback issues on error
-    return addFallbackGenericIssues();
+  });
+  
+  // Issue #6: Check for duplicate student loans
+  const studentLoanMap = new Map<string, CreditReportAccount[]>();
+  reportData.accounts.forEach(account => {
+    if (/student|loan|education|dept\.? of ed/i.test(account.accountName || '')) {
+      const balance = account.balance?.toString() || account.currentBalance?.toString() || '';
+      if (balance) {
+        if (!studentLoanMap.has(balance)) {
+          studentLoanMap.set(balance, []);
+        }
+        studentLoanMap.get(balance)?.push(account);
+      }
+    }
+  });
+  
+  // Check for duplicate loan amounts
+  studentLoanMap.forEach((accounts, balance) => {
+    if (accounts.length > 1) {
+      accounts.forEach(account => {
+        issues.push({
+          type: 'Duplicate Account',
+          title: `Possible Duplicate Student Loan: ${account.accountName}`,
+          description: `This student loan appears to be a duplicate with the same balance as another loan. This may indicate the loan was sold and is being reported multiple times.`,
+          impact: "High Impact",
+          impactColor: 'text-red-500',
+          account: account,
+          laws: FCRA_LAWS.inaccuracies
+        });
+      });
+    }
+  });
+  
+  // Issue #7: Bankruptcy reporting
+  const hasBankruptcy = reportData.publicRecords.some(record => 
+    /bankruptcy|chapter 7|chapter 13/i.test(record.type || '')
+  );
+  
+  if (hasBankruptcy) {
+    issues.push({
+      type: 'Public Record',
+      title: 'Bankruptcy Reporting',
+      description: 'Your credit report shows bankruptcy records. Check if they should still be reported based on applicable laws and timelines.',
+      impact: "Critical Impact",
+      impactColor: 'text-red-600',
+      laws: ['15 USC 1681c', '15 USC 1681i']
+    });
   }
+  
+  // Issue #8: Old inquiries over 2 years old
+  const twoYearsAgo = new Date();
+  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+  
+  reportData.inquiries.forEach(inquiry => {
+    if (inquiry.inquiryDate) {
+      const inquiryDate = new Date(inquiry.inquiryDate);
+      if (inquiryDate < twoYearsAgo) {
+        issues.push({
+          type: 'Inquiry',
+          title: `Outdated Inquiry: ${inquiry.inquiryBy}`,
+          description: `This inquiry from ${inquiry.inquiryDate} is over two years old and should no longer appear on your credit report.`,
+          impact: "Medium Impact",
+          impactColor: 'text-amber-500',
+          laws: FCRA_LAWS.inquiries
+        });
+      }
+    }
+  });
+
+  return issues;
 };
 
-/**
- * Add credit repair specific issues based on analysis of the text
- */
-function addCreditRepairSpecificIssues(issues: Issue[], reportData: CreditReportData): void {
-  const rawText = reportData.rawText || '';
+// Helper function to extract name variants from credit report text
+function extractNameVariants(text: string, primaryName: string): string[] {
+  const nameVariants = new Set<string>();
   
-  // Check for multiple names
-  if (rawText.match(/also\s+known\s+as|a\.k\.a|alias|formerly\s+known\s+as|previous\s+name/i)) {
-    issues.push({
-      type: 'multiple_names',
-      title: 'Multiple Names on Credit Report',
-      description: 'Your credit report shows multiple names or aliases. This can be a sign of identity theft or credit file mixing.',
-      impact: 'High Impact',
-      impactColor: 'orange',
-      laws: ['15 USC 1681c', '15 USC 1681g']
-    });
-  }
+  // Add the primary name
+  nameVariants.add(primaryName);
   
-  // Check for multiple addresses
-  const addressMatches = rawText.match(/address(?:es)?(?:\s|:)+.{1,50}(?:\n|$)/gi) || [];
-  if (addressMatches.length > 3) {
-    issues.push({
-      type: 'multiple_addresses',
-      title: 'Multiple Addresses Listed',
-      description: 'Your credit report shows multiple addresses. Excessive or incorrect addresses should be disputed.',
-      impact: 'Medium Impact',
-      impactColor: 'yellow',
-      laws: ['15 USC 1681c', '15 USC 1681g']
-    });
-  }
+  // Look for name patterns in the text
+  const nameSection = text.match(/name\s*:([^\n]+)|name\s+variation|name\s+alias|also known as|aka/i);
   
-  // Check for multiple employers
-  if (rawText.match(/employer(?:s)?(?:\s|:)+.{1,50}(?:\n|$)/gi)?.length > 2) {
-    issues.push({
-      type: 'multiple_employers',
-      title: 'Multiple Employers Listed',
-      description: 'Your credit report shows multiple employers. Incorrect employment information should be disputed.',
-      impact: 'Medium Impact',
-      impactColor: 'yellow',
-      laws: ['15 USC 1681c', '15 USC 1681g']
-    });
-  }
-  
-  // Check for SSN issues
-  if (rawText.match(/ssn|social security number/i) && 
-      rawText.match(/issue|invalid|incorrect|different|multiple/i)) {
-    issues.push({
-      type: 'ssn_issues',
-      title: 'Social Security Number Inconsistency',
-      description: 'There may be issues with your Social Security Number reporting. Incorrect SSN information is a serious issue.',
-      impact: 'Critical Impact',
-      impactColor: 'red',
-      laws: ['15 USC 1681c', '15 USC 1681g', '18 USC 1028a']
-    });
-  }
-  
-  // Check for late payments
-  if (rawText.match(/30(?:\s|-|_)day|60(?:\s|-|_)day|90(?:\s|-|_)day|late(?:\s|-|_)payment/i)) {
-    issues.push({
-      type: 'late_payments',
-      title: 'Late Payment Reporting Issues',
-      description: 'Your report shows late payments. These must be reported with 100% accuracy, and any discrepancies can be grounds for dispute.',
-      impact: 'Critical Impact',
-      impactColor: 'red',
-      laws: ['15 USC 1681s-2(a)(3)', '15 USC 1681e(b)']
-    });
-  }
-  
-  // Check for student loans
-  if (rawText.match(/student(?:\s|-|_)loan|dept(?:\s|-|_)of(?:\s|-|_)ed|navient|sallie(?:\s|-|_)mae/i)) {
-    // Check for duplicate student loans
-    const studentLoanAccounts = reportData.accounts.filter(acc => 
-      acc.accountName.toLowerCase().includes('student') || 
-      acc.accountName.toLowerCase().includes('edu') ||
-      acc.accountName.toLowerCase().includes('navient') ||
-      acc.accountName.toLowerCase().includes('sallie')
-    );
+  if (nameSection) {
+    const nameSectionText = nameSection[0];
+    const possibleNames = nameSectionText.split(/[,;:|]/);
     
-    // Check for potential duplicates (similar balances)
-    const balances = new Map<string, number>();
-    studentLoanAccounts.forEach(acc => {
-      const balance = typeof acc.balance === 'number' ? acc.balance : 
-                    typeof acc.currentBalance === 'number' ? acc.currentBalance : 0;
-      
-      if (balance > 0) {
-        const balanceStr = balance.toString();
-        balances.set(balanceStr, (balances.get(balanceStr) || 0) + 1);
+    possibleNames.forEach(name => {
+      const cleanName = name.replace(/name\s*:|also known as|aka/ig, '').trim();
+      if (cleanName.length > 3 && cleanName !== primaryName) {
+        nameVariants.add(cleanName);
       }
     });
-    
-    // Find duplicate balances
-    let hasDuplicates = false;
-    balances.forEach((count, balance) => {
-      if (count > 1) hasDuplicates = true;
-    });
-    
-    if (hasDuplicates) {
-      issues.push({
-        type: 'duplicate_student_loans',
-        title: 'Potentially Duplicate Student Loans',
-        description: 'Your report may have duplicate student loans with identical balances. This often happens when loans are sold to different servicers but not properly updated.',
-        impact: 'High Impact',
-        impactColor: 'orange',
-        laws: ['15 USC 1681e(b)', '15 USC 1681s-2(a)(3)']
-      });
-    } else {
-      issues.push({
-        type: 'student_loans',
-        title: 'Student Loan Verification Needed',
-        description: 'Your student loans should be verified for accurate reporting, including proper status updates and compliance with current Department of Education guidelines.',
-        impact: 'High Impact',
-        impactColor: 'orange',
-        laws: ['15 USC 1681e(b)', '15 USC 1681s-2(a)(3)']
-      });
-    }
   }
   
-  // Check for bankruptcy issues
-  if (rawText.match(/bankruptcy|chapter(?:\s|-|_)7|chapter(?:\s|-|_)13/i)) {
-    const bankruptcyDate = rawText.match(/bankruptcy(?:.{0,30})(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)(?:.{0,10})(\d{1,2})(?:,|\s|-)(\d{4})/i);
-    
-    // Check if bankruptcy is older than 10 years
-    let isOld = false;
-    if (bankruptcyDate && bankruptcyDate[3]) {
-      const year = parseInt(bankruptcyDate[3]);
-      const currentYear = new Date().getFullYear();
-      if (currentYear - year > 10) {
-        isOld = true;
-      }
-    }
-    
-    if (isOld) {
-      issues.push({
-        type: 'old_bankruptcy',
-        title: 'Outdated Bankruptcy Reporting',
-        description: 'Your credit report shows a bankruptcy older than 10 years. Bankruptcies must be removed after 10 years according to the FCRA.',
-        impact: 'Critical Impact',
-        impactColor: 'red',
-        laws: ['15 USC 1681c', '15 USC 1681i']
-      });
-    } else {
-      issues.push({
-        type: 'bankruptcy_verification',
-        title: 'Bankruptcy Information Verification',
-        description: 'Your bankruptcy information should be verified for accuracy, including dates, accounts included, and current status.',
-        impact: 'High Impact',
-        impactColor: 'orange',
-        laws: ['15 USC 1681c', '15 USC 1681i']
-      });
-    }
-  }
-  
-  // Check for old inquiries (>2 years)
-  if (reportData.inquiries && reportData.inquiries.length > 0) {
-    const oldInquiries = reportData.inquiries.filter(inq => {
-      if (!inq.inquiryDate) return false;
-      
-      try {
-        const inquiryDate = new Date(inq.inquiryDate);
-        const twoYearsAgo = new Date();
-        twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-        
-        return inquiryDate < twoYearsAgo;
-      } catch (e) {
-        return false;
-      }
-    });
-    
-    if (oldInquiries.length > 0) {
-      issues.push({
-        type: 'old_inquiries',
-        title: 'Outdated Inquiries (Over 2 Years)',
-        description: `Your credit report contains ${oldInquiries.length} inquiries that are over 2 years old. These should be removed as they're beyond the FCRA reporting period.`,
-        impact: 'Medium Impact',
-        impactColor: 'yellow',
-        laws: ['15 USC 1681b(a)(2)', '15 USC 1681m']
-      });
-    }
-  }
+  return Array.from(nameVariants);
 }
 
-/**
- * Add default generic issues when no specific issues are found
- * This is now implemented in the genericIssues.ts file
- */
-export { addFallbackGenericIssues };
+// Helper function to extract address variants
+function extractAddressVariants(text: string): string[] {
+  const addressVariants = new Set<string>();
+  
+  // Find address sections
+  const addressMatches = text.match(/address\s*:([^\n]+)|current address|previous address|former address/gi);
+  
+  if (addressMatches) {
+    addressMatches.forEach(addressMatch => {
+      const addresses = addressMatch.split(/[,;:|]/);
+      
+      addresses.forEach(address => {
+        const cleanAddress = address.replace(/address\s*:|current|previous|former/ig, '').trim();
+        if (cleanAddress.length > 5 && /\d/.test(cleanAddress)) {
+          addressVariants.add(cleanAddress);
+        }
+      });
+    });
+  }
+  
+  return Array.from(addressVariants);
+}
+
+// Helper function to extract employer variants
+function extractEmployerVariants(text: string): string[] {
+  const employerVariants = new Set<string>();
+  
+  // Find employer sections
+  const employerMatches = text.match(/employer\s*:([^\n]+)|employment|employed by|employed at|works? at|works? for/gi);
+  
+  if (employerMatches) {
+    employerMatches.forEach(employerMatch => {
+      const employers = employerMatch.split(/[,;:|]/);
+      
+      employers.forEach(employer => {
+        const cleanEmployer = employer.replace(/employer\s*:|employment|employed by|employed at|works? at|works? for/ig, '').trim();
+        if (cleanEmployer.length > 3) {
+          employerVariants.add(cleanEmployer);
+        }
+      });
+    });
+  }
+  
+  return Array.from(employerVariants);
+}
+
+// Helper function to extract SSN variants
+function extractSSNVariants(text: string): string[] {
+  const ssnVariants = new Set<string>();
+  
+  // Find SSN patterns (xxx-xx-xxxx or partial matches)
+  const ssnMatches = text.match(/ssn\s*:([^\n]+)|social security number|xxx-xx-\d{4}|\d{3}-\d{2}-\d{4}|\d{9}/gi);
+  
+  if (ssnMatches) {
+    ssnMatches.forEach(ssnMatch => {
+      const ssns = ssnMatch.split(/[,;:|]/);
+      
+      ssns.forEach(ssn => {
+        const cleanSSN = ssn.replace(/ssn\s*:|social security number/ig, '').trim();
+        if (/xxx-xx-\d{4}|\d{3}-\d{2}-\d{4}|\d{9}/.test(cleanSSN)) {
+          ssnVariants.add(cleanSSN);
+        }
+      });
+    });
+  }
+  
+  return Array.from(ssnVariants);
+}

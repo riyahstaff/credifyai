@@ -1,5 +1,4 @@
 
-
 export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
@@ -124,4 +123,3 @@ export interface UserInfo {
   ssn?: string;
   dob?: string;
 }
-
