@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from 'react';
-import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
+import { CreditReportData, CreditReportAccount, IdentifiedIssue } from '@/utils/creditReport/types';
 import { useReportAnalysis } from './report-upload/useReportAnalysis';
 import { useToast } from './use-toast';
 import { useReportStorage } from './report-upload/useReportStorage';
@@ -14,15 +14,7 @@ export const useReportUpload = () => {
   const [fileSize, setFileSize] = useState('0');
   const [reportData, setReportData] = useState<CreditReportData | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [issues, setIssues] = useState<Array<{
-    type: string;
-    title: string;
-    description: string;
-    impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
-    impactColor: string;
-    account?: CreditReportAccount;
-    laws: string[];
-  }>>([]);
+  const [issues, setIssues] = useState<IdentifiedIssue[]>([]);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [letterGenerated, setLetterGenerated] = useState(false);
   

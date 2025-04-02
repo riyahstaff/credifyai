@@ -22,7 +22,7 @@ interface AnalysisStateHandlerProps {
   onStartAnalysis: () => void;
   onGenerateDispute: (account?: CreditReportAccount) => void;
   onAnalysisComplete: () => void;
-  testMode?: boolean; // Add testMode as an optional prop
+  testMode?: boolean;
 }
 
 const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
@@ -40,7 +40,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
   onStartAnalysis,
   onGenerateDispute,
   onAnalysisComplete,
-  testMode // Now accepts testMode prop
+  testMode
 }) => {
   const [showReportPreview, setShowReportPreview] = useState(false);
   const navigate = useNavigate();

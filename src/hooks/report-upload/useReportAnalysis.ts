@@ -1,22 +1,13 @@
 
 import { MutableRefObject } from 'react';
-import { CreditReportData } from '@/utils/creditReport/types';
-import { CreditReportAccount } from '@/utils/creditReport/types';
+import { CreditReportData, IdentifiedIssue } from '@/utils/creditReport/types';
 import { handleAnalysisComplete } from '@/components/disputes/uploader/handlers/analysisHandler';
 import { useToast } from '@/hooks/use-toast';
 
 export const useReportAnalysis = (
   uploadedFile: File | null,
   setReportData: (data: CreditReportData) => void,
-  setIssues: (issues: Array<{
-    type: string;
-    title: string;
-    description: string;
-    impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
-    impactColor: string;
-    account?: CreditReportAccount;
-    laws: string[];
-  }>) => void,
+  setIssues: (issues: IdentifiedIssue[]) => void,
   setLetterGenerated: (generated: boolean) => void,
   setAnalysisError: (error: string | null) => void,
   setAnalyzing: (analyzing: boolean) => void,
