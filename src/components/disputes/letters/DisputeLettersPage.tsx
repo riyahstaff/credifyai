@@ -1,231 +1,111 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import DisputeAgent from '@/components/ai/DisputeAgent';
-import DisputePreview from '@/components/disputes/DisputePreview';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../../layout/Navbar';
 import Footer from '../../layout/Footer';
-import DisputeLettersHeader from './DisputeLettersHeader';
-import DisputeLettersTabs from './DisputeLettersTabs';
-import FCRAComplianceSection from './FCRAComplianceSection';
 import { useDisputeLettersData } from './hooks/useDisputeLettersData';
-import { useDisputeLetterActions } from './DisputeLetterActions';
-import { useDisputeLetterGenerator } from './DisputeLetterGenerator';
-import { useToast } from '@/hooks/use-toast';
+import useDisputeLetterGenerator from './DisputeLetterGenerator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, FileText, Info } from 'lucide-react';
+
+// Import existing components
+import DisputeLettersList from './DisputeLettersList';  
+import DisputeLetterViewer from './DisputeLetterViewer';
+import DisputeLetterHeader from './DisputeLetterHeader';
 
 interface DisputeLettersPageProps {
   testMode?: boolean;
 }
 
-const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode }) => {
+const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = false }) => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [showPreview, setShowPreview] = useState(false);
-  const [currentLetter, setCurrentLetter] = useState<any>(null);
-  const [selectedView, setSelectedView] = useState<string>("letters");
-  const { toast } = useToast();
-  
-  // Check URL parameters for test mode
-  const searchParams = new URLSearchParams(location.search);
-  const urlTestMode = searchParams.get('testMode') === 'true';
-  
-  // Combine component prop and URL parameter
-  const effectiveTestMode = testMode || urlTestMode;
-  
-  // Use the custom hooks for dispute letter data
-  const { letters: initialLetters, isLoading } = useDisputeLettersData(effectiveTestMode);
-  const [letters, setLetters] = useState<any[]>([]);
-  
-  // Update letters when initialLetters changes
-  useEffect(() => {
-    if (initialLetters && initialLetters.length > 0) {
-      console.log(`Setting ${initialLetters.length} letters from initialLetters`);
-      
-      // Ensure we have unique letters by adding unique IDs if they don't exist
-      const uniqueLetters = initialLetters.map((letter, index) => {
-        if (!letter.id) {
-          return { ...letter, id: Date.now() + index };
-        }
-        return letter;
-      });
-      
-      setLetters(uniqueLetters);
-      
-      // Select the first letter for preview if none is selected
-      if (!currentLetter) {
-        setCurrentLetter(uniqueLetters[0]);
-      }
-    }
-  }, [initialLetters, currentLetter]);
-  
-  // Use the dispute letter actions hook
-  const { handleDownloadLetter, handleSendLetter } = useDisputeLetterActions({
-    onUpdateLetters: (updatedLetters) => {
-      setLetters(updatedLetters);
-    }
-  });
+  const { 
+    letters, 
+    setLetters, 
+    addLetter, 
+    selectedLetter, 
+    setSelectedLetter, 
+    isLoading,
+    saveLetter,
+    usingSampleData
+  } = useDisputeLettersData(testMode);
   
   // Use the dispute letter generator hook
-  const { handleGenerateDispute } = useDisputeLetterGenerator({
-    onAddNewLetter: (newLetter) => {
-      // Ensure letter has a unique ID
-      const letterWithId = { ...newLetter, id: newLetter.id || Date.now() };
-      setLetters(prev => [letterWithId, ...prev]);
-      setCurrentLetter(letterWithId);
-      setShowPreview(true);
-      setSelectedView("letters");
-    },
-    saveLetter: async (disputeData) => {
-      // Skip saving in test mode
-      if (effectiveTestMode) {
-        console.log("[DisputeLettersPage] Test mode active - not saving letter to database");
-        return true;
-      }
-      // In a real implementation, this would save to a database
-      // For now, just return success
-      return true;
-    }
+  const { handleGenerateDispute, isGenerating } = useDisputeLetterGenerator({
+    onAddNewLetter: addLetter,
+    saveLetter
   });
   
-  const onViewLetter = (letter: any) => {
-    setCurrentLetter(letter);
-    setShowPreview(true);
-  };
+  const [navHeight, setNavHeight] = useState<number>(0);
   
-  const onDownloadLetter = (letter: any) => {
-    handleDownloadLetter(letter);
-  };
-  
-  const onSendLetter = (letter: any) => {
-    handleSendLetter(letter, letters);
-    setShowPreview(false);
-  };
-  
-  // Clear navigation flag and check for auth persistence
+  // Effect to measure navbar height
   useEffect(() => {
-    // Clear navigation flags
-    sessionStorage.removeItem('navigationInProgress');
-    const authTimestamp = sessionStorage.getItem('authTimestamp');
-    
-    if (authTimestamp) {
-      console.log(`Auth timestamp from navigation: ${authTimestamp}`);
-      sessionStorage.removeItem('authTimestamp');
+    const navbar = document.getElementById('main-navbar');
+    if (navbar) {
+      setNavHeight(navbar.offsetHeight);
     }
-    
-    // Check that we have auth state
-    const hasAuthSession = localStorage.getItem('hasAuthSession');
-    console.log(`Auth session status: ${hasAuthSession ? 'Present' : 'Missing'}`);
-    
-    // Check on mount if we have any generated letters in session storage
-    const generatedLetters = sessionStorage.getItem('generatedDisputeLetters');
-    
-    console.log("Checking for generated letters");
-    console.log("Generated letters:", generatedLetters ? `Found ${JSON.parse(generatedLetters).length} letters` : "Not present");
-    
-    if (generatedLetters) {
-      try {
-        const parsedLetters = JSON.parse(generatedLetters);
-        if (parsedLetters.length > 0) {
-          // Force to letters tab
-          setSelectedView("letters");
-          
-          // Show first letter preview
-          setCurrentLetter(parsedLetters[0]);
-          setShowPreview(true);
-          
-          // Set a flag to avoid multiple page loads
-          sessionStorage.setItem('lettersAlreadyProcessed', 'true');
-        }
-      } catch (error) {
-        console.error("Error parsing generated letters:", error);
-      }
-    }
-    
-    // Check for force reload flag
-    const forceReload = sessionStorage.getItem('forceLettersReload');
-    if (forceReload === 'true') {
-      console.log("[DisputeLettersPage] Force reload flag found and cleared");
-      sessionStorage.removeItem('forceLettersReload');
-      
-      // Only refresh if we haven't already processed the letters
-      if (sessionStorage.getItem('lettersAlreadyProcessed') !== 'true') {
-        sessionStorage.setItem('lettersAlreadyProcessed', 'true');
-      }
-    }
-    
-    return () => {
-      // Clean up on unmount
-      sessionStorage.removeItem('lettersAlreadyProcessed');
-    };
   }, []);
   
-  // Show a loading message while letters are being loaded
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-grow pt-24 pb-20 flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-4">Loading your dispute letters...</h2>
-            <p className="text-gray-600">Please wait while we prepare your letters</p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
+  // Create letter from issues found in the credit report
+  const handleCreateLetterFromIssues = () => {
+    navigate('/upload-report' + (testMode ? '?testMode=true' : ''));
+  };
+  
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-credify-navy-dark">
+      <Navbar id="main-navbar" />
       
-      <main className="flex-grow pt-24 pb-20">
+      <main 
+        className="flex-grow pt-24 pb-20"
+        style={{ marginTop: navHeight > 0 ? `${navHeight}px` : undefined }}
+      >
         <div className="container mx-auto px-4 md:px-6">
-          {/* Page Header */}
-          <DisputeLettersHeader 
-            hideCreateButton={true} // Hide manual letter creation
-          />
+          <DisputeLetterHeader testMode={testMode} />
           
-          {effectiveTestMode && (
-            <div className="mb-4 p-3 bg-amber-100 text-amber-800 rounded-lg">
-              <p><strong>Test Mode Active:</strong> Letters generated in test mode are not saved to your account and cannot be sent.</p>
-            </div>
+          {usingSampleData && (
+            <Alert className="mb-8 border-amber-300 bg-amber-50 dark:bg-amber-900/30 dark:border-amber-800/50">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500" />
+              <AlertTitle className="text-amber-800 dark:text-amber-400 font-semibold">
+                Sample Letters Displayed
+              </AlertTitle>
+              <AlertDescription className="text-amber-700 dark:text-amber-300">
+                You're currently viewing sample dispute letters, not ones generated from your credit report.
+                To generate actual dispute letters based on your report, please upload and analyze your credit report first.
+              </AlertDescription>
+              <Button 
+                variant="outline" 
+                className="mt-3 bg-white dark:bg-credify-navy-light/20 border-amber-300 dark:border-amber-800/50 text-amber-700 dark:text-amber-300 hover:bg-amber-100"
+                onClick={handleCreateLetterFromIssues}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Upload Credit Report
+              </Button>
+            </Alert>
           )}
           
-          {/* Letter Tabs */}
-          <DisputeLettersTabs
-            selectedView={selectedView}
-            onViewChange={(view) => setSelectedView(view)}
-            letters={letters}
-            isLoading={isLoading}
-            onViewLetter={onViewLetter}
-            onDownloadLetter={onDownloadLetter}
-            onSendLetter={onSendLetter}
-            onGenerateDispute={handleGenerateDispute}
-            hideGeneratorTab={true} // Hide manual generator tab
-          />
-          
-          {/* FCRA Compliance Section */}
-          <FCRAComplianceSection 
-            showUploadReportButton={true}
-            hideCreateButton={true}
-            onUploadReport={() => navigate('/upload-report')}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1">
+              <DisputeLettersList 
+                letters={letters}
+                selectedLetter={selectedLetter}
+                onSelectLetter={setSelectedLetter}
+                isLoading={isLoading}
+                onCreateLetter={handleCreateLetterFromIssues}
+                testMode={testMode}
+              />
+            </div>
+            
+            <div className="lg:col-span-2">
+              <DisputeLetterViewer 
+                letter={selectedLetter}
+                isLoading={isLoading}
+                testMode={testMode}
+              />
+            </div>
+          </div>
         </div>
       </main>
-      
-      {/* AI Agent Component */}
-      <DisputeAgent onGenerateDispute={handleGenerateDispute} />
-      
-      {/* Dispute Preview Modal */}
-      {showPreview && currentLetter && (
-        <DisputePreview 
-          letterContent={currentLetter.content || "Your dispute letter content will appear here."}
-          onClose={() => setShowPreview(false)}
-          onDownload={() => handleDownloadLetter(currentLetter)}
-          onSend={() => onSendLetter(currentLetter)}
-        />
-      )}
       
       <Footer />
     </div>

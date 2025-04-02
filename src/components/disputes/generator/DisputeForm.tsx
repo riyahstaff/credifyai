@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   CreditReportData, 
@@ -125,6 +124,9 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
       
       // Generate a unique report ID using timestamp if the report doesn't have an ID
       reportDataId: `report-${Date.now()}`,
+      
+      // Include the full report data for letter generation
+      reportData: reportData,
       
       personalInfo: reportData?.personalInfo || null
     };
