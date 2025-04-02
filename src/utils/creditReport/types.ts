@@ -1,3 +1,4 @@
+
 export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
@@ -109,4 +110,16 @@ export interface CreditReportPublicRecord {
   reference: string;
   status: string;
   bureau?: string;
+}
+
+// Add UserInfo interface for letter generation
+export interface UserInfo {
+  name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  phone?: string;
+  ssn?: string;
+  dob?: string;
 }

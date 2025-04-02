@@ -1,3 +1,4 @@
+
 /**
  * Main Issue Identification Module
  * Enhanced functions for identifying potential credit report issues
@@ -6,7 +7,7 @@
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
 import { identifyTextIssues } from './textIssues';
 import { identifyAccountIssues } from './accountIssues';
-import { addPersonalInfoIssues, addGenericIssues, addFallbackGenericIssues } from './genericIssues';
+import { addPersonalInfoIssues, addGenericIssues } from './genericIssues';
 import { extractAccountsFromRawText, extractDetailedAccountInfo } from '../accountExtraction';
 
 /**
@@ -71,7 +72,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
       description: 'Your credit report shows late payment history. Under the FCRA, late payments must be reported accurately with correct dates and amounts. Any inconsistencies can be disputed.',
       impact: 'Critical Impact',
       impactColor: 'red',
-      laws: ['FCRA § 611', 'FCRA § 623']
+      laws: ['FCRA § 611', 'FCRA § 623', '15 USC 1681s-2(a)(3)', '15 USC 1681e(b)']
     });
     addedCriticalIssues++;
   }
@@ -96,7 +97,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
       description: 'Your credit report contains collection accounts. Collection agencies must validate debts under the FDCPA, and these accounts can be disputed if they cannot provide proper documentation or if they\'re over 7 years old.',
       impact: 'Critical Impact',
       impactColor: 'red',
-      laws: ['FCRA § 611', 'FDCPA § 809']
+      laws: ['FCRA § 611', 'FDCPA § 809', '15 USC 1692c', '15 USC 1681s-2(a)(3)']
     });
     addedCriticalIssues++;
   }
@@ -117,7 +118,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
       description: 'Your credit report contains inquiries that may have been made without your explicit authorization. These can be disputed and removed if the creditor cannot prove you authorized them.',
       impact: 'High Impact',
       impactColor: 'orange',
-      laws: ['FCRA § 604', 'FCRA § 611']
+      laws: ['FCRA § 604', 'FCRA § 611', '15 USC 1681b(a)(2)', '15 USC 1681m']
     });
     addedCriticalIssues++;
   }
@@ -129,7 +130,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
     description: 'All accounts on your credit report must be fully verified by the creditor with complete records. Request verification of accounts to ensure accuracy and proper documentation.',
     impact: 'High Impact',
     impactColor: 'orange',
-    laws: ['FCRA § 611', 'FCRA § 623']
+    laws: ['FCRA § 611', 'FCRA § 623', '15 USC 1681e(b)', '15 USC 1681i']
   });
   
   // Only if we have enough critical issues already
@@ -140,7 +141,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
       description: 'Creditors sometimes illegally "re-age" old accounts to extend how long they appear on your report. Accounts older than 7 years from the original delinquency must be removed.',
       impact: 'Critical Impact',
       impactColor: 'red',
-      laws: ['FCRA § 605', 'FCRA § 611']
+      laws: ['FCRA § 605', 'FCRA § 611', '15 USC 1681c', '15 USC 1681i']
     });
   }
   
@@ -171,7 +172,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
       description: 'Your credit report contains accounts that may be more than 7 years old. Negative information beyond the 7-year limit should be removed according to FCRA requirements.',
       impact: 'High Impact',
       impactColor: 'orange',
-      laws: ['FCRA § 605', 'FCRA § 611']
+      laws: ['FCRA § 605', 'FCRA § 611', '15 USC 1681c', '15 USC 1681i']
     });
   }
   
@@ -216,7 +217,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
                         account.type?.toLowerCase().includes('collection')
           };
           
-          // Fix impact type to use allowed literals
+          // Use a valid impact level
           const impactLevel: 'High Impact' | 'Critical Impact' | 'Medium Impact' = 
             combinedAccount.isNegative ? 'Critical Impact' : 'Medium Impact';
           
@@ -229,7 +230,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
             impact: impactLevel,
             impactColor: combinedAccount.isNegative ? 'red' : 'yellow',
             account: combinedAccount,
-            laws: ['FCRA § 611', 'FCRA § 623']
+            laws: ['FCRA § 611', 'FCRA § 623', '15 USC 1681e(b)', '15 USC 1681i']
           };
         });
         
@@ -268,7 +269,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
           ...detailedInfo,
           accountName: account.name
         },
-        laws: ['FCRA § 611', 'FCRA § 623']
+        laws: ['FCRA § 611', 'FCRA § 623', '15 USC 1681e(b)', '15 USC 1681i']
       };
     });
     
@@ -283,7 +284,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
   
   // Check for personal info issues
   if (data.personalInfo) {
-    const personalInfoIssues = addPersonalInfoIssues(data.personalInfo);
+    const personalInfoIssues = addPersonalInfoIssues();
     issues.push(...personalInfoIssues);
     console.log(`Added ${personalInfoIssues.length} personal info issues`);
   }
@@ -299,7 +300,7 @@ export const identifyIssues = (data: CreditReportData): Array<{
 };
 
 /**
- * Add generic issues for specific accounts
+ * Add fallback generic issues when no specific issues are found
  */
 export const addFallbackGenericIssues = (): Array<{
   type: string;
@@ -307,7 +308,6 @@ export const addFallbackGenericIssues = (): Array<{
   description: string;
   impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
   impactColor: string;
-  account?: any;
   laws: string[];
 }> => {
   return [
@@ -317,7 +317,32 @@ export const addFallbackGenericIssues = (): Array<{
       description: 'All accounts on your credit report must be fully verified by the creditor with complete records. Request verification of accounts to ensure accuracy and proper documentation.',
       impact: 'High Impact',
       impactColor: 'orange',
-      laws: ['FCRA § 611', 'FCRA § 623']
+      laws: ['FCRA § 611', 'FCRA § 623', '15 USC 1681e(b)', '15 USC 1681i']
+    },
+    {
+      type: 'personal_info',
+      title: 'Personal Information Verification',
+      description: 'Multiple names, addresses, employers, or SSNs found on your credit report could indicate data errors. These inconsistencies should be disputed.',
+      impact: 'Medium Impact',
+      impactColor: 'yellow',
+      laws: ['FCRA § 605', '15 USC 1681c', '15 USC 1681g']
+    },
+    {
+      type: 'inquiries',
+      title: 'Outdated Inquiries',
+      description: 'Inquiries older than 2 years should be removed from your credit report. Verify the dates of all inquiries.',
+      impact: 'Medium Impact',
+      impactColor: 'yellow',
+      laws: ['FCRA § 604', '15 USC 1681b(a)(2)', '15 USC 1681m']
+    },
+    {
+      type: 'student_loans',
+      title: 'Duplicate Student Loans',
+      description: 'Student loans with identical balances may indicate duplicate reporting. If a loan has been sold to another provider, the original should be removed.',
+      impact: 'High Impact',
+      impactColor: 'orange',
+      laws: ['15 USC 1681e(b)', '15 USC 1681i']
     }
   ];
 };
+

@@ -1,250 +1,205 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import { generateEnhancedDisputeLetter } from '@/lib/supabase/letterGenerator';
+import React, { useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
 import { CreditReportData } from '@/utils/creditReport/types';
-
-interface Letter {
-  id: number;
-  title: string;
-  recipient: string;
-  createdAt: string;
-  status: string;
-  bureaus: string[];
-  laws: string[];
-  content: string;
-  resolvedAt?: string;
-}
+import { generateEnhancedDisputeLetter } from '@/lib/supabase/letterGenerator';
 
 interface DisputeLetterGeneratorProps {
-  onAddNewLetter: (newLetter: Letter) => void;
-  saveLetter: (disputeData: any) => Promise<boolean>;
+  reportData: CreditReportData | null;
 }
 
-/**
- * Custom hook for dispute letter generation
- */
-export const useDisputeLetterGenerator = ({ 
-  onAddNewLetter,
-  saveLetter
-}: DisputeLetterGeneratorProps) => {
+const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({ reportData }) => {
+  const [bureau, setBureau] = useState<string>('Experian');
+  const [accountName, setAccountName] = useState<string>('');
+  const [accountNumber, setAccountNumber] = useState<string>('');
+  const [errorType, setErrorType] = useState<string>('');
+  const [explanation, setExplanation] = useState<string>('');
+  const [generating, setGenerating] = useState<boolean>(false);
+  const [letterGenerated, setLetterGenerated] = useState<boolean>(false);
+  const [generatedLetter, setGeneratedLetter] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const [isGenerating, setIsGenerating] = useState(false);
-  const location = useLocation();
-  
-  // Check if we're in test mode
-  const searchParams = new URLSearchParams(location.search);
-  const testMode = searchParams.get('testMode') === 'true';
 
-  // Log test mode status
-  useEffect(() => {
-    if (testMode) {
-      console.log("DisputeLetterGenerator: Test mode active");
-    }
-  }, [testMode]);
+  // Get user info from localStorage
+  const userName = localStorage.getItem('userName') || '[YOUR NAME]';
+  const userAddress = localStorage.getItem('userAddress') || '[YOUR ADDRESS]';
+  const userCity = localStorage.getItem('userCity') || '[CITY]';
+  const userState = localStorage.getItem('userState') || '[STATE]';
+  const userZip = localStorage.getItem('userZip') || '[ZIP]';
 
-  const handleGenerateDispute = async (disputeData: any) => {
-    setIsGenerating(true);
-    console.log('Generating dispute with full data:', {
-      accountName: disputeData.accountName,
-      accountNumber: disputeData.accountNumber,
-      bureau: disputeData.bureau,
-      errorType: disputeData.errorType,
-      hasActualAccount: !!disputeData.actualAccountInfo
-    });
+  const generateLetter = async () => {
+    setGenerating(true);
+    setError(null);
     
     try {
-      // First check if we have report data in session storage
-      let creditReportData: CreditReportData | null = null;
-      const storedReportData = sessionStorage.getItem('creditReportData');
-      let rawReportText = '';
-      const lastReportText = sessionStorage.getItem('lastReportText');
-      
-      if (lastReportText) {
-        rawReportText = lastReportText;
-        console.log("Found stored raw report text, length:", rawReportText.length);
-      }
-      
-      if (storedReportData) {
-        try {
-          creditReportData = JSON.parse(storedReportData) as CreditReportData;
-          console.log("Found stored credit report data:", 
-            creditReportData ? {
-              personalInfo: creditReportData.personalInfo,
-              accountsCount: creditReportData.accounts?.length,
-              bureausDetected: Object.entries(creditReportData.bureaus)
-                .filter(([_, present]) => present)
-                .map(([bureau]) => bureau)
-                .join(', ')
-            } : "No report data"
-          );
-        } catch (e) {
-          console.error("Error parsing stored credit report data:", e);
-        }
-      }
-      
-      // Extract user info from storage or dispute data
-      const userInfo = {
-        name: localStorage.getItem('userName') || localStorage.getItem('name') || "[YOUR NAME]",
-        address: localStorage.getItem('userAddress') || "[YOUR ADDRESS]",
-        city: localStorage.getItem('userCity') || "[CITY]",
-        state: localStorage.getItem('userState') || "[STATE]",
-        zip: localStorage.getItem('userZip') || "[ZIP]"
+      // Create dispute object
+      const disputeData = {
+        title: errorType,
+        bureau,
+        accountName,
+        accountNumber,
+        errorType,
+        explanation,
+        letterContent: '',
+        timestamp: new Date(),
+        // Add all raw extracted text for dispute generation
+        rawText: reportData?.rawText || ''
       };
       
-      console.log("User info for letter:", userInfo);
-      console.log("Account info for letter:", disputeData.actualAccountInfo || disputeData);
+      // Generate letter content
+      const letterContent = await generateEnhancedDisputeLetter(
+        errorType,
+        {
+          accountName,
+          accountNumber,
+          errorDescription: explanation,
+          bureau
+        },
+        {
+          name: userName,
+          address: userAddress,
+          city: userCity,
+          state: userState,
+          zip: userZip
+        },
+        reportData
+      );
       
-      // Get actual account info from the dispute data
-      const actualAccountInfo = disputeData.actualAccountInfo || {};
+      // Update the dispute data with the letter content
+      disputeData.letterContent = letterContent;
       
-      // Clean up account name and format it consistently
-      const accountName = actualAccountInfo.name || disputeData.accountName || "Unknown Account";
-      const formattedAccountName = accountName.toUpperCase();
-      
-      // Format account number with proper masking
-      const rawAccountNumber = actualAccountInfo.number || disputeData.accountNumber || "";
-      let accountNumber = rawAccountNumber;
-      
-      if (rawAccountNumber) {
-        if (rawAccountNumber.length > 4 && !rawAccountNumber.includes('xx-xxxx-')) {
-          accountNumber = `xx-xxxx-${rawAccountNumber.slice(-4)}`;
-        } else if (!rawAccountNumber.includes('xx-xxxx-')) {
-          accountNumber = `xx-xxxx-${rawAccountNumber}`;
-        }
-      } else {
-        // If no account number, create a placeholder
-        accountNumber = "xx-xxxx-1000";
-      }
-      
-      // Try to find actual report data relevant to this account
-      let relevantReportText = '';
-      
-      if (rawReportText && formattedAccountName && formattedAccountName !== "UNKNOWN ACCOUNT") {
-        // Create a regex to find text around the account name
-        const accountNamePattern = new RegExp(`([^]*?${formattedAccountName}[^]*?)(?=\\n\\n|$)`, 'i');
-        const match = rawReportText.match(accountNamePattern);
-        
-        if (match && match[1]) {
-          relevantReportText = match[1];
-          console.log(`Found relevant report text for ${formattedAccountName}, length: ${relevantReportText.length}`);
-        }
-      }
-      
-      // If letterContent is not provided, generate it
-      if (!disputeData.letterContent) {
-        // Generate letter content with detailed account information
-        console.log("Generating enhanced dispute letter with real report data");
-        
-        disputeData.letterContent = await generateEnhancedDisputeLetter(
-          disputeData.errorType,
-          {
-            accountName: formattedAccountName,
-            accountNumber: accountNumber,
-            errorDescription: disputeData.explanation,
-            bureau: disputeData.bureau
-          },
-          userInfo,
-          creditReportData // Pass the credit report data to enhance the letter
-        );
-        
-        // Make sure the letter has the correct format for the account section
-        if (disputeData.letterContent) {
-          const accountSection = `
-DISPUTED ITEM(S):
-Account Name: ${formattedAccountName}
-Account Number: ${accountNumber}
-Reason for Dispute: ${disputeData.errorType}
-`;
-          
-          // Replace any existing account section with our properly formatted one
-          disputeData.letterContent = disputeData.letterContent.replace(
-            /DISPUTED ITEM\(S\):[\s\S]*?(?=\n\nUnder)/,
-            accountSection
-          );
-        }
-      }
-      
-      // Ensure the letter has the correct dispute reason
-      let letterTitle = disputeData.errorType;
-      
-      // Add the account name to the title if available
-      if (formattedAccountName && formattedAccountName !== "UNKNOWN ACCOUNT") {
-        letterTitle = `${disputeData.errorType} (${formattedAccountName})`;
-      }
-      
-      // Create a new letter from the dispute data
-      const newLetter = {
+      // Store in session storage
+      sessionStorage.setItem('pendingDisputeLetter', JSON.stringify({
+        ...disputeData,
+        content: letterContent,
         id: Date.now(),
-        title: letterTitle,
-        recipient: disputeData.bureau,
         createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        status: 'ready', // Status is "ready"
-        bureaus: [disputeData.bureau],
-        laws: ['FCRA § 611', 'FCRA § 623'],
-        content: disputeData.letterContent
-      };
+        status: 'ready'
+      }));
       
-      // Log the generated letter
-      console.log("Generated letter:", {
-        title: newLetter.title,
-        contentLength: newLetter.content.length,
-        content: newLetter.content.substring(0, 100) + "..." // Log just the beginning
-      });
-      
-      // Add the new letter 
-      onAddNewLetter(newLetter);
-      
-      // Only try to save the letter if not in test mode or if user is authenticated
-      if (!testMode) {
-        try {
-          // Save the letter to Supabase if user is logged in
-          const saved = await saveLetter(disputeData);
-          if (saved) {
-            toast({
-              title: "Dispute letter saved",
-              description: "Your dispute letter has been saved to your account.",
-              duration: 5000,
-            });
-          }
-        } catch (error) {
-          console.error("Error saving letter to account:", error);
-          // We still continue even if saving fails
-        }
-      } else {
-        // In test mode, we just notify the user that we're in test mode
-        toast({
-          title: "Test Mode Active",
-          description: "Letter generated but not saved to account in test mode.",
-          duration: 5000,
-        });
-      }
-      
+      // Show success message
       toast({
-        title: "Dispute letter created",
-        description: "Your dispute letter has been generated and is ready for review.",
-        duration: 5000,
+        title: "Dispute letter generated",
+        description: "Your dispute letter has been created and is ready for review.",
+        duration: 3000,
       });
       
-      // Set flag in session storage to indicate a letter was generated
-      sessionStorage.setItem('autoGeneratedLetter', 'true');
+      // Set letter generated flag
+      setLetterGenerated(true);
       
-      return true;
+      // Set the letter content
+      setGeneratedLetter(letterContent);
     } catch (error) {
-      console.error('Error in handleGenerateDispute:', error);
+      console.error('Error generating letter:', error);
+      setError('Failed to generate dispute letter. Please try again.');
       toast({
         title: "Error generating letter",
-        description: "There was a problem generating your dispute letter. Please try again.",
+        description: "There was a problem creating your dispute letter. Please try again.",
         variant: "destructive",
         duration: 5000,
       });
-      return false;
     } finally {
-      setIsGenerating(false);
+      setGenerating(false);
     }
   };
 
-  return { handleGenerateDispute, isGenerating };
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Dispute Letter Generator</h1>
+
+      {/* Bureau Selection */}
+      <div className="mb-4">
+        <Label htmlFor="bureau">Select Bureau</Label>
+        <select
+          id="bureau"
+          className="w-full p-2 border rounded"
+          value={bureau}
+          onChange={(e) => setBureau(e.target.value)}
+        >
+          <option value="Experian">Experian</option>
+          <option value="Equifax">Equifax</option>
+          <option value="TransUnion">TransUnion</option>
+        </select>
+      </div>
+
+      {/* Account Information */}
+      <div className="mb-4">
+        <Label htmlFor="accountName">Account Name</Label>
+        <Input
+          type="text"
+          id="accountName"
+          className="w-full p-2 border rounded"
+          value={accountName}
+          onChange={(e) => setAccountName(e.target.value)}
+        />
+      </div>
+
+      <div className="mb-4">
+        <Label htmlFor="accountNumber">Account Number</Label>
+        <Input
+          type="text"
+          id="accountNumber"
+          className="w-full p-2 border rounded"
+          value={accountNumber}
+          onChange={(e) => setAccountNumber(e.target.value)}
+        />
+      </div>
+
+      {/* Dispute Details */}
+      <div className="mb-4">
+        <Label htmlFor="errorType">Error Type</Label>
+        <Input
+          type="text"
+          id="errorType"
+          className="w-full p-2 border rounded"
+          value={errorType}
+          onChange={(e) => setErrorType(e.target.value)}
+        />
+      </div>
+
+      <div className="mb-4">
+        <Label htmlFor="explanation">Explanation</Label>
+        <Textarea
+          id="explanation"
+          className="w-full p-2 border rounded"
+          value={explanation}
+          onChange={(e) => setExplanation(e.target.value)}
+        />
+      </div>
+
+      {/* Generate Letter Button */}
+      <Button onClick={generateLetter} disabled={generating}>
+        {generating ? "Generating..." : "Generate Letter"}
+      </Button>
+
+      {/* Error Message */}
+      {error && <p className="text-red-500 mt-2">{error}</p>}
+
+      {/* Display Generated Letter */}
+      {letterGenerated && (
+        <div className="mt-4">
+          <h2 className="text-xl font-bold mb-2">Generated Letter</h2>
+          <div className="border rounded p-4 whitespace-pre-line">
+            {generatedLetter}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
-export default useDisputeLetterGenerator;
+export default DisputeLetterGenerator;
