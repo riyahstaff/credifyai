@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../../layout/Navbar';
 import Footer from '../../layout/Footer';
 import { useDisputeLettersData } from './hooks/useDisputeLettersData';
-import useDisputeLetterGenerator from './DisputeLetterGenerator';
+import DisputeLetterGenerator from './DisputeLetterGenerator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, FileText, Info } from 'lucide-react';
@@ -31,11 +31,19 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
     usingSampleData
   } = useDisputeLettersData(testMode);
   
-  // Use the dispute letter generator hook
-  const { handleGenerateDispute, isGenerating } = useDisputeLetterGenerator({
-    onAddNewLetter: addLetter,
-    saveLetter
-  });
+  // States for letter generation
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Handler for generating new dispute letters
+  const handleGenerateDispute = async (disputeData: any) => {
+    setIsGenerating(true);
+    try {
+      // Add the letter once generated
+      addLetter(disputeData);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
   
   const [navHeight, setNavHeight] = useState<number>(0);
   

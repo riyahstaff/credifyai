@@ -1,348 +1,270 @@
 
 /**
- * Main Issue Identification Module
- * Enhanced functions for identifying potential credit report issues
+ * Issue Identification
+ * Main functionality for identifying and categorizing credit report issues
  */
 
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
-import { identifyTextIssues } from './textIssues';
+import { addPersonalInfoIssues, addGenericIssues, addFallbackGenericIssues } from './genericIssues';
 import { identifyAccountIssues } from './accountIssues';
-import { addPersonalInfoIssues, addGenericIssues } from './genericIssues';
-import { extractAccountsFromRawText, extractDetailedAccountInfo } from '../accountExtraction';
+import { identifyTextIssues } from './textIssues';
 
-/**
- * Identify potential issues in the credit report
- */
-export const identifyIssues = (data: CreditReportData): Array<{
+// Define impact types for consistency
+type ImpactLevel = 'High Impact' | 'Critical Impact' | 'Medium Impact';
+
+// Issue interface for type safety
+interface Issue {
   type: string;
   title: string;
   description: string;
-  impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
+  impact: ImpactLevel;
   impactColor: string;
-  account?: any;
+  account?: CreditReportAccount;
   laws: string[];
-}> => {
-  const issues: Array<{
-    type: string;
-    title: string;
-    description: string;
-    impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
-    impactColor: string;
-    account?: any;
-    laws: string[];
-  }> = [];
-  
-  console.log("Starting enhanced issue identification with data:", {
-    hasRawText: !!data.rawText,
-    accountsLength: data.accounts?.length || 0,
-    hasPersonalInfo: !!data.personalInfo,
-    rawTextSample: data.rawText ? data.rawText.substring(0, 100) + '...' : 'none'
-  });
-  
-  // ALWAYS add common credit report issues
-  // Add basic issues, but don't replicate with too many of these
-  console.log("Adding critical credit report issues based on FCRA requirements");
-  
-  // Only add issues that we can confirm from the data
-  let addedCriticalIssues = 0;
-  
-  // Extract account information directly from raw text if available
-  let extractedAccounts: Array<any> = [];
-  if (data.rawText) {
-    extractedAccounts = extractAccountsFromRawText(data.rawText);
-    console.log(`Extracted ${extractedAccounts.length} accounts directly from raw text`);
-  }
-  
-  // Look for late payment evidence in accounts
-  let hasLatePayments = false;
-  if (data.accounts && data.accounts.length > 0) {
-    hasLatePayments = data.accounts.some(account => 
-      account.paymentStatus && 
-      (/late|past due|delinquent|charge.?off|collection/i.test(account.paymentStatus))
-    );
-  } else if (data.rawText) {
-    // Check raw text for late payment indicators
-    hasLatePayments = /(?:late|past due|delinquent|charge.?off|collection)\s+(?:payment|account|status)/i.test(data.rawText);
-  }
-  
-  if (hasLatePayments) {
-    issues.push({
-      type: 'late_payment',
-      title: 'Late Payment Reporting',
-      description: 'Your credit report shows late payment history. Under the FCRA, late payments must be reported accurately with correct dates and amounts. Any inconsistencies can be disputed.',
-      impact: 'Critical Impact',
-      impactColor: 'red',
-      laws: ['FCRA § 611', 'FCRA § 623', '15 USC 1681s-2(a)(3)', '15 USC 1681e(b)']
-    });
-    addedCriticalIssues++;
-  }
-  
-  // Look for collections specifically
-  let hasCollections = false;
-  if (data.accounts && data.accounts.length > 0) {
-    hasCollections = data.accounts.some(account => 
-      (account.accountType && /collection/i.test(account.accountType)) ||
-      (account.status && /collection/i.test(account.status)) ||
-      (account.accountName && /(?:portfolio|midland|lvnv|recovery|collection)/i.test(account.accountName))
-    );
-  } else if (data.rawText) {
-    // Check raw text for collection indicators
-    hasCollections = /(?:collection|portfolio recovery|midland|lvnv|account.+collection|debt.+collection)/i.test(data.rawText);
-  }
-  
-  if (hasCollections) {
-    issues.push({
-      type: 'collection',
-      title: 'Collection Account Disputes',
-      description: 'Your credit report contains collection accounts. Collection agencies must validate debts under the FDCPA, and these accounts can be disputed if they cannot provide proper documentation or if they\'re over 7 years old.',
-      impact: 'Critical Impact',
-      impactColor: 'red',
-      laws: ['FCRA § 611', 'FDCPA § 809', '15 USC 1692c', '15 USC 1681s-2(a)(3)']
-    });
-    addedCriticalIssues++;
-  }
-  
-  // Check if there are inquiries
-  let hasInquiries = false;
-  if (data.inquiries && data.inquiries.length > 0) {
-    hasInquiries = true;
-  } else if (data.rawText) {
-    // Check raw text for inquiry indicators
-    hasInquiries = /(?:inquiry|inquiries|inquired|credit.+check)/i.test(data.rawText);
-  }
-  
-  if (hasInquiries) {
-    issues.push({
-      type: 'unauthorized_inquiries',
-      title: 'Potential Unauthorized Inquiries',
-      description: 'Your credit report contains inquiries that may have been made without your explicit authorization. These can be disputed and removed if the creditor cannot prove you authorized them.',
-      impact: 'High Impact',
-      impactColor: 'orange',
-      laws: ['FCRA § 604', 'FCRA § 611', '15 USC 1681b(a)(2)', '15 USC 1681m']
-    });
-    addedCriticalIssues++;
-  }
-  
-  // Always add verification issue - this is always valid
-  issues.push({
-    type: 'account_verification',
-    title: 'Account Verification Required',
-    description: 'All accounts on your credit report must be fully verified by the creditor with complete records. Request verification of accounts to ensure accuracy and proper documentation.',
-    impact: 'High Impact',
-    impactColor: 'orange',
-    laws: ['FCRA § 611', 'FCRA § 623', '15 USC 1681e(b)', '15 USC 1681i']
-  });
-  
-  // Only if we have enough critical issues already
-  if (addedCriticalIssues < 2) {
-    issues.push({
-      type: 'reaging',
-      title: 'Re-aging of Negative Items',
-      description: 'Creditors sometimes illegally "re-age" old accounts to extend how long they appear on your report. Accounts older than 7 years from the original delinquency must be removed.',
-      impact: 'Critical Impact',
-      impactColor: 'red',
-      laws: ['FCRA § 605', 'FCRA § 611', '15 USC 1681c', '15 USC 1681i']
-    });
-  }
-  
-  // Look for old accounts
-  let hasOldAccounts = false;
-  if (data.accounts && data.accounts.length > 0) {
-    const sevenYearsAgo = new Date();
-    sevenYearsAgo.setFullYear(sevenYearsAgo.getFullYear() - 7);
+}
+
+/**
+ * Main function to identify issues in a credit report
+ */
+export const identifyIssues = (reportData: CreditReportData): Issue[] => {
+  try {
+    console.log("Starting issue identification on credit report data");
     
-    hasOldAccounts = data.accounts.some(account => {
-      if (account.dateOpened) {
-        try {
-          const openDate = new Date(account.dateOpened);
-          return openDate < sevenYearsAgo;
-        } catch (e) {
-          // If date parsing fails, ignore
-          return false;
-        }
-      }
-      return false;
-    });
-  }
-  
-  if (hasOldAccounts) {
-    issues.push({
-      type: 'old_accounts',
-      title: 'Accounts Exceeding 7-Year Reporting Limit',
-      description: 'Your credit report contains accounts that may be more than 7 years old. Negative information beyond the 7-year limit should be removed according to FCRA requirements.',
-      impact: 'High Impact',
-      impactColor: 'orange',
-      laws: ['FCRA § 605', 'FCRA § 611', '15 USC 1681c', '15 USC 1681i']
-    });
-  }
-  
-  // Now process the actual report content
-  // Analyze raw text for issues
-  if (data.rawText) {
-    const textIssues = identifyTextIssues(data);
-    issues.push(...textIssues);
-    console.log(`Found ${textIssues.length} text-based issues`);
-  }
-  
-  // Identify issues based on account analysis if accounts are available
-  if (data.accounts && data.accounts.length > 0) {
-    try {
-      const { issues: accountIssues, validAccounts, cleanedAccounts } = identifyAccountIssues(data.accounts, data.rawText);
-      issues.push(...accountIssues);
-      console.log(`Found ${accountIssues.length} account-based issues from ${validAccounts.length} valid accounts`);
-      
-      // Add generic issues for specific accounts
-      const genericIssues = addGenericIssues(cleanedAccounts);
-      issues.push(...genericIssues);
-      console.log(`Added ${genericIssues.length} generic account-specific issues`);
-    } catch (error) {
-      console.error("Error identifying account issues:", error);
-      
-      // If we've extracted accounts directly from text, use those instead
-      if (extractedAccounts.length > 0) {
-        console.log("Using extracted accounts for issue identification");
-        const textBasedIssues = extractedAccounts.map(account => {
-          // Try to extract more details about this account
-          let detailedInfo = {};
-          if (data.rawText) {
-            detailedInfo = extractDetailedAccountInfo(account.name, data.rawText);
-          }
-          
-          const combinedAccount = {
-            ...account,
-            ...detailedInfo,
-            accountName: account.name,
-            isNegative: account.status?.toLowerCase().includes('late') || 
-                        account.status?.toLowerCase().includes('collection') ||
-                        account.type?.toLowerCase().includes('collection')
-          };
-          
-          // Use a valid impact level
-          const impactLevel: 'High Impact' | 'Critical Impact' | 'Medium Impact' = 
-            combinedAccount.isNegative ? 'Critical Impact' : 'Medium Impact';
-          
-          return {
-            type: combinedAccount.isNegative ? 'negative_account' : 'account_verification',
-            title: `Issue with ${account.name}`,
-            description: combinedAccount.isNegative ? 
-              `This account shows negative information that may be inaccurate or unverifiable.` :
-              `This account requires verification of all reported information including balance, payment history, and dates.`,
-            impact: impactLevel,
-            impactColor: combinedAccount.isNegative ? 'red' : 'yellow',
-            account: combinedAccount,
-            laws: ['FCRA § 611', 'FCRA § 623', '15 USC 1681e(b)', '15 USC 1681i']
-          };
-        });
-        
-        // Add up to 5 account-specific issues
-        const accountIssues = textBasedIssues.slice(0, 5);
-        issues.push(...accountIssues);
-        console.log(`Added ${accountIssues.length} text-extracted account issues`);
-      } else {
-        // If we encounter an error with account analysis, add fallback issues
-        const fallbackAccountIssues = addFallbackGenericIssues();
-        issues.push(...fallbackAccountIssues);
-        console.log(`Added ${fallbackAccountIssues.length} fallback issues due to account analysis error`);
-      }
-    }
-  } else if (extractedAccounts.length > 0) {
-    // If we have extracted accounts but no parsed accounts
-    console.log("Using extracted accounts for issue identification (no parsed accounts)");
-    const accountIssues = extractedAccounts.slice(0, 5).map(account => {
-      // Try to extract more details
-      let detailedInfo = {};
-      if (data.rawText) {
-        detailedInfo = extractDetailedAccountInfo(account.name, data.rawText);
-      }
-      
-      // Use a valid impact level
-      const impactLevel: 'High Impact' | 'Critical Impact' | 'Medium Impact' = 'Medium Impact';
-      
-      return {
-        type: 'account_verification',
-        title: `Issue with ${account.name}`,
-        description: `This account requires verification of all reported information.`,
-        impact: impactLevel,
-        impactColor: 'yellow',
-        account: {
-          ...account,
-          ...detailedInfo,
-          accountName: account.name
-        },
-        laws: ['FCRA § 611', 'FCRA § 623', '15 USC 1681e(b)', '15 USC 1681i']
-      };
-    });
+    // Initialize issues array
+    const issues: Issue[] = [];
     
-    issues.push(...accountIssues);
-    console.log(`Added ${accountIssues.length} extracted account issues`);
-  } else {
-    // If we couldn't find any accounts, ensure we have fallback issues
-    const fallbackIssues = addFallbackGenericIssues();
-    issues.push(...fallbackIssues);
-    console.log(`Added ${fallbackIssues.length} fallback issues due to no accounts`);
-  }
-  
-  // Check for personal info issues
-  if (data.personalInfo) {
+    // Extract accounts and raw text
+    const { accounts = [], rawText = '' } = reportData;
+    
+    // Add personal information issues
     const personalInfoIssues = addPersonalInfoIssues();
     issues.push(...personalInfoIssues);
-    console.log(`Added ${personalInfoIssues.length} personal info issues`);
+    
+    // Analyze accounts for issues
+    const { issues: accountIssues, cleanedAccounts } = identifyAccountIssues(accounts, rawText);
+    
+    // Add account-specific issues
+    issues.push(...accountIssues);
+    
+    // Identify issues from text content
+    const textIssues = identifyTextIssues(reportData);
+    issues.push(...textIssues);
+    
+    // Ensure we have a minimum set of issues
+    if (issues.length < 5) {
+      console.log("Less than 5 issues found, adding generic issues");
+      
+      // Add generic fallback issues
+      const fallbackIssues = addFallbackGenericIssues();
+      
+      // Add fallback issues until we have at least 5
+      for (const issue of fallbackIssues) {
+        // Check if we already have a similar issue
+        if (!issues.some(i => i.type === issue.type)) {
+          issues.push(issue);
+          if (issues.length >= 10) {
+            break;
+          }
+        }
+      }
+    }
+    
+    // Credit repair specific issues based on keywords in the text
+    addCreditRepairSpecificIssues(issues, reportData);
+    
+    // Return the identified issues
+    return issues;
+  } catch (error) {
+    console.error("Error identifying issues:", error);
+    
+    // Return fallback issues on error
+    return addFallbackGenericIssues();
   }
-  
-  // Remove any duplicates based on title
-  const uniqueIssues = issues.filter((issue, index, self) =>
-    index === self.findIndex((t) => t.title === issue.title)
-  );
-  
-  console.log(`Returning ${uniqueIssues.length} unique issues after deduplication (from ${issues.length} total)`);
-  
-  return uniqueIssues;
 };
 
 /**
- * Add fallback generic issues when no specific issues are found
+ * Add credit repair specific issues based on analysis of the text
  */
-export const addFallbackGenericIssues = (): Array<{
-  type: string;
-  title: string;
-  description: string;
-  impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
-  impactColor: string;
-  laws: string[];
-}> => {
-  return [
-    {
-      type: 'account_verification',
-      title: 'Account Verification Required',
-      description: 'All accounts on your credit report must be fully verified by the creditor with complete records. Request verification of accounts to ensure accuracy and proper documentation.',
+function addCreditRepairSpecificIssues(issues: Issue[], reportData: CreditReportData): void {
+  const rawText = reportData.rawText || '';
+  
+  // Check for multiple names
+  if (rawText.match(/also\s+known\s+as|a\.k\.a|alias|formerly\s+known\s+as|previous\s+name/i)) {
+    issues.push({
+      type: 'multiple_names',
+      title: 'Multiple Names on Credit Report',
+      description: 'Your credit report shows multiple names or aliases. This can be a sign of identity theft or credit file mixing.',
       impact: 'High Impact',
       impactColor: 'orange',
-      laws: ['FCRA § 611', 'FCRA § 623', '15 USC 1681e(b)', '15 USC 1681i']
-    },
-    {
-      type: 'personal_info',
-      title: 'Personal Information Verification',
-      description: 'Multiple names, addresses, employers, or SSNs found on your credit report could indicate data errors. These inconsistencies should be disputed.',
+      laws: ['15 USC 1681c', '15 USC 1681g']
+    });
+  }
+  
+  // Check for multiple addresses
+  const addressMatches = rawText.match(/address(?:es)?(?:\s|:)+.{1,50}(?:\n|$)/gi) || [];
+  if (addressMatches.length > 3) {
+    issues.push({
+      type: 'multiple_addresses',
+      title: 'Multiple Addresses Listed',
+      description: 'Your credit report shows multiple addresses. Excessive or incorrect addresses should be disputed.',
       impact: 'Medium Impact',
       impactColor: 'yellow',
-      laws: ['FCRA § 605', '15 USC 1681c', '15 USC 1681g']
-    },
-    {
-      type: 'inquiries',
-      title: 'Outdated Inquiries',
-      description: 'Inquiries older than 2 years should be removed from your credit report. Verify the dates of all inquiries.',
+      laws: ['15 USC 1681c', '15 USC 1681g']
+    });
+  }
+  
+  // Check for multiple employers
+  if (rawText.match(/employer(?:s)?(?:\s|:)+.{1,50}(?:\n|$)/gi)?.length > 2) {
+    issues.push({
+      type: 'multiple_employers',
+      title: 'Multiple Employers Listed',
+      description: 'Your credit report shows multiple employers. Incorrect employment information should be disputed.',
       impact: 'Medium Impact',
       impactColor: 'yellow',
-      laws: ['FCRA § 604', '15 USC 1681b(a)(2)', '15 USC 1681m']
-    },
-    {
-      type: 'student_loans',
-      title: 'Duplicate Student Loans',
-      description: 'Student loans with identical balances may indicate duplicate reporting. If a loan has been sold to another provider, the original should be removed.',
-      impact: 'High Impact',
-      impactColor: 'orange',
-      laws: ['15 USC 1681e(b)', '15 USC 1681i']
+      laws: ['15 USC 1681c', '15 USC 1681g']
+    });
+  }
+  
+  // Check for SSN issues
+  if (rawText.match(/ssn|social security number/i) && 
+      rawText.match(/issue|invalid|incorrect|different|multiple/i)) {
+    issues.push({
+      type: 'ssn_issues',
+      title: 'Social Security Number Inconsistency',
+      description: 'There may be issues with your Social Security Number reporting. Incorrect SSN information is a serious issue.',
+      impact: 'Critical Impact',
+      impactColor: 'red',
+      laws: ['15 USC 1681c', '15 USC 1681g', '18 USC 1028a']
+    });
+  }
+  
+  // Check for late payments
+  if (rawText.match(/30(?:\s|-|_)day|60(?:\s|-|_)day|90(?:\s|-|_)day|late(?:\s|-|_)payment/i)) {
+    issues.push({
+      type: 'late_payments',
+      title: 'Late Payment Reporting Issues',
+      description: 'Your report shows late payments. These must be reported with 100% accuracy, and any discrepancies can be grounds for dispute.',
+      impact: 'Critical Impact',
+      impactColor: 'red',
+      laws: ['15 USC 1681s-2(a)(3)', '15 USC 1681e(b)']
+    });
+  }
+  
+  // Check for student loans
+  if (rawText.match(/student(?:\s|-|_)loan|dept(?:\s|-|_)of(?:\s|-|_)ed|navient|sallie(?:\s|-|_)mae/i)) {
+    // Check for duplicate student loans
+    const studentLoanAccounts = reportData.accounts.filter(acc => 
+      acc.accountName.toLowerCase().includes('student') || 
+      acc.accountName.toLowerCase().includes('edu') ||
+      acc.accountName.toLowerCase().includes('navient') ||
+      acc.accountName.toLowerCase().includes('sallie')
+    );
+    
+    // Check for potential duplicates (similar balances)
+    const balances = new Map<string, number>();
+    studentLoanAccounts.forEach(acc => {
+      const balance = typeof acc.balance === 'number' ? acc.balance : 
+                    typeof acc.currentBalance === 'number' ? acc.currentBalance : 0;
+      
+      if (balance > 0) {
+        const balanceStr = balance.toString();
+        balances.set(balanceStr, (balances.get(balanceStr) || 0) + 1);
+      }
+    });
+    
+    // Find duplicate balances
+    let hasDuplicates = false;
+    balances.forEach((count, balance) => {
+      if (count > 1) hasDuplicates = true;
+    });
+    
+    if (hasDuplicates) {
+      issues.push({
+        type: 'duplicate_student_loans',
+        title: 'Potentially Duplicate Student Loans',
+        description: 'Your report may have duplicate student loans with identical balances. This often happens when loans are sold to different servicers but not properly updated.',
+        impact: 'High Impact',
+        impactColor: 'orange',
+        laws: ['15 USC 1681e(b)', '15 USC 1681s-2(a)(3)']
+      });
+    } else {
+      issues.push({
+        type: 'student_loans',
+        title: 'Student Loan Verification Needed',
+        description: 'Your student loans should be verified for accurate reporting, including proper status updates and compliance with current Department of Education guidelines.',
+        impact: 'High Impact',
+        impactColor: 'orange',
+        laws: ['15 USC 1681e(b)', '15 USC 1681s-2(a)(3)']
+      });
     }
-  ];
-};
+  }
+  
+  // Check for bankruptcy issues
+  if (rawText.match(/bankruptcy|chapter(?:\s|-|_)7|chapter(?:\s|-|_)13/i)) {
+    const bankruptcyDate = rawText.match(/bankruptcy(?:.{0,30})(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)(?:.{0,10})(\d{1,2})(?:,|\s|-)(\d{4})/i);
+    
+    // Check if bankruptcy is older than 10 years
+    let isOld = false;
+    if (bankruptcyDate && bankruptcyDate[3]) {
+      const year = parseInt(bankruptcyDate[3]);
+      const currentYear = new Date().getFullYear();
+      if (currentYear - year > 10) {
+        isOld = true;
+      }
+    }
+    
+    if (isOld) {
+      issues.push({
+        type: 'old_bankruptcy',
+        title: 'Outdated Bankruptcy Reporting',
+        description: 'Your credit report shows a bankruptcy older than 10 years. Bankruptcies must be removed after 10 years according to the FCRA.',
+        impact: 'Critical Impact',
+        impactColor: 'red',
+        laws: ['15 USC 1681c', '15 USC 1681i']
+      });
+    } else {
+      issues.push({
+        type: 'bankruptcy_verification',
+        title: 'Bankruptcy Information Verification',
+        description: 'Your bankruptcy information should be verified for accuracy, including dates, accounts included, and current status.',
+        impact: 'High Impact',
+        impactColor: 'orange',
+        laws: ['15 USC 1681c', '15 USC 1681i']
+      });
+    }
+  }
+  
+  // Check for old inquiries (>2 years)
+  if (reportData.inquiries && reportData.inquiries.length > 0) {
+    const oldInquiries = reportData.inquiries.filter(inq => {
+      if (!inq.inquiryDate) return false;
+      
+      try {
+        const inquiryDate = new Date(inq.inquiryDate);
+        const twoYearsAgo = new Date();
+        twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+        
+        return inquiryDate < twoYearsAgo;
+      } catch (e) {
+        return false;
+      }
+    });
+    
+    if (oldInquiries.length > 0) {
+      issues.push({
+        type: 'old_inquiries',
+        title: 'Outdated Inquiries (Over 2 Years)',
+        description: `Your credit report contains ${oldInquiries.length} inquiries that are over 2 years old. These should be removed as they're beyond the FCRA reporting period.`,
+        impact: 'Medium Impact',
+        impactColor: 'yellow',
+        laws: ['15 USC 1681b(a)(2)', '15 USC 1681m']
+      });
+    }
+  }
+}
 
+/**
+ * Add default generic issues when no specific issues are found
+ * This is now implemented in the genericIssues.ts file
+ */
+export { addFallbackGenericIssues };

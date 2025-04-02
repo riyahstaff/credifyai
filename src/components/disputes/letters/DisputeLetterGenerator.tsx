@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   AlertDialog,
@@ -60,6 +61,17 @@ const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({ reportD
         rawText: reportData?.rawText || ''
       };
       
+      // Extract relevant text related to this account if possible
+      let relevantText = '';
+      if (reportData?.rawText && accountName) {
+        // Try to find text sections related to this account
+        const regex = new RegExp(`(.{0,200}${accountName}.{0,500})`, 'gi');
+        const matches = [...(reportData.rawText.matchAll(regex) || [])];
+        if (matches.length > 0) {
+          relevantText = matches.map(m => m[0]).join(' ');
+        }
+      }
+      
       // Generate letter content
       const letterContent = await generateEnhancedDisputeLetter(
         errorType,
@@ -67,7 +79,8 @@ const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({ reportD
           accountName,
           accountNumber,
           errorDescription: explanation,
-          bureau
+          bureau,
+          relevantReportText: relevantText
         },
         {
           name: userName,

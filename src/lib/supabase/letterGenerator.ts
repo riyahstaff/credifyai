@@ -3,7 +3,7 @@ import { fetchDisputeTemplate } from './legalTemplates';
 import { getRelevantFCRASections } from './legalTemplates';
 import { getSuccessfulDisputeExamples } from './disputeLetters';
 import { DISPUTE_TEMPLATES } from './constants';
-import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
+import { CreditReportData, CreditReportAccount, UserInfo } from '@/utils/creditReport/types';
 
 /**
  * Enhanced function to generate comprehensive dispute letters using templates and FCRA provisions
