@@ -1,4 +1,5 @@
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
+import { addFallbackGenericIssues } from './genericIssues';
 
 // FCRA Laws reference for different dispute types
 const FCRA_LAWS = {
@@ -315,17 +316,4 @@ function extractSSNVariants(text: string): string[] {
   }
   
   return Array.from(ssnVariants);
-}
-
-function addFallbackGenericIssues() {
-  return [
-    {
-      type: 'Generic Issue',
-      title: 'Generic Issue',
-      description: 'Generic issue description',
-      impact: "Medium Impact",
-      impactColor: 'text-amber-500',
-      laws: []
-    }
-  ];
 }
