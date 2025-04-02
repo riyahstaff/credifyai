@@ -45,7 +45,9 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
       /consumer:?\s*([A-Za-z\s.'-]{3,30})/i,
       /applicant:?\s*([A-Za-z\s.'-]{3,30})/i,
       /(?:^|\n)([A-Z][A-Za-z\s.'-]{2,20}\s+[A-Z][A-Za-z\s.'-]{2,20})(?:\n|$)/,
-      /(?:^|\n)([A-Z][A-Za-z\s.'-]{2,25})(?:\n|$)/
+      /(?:^|\n)([A-Z][A-Za-z\s.'-]{2,25})(?:\n|$)/,
+      /PERSONAL INFORMATION\s*\n+\s*([\w\s.'-]{3,30})/i, // Look for name after "PERSONAL INFORMATION"
+      /CREDIT REPORT\s+(?:FOR|OF)?\s+([\w\s.'-]{3,30})/i
     ];
     
     for (const pattern of namePatterns) {
@@ -64,7 +66,8 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
       /(?:^|\n)(\d+\s+[A-Za-z0-9\s.#,-]{5,50})(?:\n|$)/,
       /ADDRESS(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
       /STREET(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
-      /RESIDENCE(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i
+      /RESIDENCE(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
+      /\b(\d+(?:\s*[A-Za-z]+){1,4}(?:\s*\w+\.?){0,2}(?:\s+[A-Za-z]+){0,2})\b/i
     ];
     
     for (const pattern of addressPatterns) {

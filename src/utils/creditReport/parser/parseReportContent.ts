@@ -41,6 +41,22 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
   
   console.log("Detected bureaus:", reportData.bureaus);
   
+  // Determine primary bureau for dispute letters
+  if (reportData.bureaus.transunion) {
+    reportData.primaryBureau = "TransUnion";
+  } else if (reportData.bureaus.equifax) {
+    reportData.primaryBureau = "Equifax";
+  } else if (reportData.bureaus.experian) {
+    reportData.primaryBureau = "Experian";
+  }
+  
+  if (reportData.primaryBureau) {
+    console.log(`Determined primary bureau: ${reportData.primaryBureau}`);
+  } else {
+    console.log("No bureau detected, defaulting to Experian");
+    reportData.primaryBureau = "Experian";
+  }
+  
   // Extract personal information - this is critical for letter generation
   reportData.personalInfo = extractPersonalInfo(content);
   console.log("Extracted personal information:", reportData.personalInfo);
@@ -96,7 +112,7 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
         id: `dispute-${index}`,
         type: "Account Error",
         title: `Issue with ${account.accountName}`,
-        bureau: account.bureau || "Experian",
+        bureau: reportData.primaryBureau || account.bureau || "Experian",
         accountName: account.accountName,
         accountNumber: account.accountNumber || "",
         reason: "Inaccurate Information",

@@ -1,4 +1,3 @@
-
 export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
@@ -75,6 +74,7 @@ export interface CreditReportData {
   htmlContent?: string;
   isSampleData?: boolean;
   analysisResults?: AnalysisResults;
+  primaryBureau?: string;
 }
 
 export interface PersonalInfo {
@@ -112,7 +112,6 @@ export interface CreditReportPublicRecord {
   bureau?: string;
 }
 
-// Add UserInfo interface for letter generation
 export interface UserInfo {
   name?: string;
   address?: string;

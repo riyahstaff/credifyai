@@ -32,7 +32,16 @@ export async function generateEnhancedDisputeLetter(
   creditReportData?: CreditReportData | null
 ): Promise<string> {
   try {
-    console.log("Generating dispute letter with:", { disputeType, accountDetails, userInfo });
+    console.log("Generating dispute letter with:", { 
+      disputeType, 
+      accountDetails: {
+        accountName: accountDetails.accountName,
+        bureau: accountDetails.bureau
+      }, 
+      userInfo: {
+        name: userInfo.name
+      }
+    });
     
     // Determine the dispute category and type based on the input
     let disputeCategory: keyof typeof DISPUTE_TEMPLATES = 'general';
@@ -85,7 +94,18 @@ export async function generateEnhancedDisputeLetter(
     };
     
     const bureau = accountDetails.bureau.toLowerCase();
-    const bureauAddress = bureauAddresses[bureau as keyof typeof bureauAddresses] || '[BUREAU ADDRESS]';
+    let bureauAddress = '';
+    
+    if (bureau.includes('experian')) {
+      bureauAddress = bureauAddresses.experian;
+    } else if (bureau.includes('equifax')) {
+      bureauAddress = bureauAddresses.equifax;
+    } else if (bureau.includes('transunion')) {
+      bureauAddress = bureauAddresses.transunion;
+    } else {
+      // Default to the bureau name and generic address
+      bureauAddress = `${accountDetails.bureau}\n[BUREAU ADDRESS]`;
+    }
     
     // Clean up account name and number
     const accountName = accountDetails.accountName || 'Unknown Account';
@@ -158,7 +178,7 @@ ${finalUserInfo.name || '[YOUR NAME]'}
 ${formattedAddress}
 ${locationInfo}
 
-${bureau.charAt(0).toUpperCase() + bureau.slice(1)}
+${accountDetails.bureau}
 ${bureauAddress}
 
 Re: Dispute of Inaccurate Information - ${disputeType} Account #1

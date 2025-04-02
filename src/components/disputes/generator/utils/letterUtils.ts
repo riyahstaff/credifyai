@@ -23,12 +23,56 @@ export const processDisputeData = async (disputeData: DisputeData, testMode: boo
   const legalRefs = getLegalReferencesForDispute(disputeData.errorType, disputeData.explanation);
   disputeData.legalReferences = legalRefs;
   
+  // Get user info from credit report data if available
+  const reportDataJSON = sessionStorage.getItem('creditReportData');
+  let reportData = null;
+  
+  if (reportDataJSON) {
+    try {
+      reportData = JSON.parse(reportDataJSON);
+      console.log("Found stored credit report data with primaryBureau:", reportData.primaryBureau);
+      
+      // Use the primary bureau from the report if available and no bureau specified
+      if (reportData.primaryBureau && (!disputeData.bureau || disputeData.bureau === "Experian")) {
+        disputeData.bureau = reportData.primaryBureau;
+        console.log("Using primary bureau from report:", disputeData.bureau);
+      }
+    } catch (error) {
+      console.error("Error parsing stored report data:", error);
+    }
+  }
+  
   // Add more precise details to the dispute data
-  const userName = localStorage.getItem('userName') || localStorage.getItem('name') || "[YOUR NAME]";
-  const userAddress = localStorage.getItem('userAddress') || "[YOUR ADDRESS]";
-  const userCity = localStorage.getItem('userCity') || "[CITY]";
-  const userState = localStorage.getItem('userState') || "[STATE]";
-  const userZip = localStorage.getItem('userZip') || "[ZIP]";
+  let userName = '';
+  let userAddress = '';
+  let userCity = '';
+  let userState = '';
+  let userZip = '';
+  
+  // First try to use personal info from the credit report
+  if (reportData && reportData.personalInfo) {
+    const pi = reportData.personalInfo;
+    userName = pi.name || localStorage.getItem('userName') || "[YOUR NAME]";
+    userAddress = pi.address || localStorage.getItem('userAddress') || "[YOUR ADDRESS]";
+    userCity = pi.city || localStorage.getItem('userCity') || "[CITY]";
+    userState = pi.state || localStorage.getItem('userState') || "[STATE]";
+    userZip = pi.zip || localStorage.getItem('userZip') || "[ZIP]";
+    
+    console.log("Using personal info from credit report:", {
+      name: userName,
+      address: userAddress,
+      city: userCity,
+      state: userState,
+      zip: userZip
+    });
+  } else {
+    // Fall back to localStorage if no report data
+    userName = localStorage.getItem('userName') || "[YOUR NAME]";
+    userAddress = localStorage.getItem('userAddress') || "[YOUR ADDRESS]";
+    userCity = localStorage.getItem('userCity') || "[CITY]";
+    userState = localStorage.getItem('userState') || "[STATE]";
+    userZip = localStorage.getItem('userZip') || "[ZIP]";
+  }
   
   // Add user information
   disputeData.userInfo = {
@@ -39,10 +83,13 @@ export const processDisputeData = async (disputeData: DisputeData, testMode: boo
     zip: userZip
   };
   
+  // Add report data to dispute data for enhanced letter generation
+  disputeData.reportData = reportData;
+  
   // Generate letter content if not already present
   if (!disputeData.letterContent) {
     try {
-      console.log("Generating enhanced dispute letter content");
+      console.log("Generating enhanced dispute letter content for bureau:", disputeData.bureau);
       
       // Format the account name and number consistently
       const accountName = disputeData.actualAccountInfo?.name || disputeData.accountName || "Unknown Account";
@@ -61,10 +108,11 @@ export const processDisputeData = async (disputeData: DisputeData, testMode: boo
           accountName: formattedAccountName,
           accountNumber: accountNumber,
           errorDescription: disputeData.explanation,
-          bureau: disputeData.bureau
+          bureau: disputeData.bureau,
+          relevantReportText: reportData?.rawText?.substring(0, 500) // Add snippet of report text
         },
         disputeData.userInfo,
-        disputeData.reportData
+        reportData
       );
       
       if (letterContent && letterContent.length > 100) {
