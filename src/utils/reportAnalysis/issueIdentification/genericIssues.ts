@@ -2,49 +2,50 @@
 import { IdentifiedIssue } from '@/utils/creditReport/types';
 
 /**
- * Provides fallback generic issues when no specific issues are found in a credit report
+ * Add fallback generic issues when no specific issues are found
+ * These are used as a last resort to ensure the user has something to dispute
  */
-export function addFallbackGenericIssues(): IdentifiedIssue[] {
+export const addFallbackGenericIssues = (): IdentifiedIssue[] => {
   return [
     {
-      type: 'Personal Info',
-      title: 'Verify Personal Information',
-      description: 'Review your personal information for accuracy. Incorrect personal details can affect your credit history.',
-      impact: "Medium Impact",
-      impactColor: 'text-amber-500',
-      laws: []
-    },
-    {
-      type: 'Accounts',
-      title: 'Check Account Balances',
-      description: 'Verify that all account balances are accurate and reflect your current financial situation.',
-      impact: "Medium Impact",
-      impactColor: 'text-amber-500',
-      laws: []
-    },
-    {
-      type: 'Inquiries',
-      title: 'Review Recent Inquiries',
-      description: 'Examine recent inquiries to ensure they were authorized by you. Unauthorized inquiries may indicate identity theft.',
-      impact: "Medium Impact",
-      impactColor: 'text-amber-500',
-      laws: []
-    },
-    {
-      type: 'Public Records',
-      title: 'Check Public Records',
-      description: 'Review any public records for accuracy. Incorrect public records can significantly impact your credit score.',
+      type: "Inaccurate Information",
+      title: "Possible Inaccurate Account Information",
+      description: "Your credit report may contain accounts with incorrect information. This could include inaccurate payment history, balance amounts, or account status.",
       impact: "High Impact",
-      impactColor: 'text-red-500',
+      impactColor: "text-red-500",
       laws: []
     },
     {
-      type: 'Credit Mix',
-      title: 'Evaluate Credit Mix',
-      description: 'Assess your credit mix for a healthy balance of different credit types to improve your credit score.',
+      type: "Unauthorized Inquiry",
+      title: "Potential Unauthorized Credit Inquiries",
+      description: "Your report shows credit inquiries that may not have been authorized by you. Unauthorized inquiries can negatively impact your credit score.",
       impact: "Medium Impact",
-      impactColor: 'text-amber-500',
+      impactColor: "text-amber-500",
+      laws: []
+    },
+    {
+      type: "Identity Verification",
+      title: "Personal Information Verification Needed",
+      description: "Some personal information in your credit report may need verification to ensure accuracy and protect against identity theft.",
+      impact: "Medium Impact",
+      impactColor: "text-amber-500",
+      laws: []
+    },
+    {
+      type: "Collection Account",
+      title: "Collection Account Dispute",
+      description: "Your report may contain collection accounts that could be disputed. Collection accounts can significantly impact your credit score.",
+      impact: "Critical Impact",
+      impactColor: "text-red-600",
+      laws: []
+    },
+    {
+      type: "Late Payment",
+      title: "Late Payment Reporting",
+      description: "Your credit report shows late payments that may be inaccurately reported or outdated. Late payments can significantly impact your credit score.",
+      impact: "High Impact",
+      impactColor: "text-red-500",
       laws: []
     }
   ];
-}
+};
