@@ -1,4 +1,3 @@
-
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
 
 // FCRA Laws reference for different dispute types
@@ -31,8 +30,34 @@ export const identifyIssues = (reportData: CreditReportData): IdentifiedIssue[] 
     return [];
   }
 
+  console.log("Analyzing credit report with raw text length:", reportData.rawText?.length || 0);
+  console.log("Sample of text being analyzed:", reportData.rawText?.substring(0, 300) || "No text");
+  
   const issues: IdentifiedIssue[] = [];
   
+  // First check if the report has raw text that's actually readable (not PDF binary)
+  if (!reportData.rawText || reportData.rawText.startsWith('%PDF')) {
+    console.error("Raw text appears to be in PDF binary format, not readable text");
+    return addFallbackGenericIssues();
+  }
+  
+  // Check if actual credit report content is present
+  const creditReportKeywords = ['credit report', 'account', 'score', 'payment', 
+                               'inquiry', 'transunion', 'equifax', 'experian'];
+  
+  let keywordsFound = 0;
+  creditReportKeywords.forEach(keyword => {
+    if (reportData.rawText?.toLowerCase().includes(keyword)) {
+      keywordsFound++;
+    }
+  });
+  
+  // If less than 3 keywords are found, it's probably not a proper credit report text
+  if (keywordsFound < 3) {
+    console.warn(`Only ${keywordsFound} credit report keywords found. Text may not be a credit report.`);
+    return addFallbackGenericIssues();
+  }
+
   // Issue #1: Multiple names in personal information
   if (reportData.personalInfo?.name) {
     const nameText = reportData.rawText?.toLowerCase() || '';
@@ -290,4 +315,17 @@ function extractSSNVariants(text: string): string[] {
   }
   
   return Array.from(ssnVariants);
+}
+
+function addFallbackGenericIssues() {
+  return [
+    {
+      type: 'Generic Issue',
+      title: 'Generic Issue',
+      description: 'Generic issue description',
+      impact: "Medium Impact",
+      impactColor: 'text-amber-500',
+      laws: []
+    }
+  ];
 }

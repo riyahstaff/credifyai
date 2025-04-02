@@ -1,188 +1,205 @@
-
 /**
  * Credit Report PDF Extractor Module
  * Specialized in extracting text from PDF files with enhanced detection for credit reports
  */
 
 export const extractTextFromPDF = async (file: File): Promise<string> => {
-  console.log(`Extracting text from ${file.name} (${file.type})`);
+  console.log(`Starting enhanced PDF extraction for ${file.name} (${file.type})`);
   
   try {
-    // Verify if file is a PDF by MIME type or extension
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    
-    if (!isPdf) {
-      console.log("Extracting as text file (not PDF)");
-      const text = await file.text();
-      console.log(`Extracted ${text.length} characters from text file`);
-      return text;
+    // We need to use a third-party PDF parsing library since we're getting raw binary data
+    // First attempt: Try to use PDF.js to extract the text if available
+    if (window.pdfjsLib) {
+      console.log("Using PDF.js for extraction");
+      return await extractWithPDFJS(file);
     }
     
-    // For PDF files, we use multiple extraction methods for better results
-    console.log("Extracting as PDF file");
+    // Second attempt: Use the browser's PDF capabilities if available
+    const arrayBuffer = await file.arrayBuffer();
     
-    // First attempt: Use FileReader to read as text
+    // Create a blob URL and an iframe to load the PDF
+    const blobUrl = URL.createObjectURL(new Blob([arrayBuffer], { type: 'application/pdf' }));
+    
     try {
-      const fileText = await readFileAsText(file);
-      if (fileText && fileText.length > 500) {
-        console.log(`PDF basic text extraction successful: ${fileText.length} characters`);
-        // Display a sample for debugging
-        console.log("Text sample:", fileText.substring(0, 300));
-        return fileText;
+      // Try to use a more advanced extraction technique
+      console.log("Attempting browser-based PDF text extraction");
+      const text = await extractTextWithBrowser(blobUrl);
+      
+      if (text && text.length > 200) {
+        console.log(`Successfully extracted ${text.length} characters of text using browser method`);
+        return text;
       }
     } catch (e) {
-      console.warn("Basic text extraction failed:", e);
+      console.warn("Browser-based extraction failed:", e);
+    } finally {
+      // Clean up the blob URL
+      URL.revokeObjectURL(blobUrl);
     }
     
-    // Second attempt: Use arrayBuffer for binary processing
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const binaryStr = new TextDecoder().decode(new Uint8Array(arrayBuffer));
-      
-      // Look for text patterns in the binary data
-      const extractedText = extractTextFromBinary(binaryStr);
-      
-      if (extractedText && extractedText.length > 500) {
-        console.log(`Binary extraction successful: ${extractedText.length} characters`);
-        console.log("Text sample:", extractedText.substring(0, 300));
-        return extractedText;
-      }
-    } catch (e) {
-      console.warn("Binary extraction failed:", e);
+    // Last resort: Convert the binary PDF data to text and look for patterns
+    console.log("Falling back to binary pattern extraction");
+    const decoder = new TextDecoder('utf-8');
+    let textContent = decoder.decode(arrayBuffer);
+    
+    // Remove binary data and extract readable text
+    textContent = cleanPDFText(textContent);
+    
+    // Look for credit report specific sections
+    const extractedSections = extractCreditReportSections(textContent);
+    
+    if (extractedSections && extractedSections.length > 100) {
+      console.log(`Extracted ${extractedSections.length} characters from structured sections`);
+      return extractedSections;
     }
     
-    // Last resort - try content sniffing
-    console.log("Attempting content sniffing from PDF");
-    const textContent = await sniffPdfContent(file);
-    console.log(`Content sniffing result: ${textContent.length} characters`);
-    console.log("Text sample:", textContent.substring(0, 300));
-    
+    console.log("Could not extract structured text, returning cleaned text");
     return textContent;
+    
   } catch (error) {
-    console.error("Error in PDF text extraction:", error);
+    console.error("Error extracting PDF text:", error);
     throw new Error(`Failed to extract text from PDF: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
-// Enhanced FileReader promise wrapper
-const readFileAsText = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      try {
-        if (e.target?.result) {
-          resolve(e.target.result.toString());
-        } else {
-          reject(new Error("Failed to read file content"));
-        }
-      } catch (error) {
-        reject(error);
-      }
-    };
-    
-    reader.onerror = (e) => {
-      reject(new Error(`Error reading file: ${e}`));
-    };
-    
-    reader.readAsText(file);
-  });
-};
-
-// Extract text from binary data
-const extractTextFromBinary = (binaryStr: string): string => {
-  let extractedText = "";
-  
-  // Pattern for finding text blocks in PDF binary data
-  const textPatterns = [
-    /BT\s*\/(.*?)\s+Tf\s*(.*?)ET/g,
-    /\((.*?)\)/g,
-    /<([0-9A-Fa-f]{4,})>/g,
-    /\/(.*?)\s+\d+\s+Tf/g
-  ];
-  
-  // Extract text using patterns
-  textPatterns.forEach(pattern => {
-    let match;
-    while ((match = pattern.exec(binaryStr)) !== null) {
-      if (match[1] && match[1].length > 3) {
-        // Filter out binary garbage
-        if (/[a-zA-Z0-9\s.,;:]{3,}/.test(match[1])) {
-          extractedText += match[1] + "\n";
-        }
-      }
-    }
-  });
-  
-  // Credit report specific content extraction
-  const creditReportKeywords = [
-    "credit report", "personal information", "consumer", "account", "payment history", 
-    "inquiry", "public record", "experian", "equifax", "transunion", "fico", "score",
-    "date opened", "balance", "credit limit", "payment status"
-  ];
-  
-  creditReportKeywords.forEach(keyword => {
-    const keywordRegex = new RegExp(`[^\\n]{0,50}${keyword}[^\\n]{0,50}`, 'gi');
-    let keywordMatch;
-    while ((keywordMatch = keywordRegex.exec(binaryStr)) !== null) {
-      if (keywordMatch[0]) {
-        extractedText += keywordMatch[0] + "\n";
-      }
-    }
-  });
-  
-  return extractedText;
-};
-
-// Last resort: Content sniffing by slicing the file
-const sniffPdfContent = async (file: File): Promise<string> => {
+// Extract text using PDF.js if available
+const extractWithPDFJS = async (file: File): Promise<string> => {
   try {
-    // Read as ArrayBuffer to access binary data
-    const buffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await (window as any).pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     
-    // Convert to string for easier processing
-    let content = '';
-    for (let i = 0; i < bytes.length; i++) {
-      // Only include printable ASCII characters and common whitespace
-      if ((bytes[i] >= 32 && bytes[i] <= 126) || [9, 10, 13].includes(bytes[i])) {
-        content += String.fromCharCode(bytes[i]);
-      }
+    let fullText = '';
+    
+    // Extract text from each page
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map((item: any) => item.str).join(' ');
+      fullText += pageText + '\n\n';
     }
     
-    // Clean up the content
-    content = content.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-    
-    // Look for sections that might contain readable text (consecutive alphabetic characters)
-    let extractedText = '';
-    const sections = content.match(/[a-zA-Z\s.,;:]{10,}/g) || [];
-    
-    sections.forEach(section => {
-      if (section.length > 10) {
-        extractedText += section + '\n';
-      }
-    });
-    
-    // Add additional targeted extraction for common credit report fields
-    const nameMatch = content.match(/name\s*[:\.\s]+\s*([a-zA-Z\s.-]{3,40})/i);
-    if (nameMatch && nameMatch[1]) {
-      extractedText += `CONSUMER NAME: ${nameMatch[1]}\n`;
-    }
-    
-    const addressMatch = content.match(/address\s*[:\.\s]+\s*([a-zA-Z0-9\s.,#-]{5,60})/i);
-    if (addressMatch && addressMatch[1]) {
-      extractedText += `ADDRESS: ${addressMatch[1]}\n`;
-    }
-    
-    const ssnMatch = content.match(/ssn\s*[:\.\s]+\s*([\d-*]{4,11})/i);
-    if (ssnMatch && ssnMatch[1]) {
-      extractedText += `SSN: ${ssnMatch[1]}\n`;
-    }
-    
-    return extractedText;
-  } catch (error) {
-    console.error("Error in PDF content sniffing:", error);
-    return "";
+    console.log(`Extracted ${fullText.length} characters using PDF.js`);
+    return fullText;
+  } catch (e) {
+    console.warn("PDF.js extraction failed:", e);
+    throw e;
   }
 };
 
+// Extract text using browser capabilities
+const extractTextWithBrowser = (pdfUrl: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    
+    let timeout = setTimeout(() => {
+      document.body.removeChild(iframe);
+      reject(new Error("PDF extraction timed out"));
+    }, 5000);
+    
+    iframe.onload = () => {
+      try {
+        clearTimeout(timeout);
+        
+        // Try to access the PDF document
+        const iframeDocument = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!iframeDocument) {
+          throw new Error("Could not access iframe document");
+        }
+        
+        // Get the text content
+        let text = iframeDocument.body.textContent || '';
+        
+        // Clean up
+        document.body.removeChild(iframe);
+        
+        if (text.length > 200) {
+          resolve(text);
+        } else {
+          reject(new Error("Extracted text is too short"));
+        }
+      } catch (e) {
+        document.body.removeChild(iframe);
+        reject(e);
+      }
+    };
+    
+    iframe.src = pdfUrl;
+  });
+};
+
+// Clean PDF text by removing binary data and non-text content
+const cleanPDFText = (rawText: string): string => {
+  // Remove PDF binary headers and content
+  let text = rawText.replace(/%PDF-[\d.]+[\s\S]*?stream/gi, '')
+                   .replace(/endstream[\s\S]*?endobj/gi, '')
+                   .replace(/<<[\s\S]*?>>/gi, '');
+  
+  // Replace escaped characters
+  text = text.replace(/\\n/g, '\n')
+            .replace(/\\r/g, '\r')
+            .replace(/\\t/g, '\t');
+  
+  // Keep only printable ASCII characters
+  let cleaned = '';
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if ((code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13) {
+      cleaned += text.charAt(i);
+    }
+  }
+  
+  // Remove PDF operators
+  cleaned = cleaned.replace(/\/(Font|F|Helvetica|Arial|Pages|Page|Encoding)[\s\d]+/g, ' ');
+  
+  return cleaned;
+};
+
+// Extract important credit report sections using known keywords
+const extractCreditReportSections = (text: string): string => {
+  const sections = [];
+  
+  // Common credit report sections
+  const sectionKeywords = [
+    'Personal Information', 'Consumer Information', 'Credit Summary',
+    'Account Information', 'Account History', 'Public Records',
+    'Credit Inquiries', 'Collections', 'Negative Items',
+    'Payment History', 'Credit Score', 'FICO', 'TransUnion', 
+    'Equifax', 'Experian', 'Tradeline', 'Dispute'
+  ];
+  
+  const lowerText = text.toLowerCase();
+  
+  // Find paragraphs containing relevant information
+  sectionKeywords.forEach(keyword => {
+    const lowerKeyword = keyword.toLowerCase();
+    const keywordIndex = lowerText.indexOf(lowerKeyword);
+    
+    if (keywordIndex !== -1) {
+      // Extract a window of text (1000 chars) around the keyword
+      const start = Math.max(0, keywordIndex - 100);
+      const end = Math.min(text.length, keywordIndex + 900);
+      const sectionText = text.substring(start, end);
+      
+      // Only add if this section contains readable text (not just binary data)
+      if (/[a-z]{3,}/i.test(sectionText)) {
+        sections.push(`--- ${keyword.toUpperCase()} SECTION ---\n${sectionText}\n`);
+      }
+    }
+  });
+  
+  // Look for account numbers and card numbers (masked with X's)
+  const accountPattern = /(?:account|acct)[^\d]*?(?:number|#|no)?[^\d]*?(\d[\dX]+\d)/gi;
+  let match;
+  while ((match = accountPattern.exec(text)) !== null) {
+    if (match[1] && match[1].length > 4) {
+      const start = Math.max(0, match.index - 50);
+      const end = Math.min(text.length, match.index + 150);
+      const context = text.substring(start, end);
+      
+      sections.push(`--- ACCOUNT DETAIL ---\n${context}\n`);
+    }
+  }
+  
+  return sections.join('\n');
+};
