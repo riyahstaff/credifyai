@@ -18,6 +18,7 @@ import { convertReportToHtml } from '../formatters';
  */
 export const parseReportContent = (content: string, isPdf: boolean = false): CreditReportData => {
   console.log("Parsing credit report content, length:", content.length);
+  console.log("Raw content sample:", content.substring(0, 200));
   
   // Create empty report structure
   const reportData: CreditReportData = {
@@ -29,86 +30,148 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
     accounts: [],
     inquiries: [],
     publicRecords: [],
-    rawText: content, // Store the raw text for later reference
-    htmlContent: convertReportToHtml(content, isPdf) // Add HTML formatted content with PDF flag
+    rawText: content,
+    htmlContent: convertReportToHtml(content, isPdf)
   };
   
-  // Stronger detection of bureau information - first by specific header patterns
+  // Advanced bureau detection system - more aggressive pattern matching
   const lowerContent = content.toLowerCase();
   
-  // Look for very explicit bureau headers/logos first
-  const experianLogo = /(e+\s*x+\s*p+\s*e+\s*r+\s*i+\s*a+\s*n+|e\s*x\s*p\s*e\s*r\s*i\s*a\s*n)/i;
-  const equifaxLogo = /(e+\s*q+\s*u+\s*i+\s*f+\s*a+\s*x+|e\s*q\s*u\s*i\s*f\s*a\s*x)/i;
-  const transunionLogo = /(t+\s*r+\s*a+\s*n+\s*s+\s*u+\s*n+\s*i+\s*o+\s*n+|t\s*r\s*a\s*n\s*s\s*u\s*n\s*i\s*o\s*n|trans\s*union)/i;
+  // TransUnion detection - try multiple variations and patterns
+  const transunionPatterns = [
+    /trans\s*union/i,
+    /transunion/i,
+    /tu\s+credit/i,
+    /credit\s+report\s+from\s+trans/i,
+    /tu\s+consumer/i,
+    /transunion\s+consumer/i,
+    /tu\s+score/i,
+    /tu\s+report/i,
+    /transunion\.com/i,
+    /tuc\.com/i,
+    /tu\s+disclosure/i,
+    /\btu\b(?!.*(?:equifax|experian))/i // TU mentioned but not other bureaus
+  ];
   
-  reportData.bureaus.experian = 
-    experianLogo.test(lowerContent) || 
-    content.includes('EXPERIAN') || 
-    lowerContent.includes('experian credit report') ||
-    lowerContent.includes('experian.com');
-    
-  reportData.bureaus.equifax = 
-    equifaxLogo.test(lowerContent) || 
-    content.includes('EQUIFAX') || 
-    lowerContent.includes('equifax credit report') ||
-    lowerContent.includes('equifax.com');
-    
-  reportData.bureaus.transunion = 
-    transunionLogo.test(lowerContent) || 
-    content.includes('TRANSUNION') || 
-    content.includes('TRANS UNION') || 
-    lowerContent.includes('transunion credit report') ||
-    lowerContent.includes('transunion.com') ||
-    lowerContent.includes('tuc.com') ||
-    lowerContent.includes('tu credit') ||
-    lowerContent.includes('trans union');
+  // Equifax detection
+  const equifaxPatterns = [
+    /equifax/i,
+    /credit\s+report\s+from\s+equifax/i,
+    /equifax\s+consumer/i,
+    /eq\s+score/i,
+    /eq\s+report/i,
+    /equifax\.com/i,
+    /\beq\b(?!.*(?:transunion|experian))/i
+  ];
+  
+  // Experian detection
+  const experianPatterns = [
+    /experian/i,
+    /credit\s+report\s+from\s+experian/i,
+    /experian\s+consumer/i,
+    /ex\s+score/i,
+    /ex\s+report/i,
+    /experian\.com/i,
+    /\bex\b(?!.*(?:transunion|equifax))/i
+  ];
+  
+  // Check TransUnion patterns
+  for (const pattern of transunionPatterns) {
+    if (pattern.test(lowerContent)) {
+      reportData.bureaus.transunion = true;
+      break;
+    }
+  }
+  
+  // Check Equifax patterns
+  for (const pattern of equifaxPatterns) {
+    if (pattern.test(lowerContent)) {
+      reportData.bureaus.equifax = true;
+      break;
+    }
+  }
+  
+  // Check Experian patterns
+  for (const pattern of experianPatterns) {
+    if (pattern.test(lowerContent)) {
+      reportData.bureaus.experian = true;
+      break;
+    }
+  }
   
   console.log("Detected bureaus:", reportData.bureaus);
   
-  // Determine primary bureau with NO default - we must identify it from the report
+  // Determine primary bureau strictly from detected patterns with NO defaults
   if (reportData.bureaus.transunion) {
     reportData.primaryBureau = "TransUnion";
   } else if (reportData.bureaus.equifax) {
     reportData.primaryBureau = "Equifax";
   } else if (reportData.bureaus.experian) {
     reportData.primaryBureau = "Experian";
-  } else {
-    // Deeper analysis - search for more specific bureau indicators
-    if (lowerContent.includes('tu') && !lowerContent.includes('equifax') && !lowerContent.includes('experian')) {
+  }
+  
+  // If no bureau detected, use more aggressive detection
+  if (!reportData.primaryBureau) {
+    // Look for format-specific indicators
+    if (content.includes('PERSONAL PROFILE FOR:') || 
+        content.includes('TRANSUNION CREDIT REPORT') || 
+        content.includes('TU CREDIT PROFILE') ||
+        content.includes('TU REPORT') ||
+        content.includes('TRANS UNION')) {
       reportData.bureaus.transunion = true;
       reportData.primaryBureau = "TransUnion";
-    } else if (lowerContent.includes('fico') && lowerContent.includes('score') && lowerContent.includes('tu')) {
-      reportData.bureaus.transunion = true;
-      reportData.primaryBureau = "TransUnion";
-    } else {
-      // Look for score types that might indicate the bureau
-      if (lowerContent.includes('fico score 8 tu')) {
-        reportData.bureaus.transunion = true;
-        reportData.primaryBureau = "TransUnion";
-      } else if (lowerContent.includes('fico score 8 eq')) {
-        reportData.bureaus.equifax = true;
-        reportData.primaryBureau = "Equifax";
-      } else if (lowerContent.includes('fico score 8 ex')) {
-        reportData.bureaus.experian = true;
-        reportData.primaryBureau = "Experian";
-      } else {
-        // Leave primaryBureau undefined if we couldn't detect it
-        // DO NOT SET A DEFAULT
-        reportData.primaryBureau = undefined;
-        console.log("WARNING: Could not determine primary bureau from credit report");
-      }
+    } else if (content.includes('EQUIFAX CREDIT REPORT') || 
+               content.includes('EQ CREDIT PROFILE') ||
+               content.includes('EQUIFAX INFORMATION SERVICES')) {
+      reportData.bureaus.equifax = true;
+      reportData.primaryBureau = "Equifax";
+    } else if (content.includes('EXPERIAN CREDIT REPORT') || 
+               content.includes('EX CREDIT PROFILE') ||
+               content.includes('NATIONAL CONSUMER ASSISTANCE CENTER')) {
+      reportData.bureaus.experian = true;
+      reportData.primaryBureau = "Experian";
     }
   }
   
-  // Log the determined primary bureau
-  console.log(`Determined primary bureau: ${reportData.primaryBureau || "UNKNOWN"}`);
+  // If still no bureau detected, check for any mention of credit bureaus in the text
+  if (!reportData.primaryBureau) {
+    const tuCount = (content.match(/transunion|trans union|tu/gi) || []).length;
+    const eqCount = (content.match(/equifax|eq/gi) || []).length;
+    const exCount = (content.match(/experian|ex/gi) || []).length;
+    
+    console.log("Bureau mention counts:", { TransUnion: tuCount, Equifax: eqCount, Experian: exCount });
+    
+    if (tuCount > eqCount && tuCount > exCount && tuCount > 0) {
+      reportData.bureaus.transunion = true;
+      reportData.primaryBureau = "TransUnion";
+    } else if (eqCount > tuCount && eqCount > exCount && eqCount > 0) {
+      reportData.bureaus.equifax = true;
+      reportData.primaryBureau = "Equifax";
+    } else if (exCount > tuCount && exCount > eqCount && exCount > 0) {
+      reportData.bureaus.experian = true;
+      reportData.primaryBureau = "Experian";
+    }
+  }
   
-  // Extract personal information - this is critical for letter generation
+  console.log("Determined primary bureau:", reportData.primaryBureau || "UNKNOWN");
+  
+  // Extract personal information first
   reportData.personalInfo = extractPersonalInfo(content);
   console.log("Extracted personal information:", reportData.personalInfo);
   
   // Extract account information
   reportData.accounts = extractAccounts(content, reportData.bureaus);
+  console.log(`Extracted ${reportData.accounts.length} accounts from report`);
+  
+  // Data quality check - log the first account for debugging
+  if (reportData.accounts.length > 0) {
+    console.log("First account sample:", {
+      name: reportData.accounts[0].accountName,
+      number: reportData.accounts[0].accountNumber,
+      type: reportData.accounts[0].accountType,
+      status: reportData.accounts[0].status
+    });
+  }
   
   // Extract inquiry information
   const extractedInquiries = extractInquiries(content, reportData.bureaus);
@@ -129,8 +192,11 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
     return completeInquiry;
   });
   
+  console.log(`Extracted ${reportData.inquiries.length} inquiries from report`);
+  
   // Extract public records information
   reportData.publicRecords = extractPublicRecords(content, reportData.bureaus);
+  console.log(`Extracted ${reportData.publicRecords.length} public records from report`);
   
   // Generate a complete analysis results object
   reportData.analysisResults = {
@@ -150,7 +216,7 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
     recommendedDisputes: [] // Will be populated below
   };
   
-  // If we have actual account data, generate more accurate recommendedDisputes
+  // Create recommended disputes from actual accounts
   if (reportData.accounts.length > 0) {
     // Create properly typed RecommendedDispute objects
     const recommendedDisputes: RecommendedDispute[] = reportData.accounts

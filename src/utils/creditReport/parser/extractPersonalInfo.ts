@@ -1,7 +1,7 @@
 
 /**
- * Credit Report Parser - Personal Information Extractor
- * This module extracts personal information from credit reports
+ * Credit Report Parser - Enhanced Personal Information Extractor
+ * Specialized in extracting consumer data from credit reports with improved pattern matching
  */
 
 export interface PersonalInfo {
@@ -18,6 +18,7 @@ export interface PersonalInfo {
 export const extractPersonalInfo = (content: string): PersonalInfo => {
   console.log("Extracting personal information from report content length:", content.length);
   
+  // Initialize with empty values (no defaults)
   const personalInfo: PersonalInfo = {
     name: '',
     address: '',
@@ -31,205 +32,277 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
     return personalInfo;
   }
   
-  // Normalize line breaks and spaces
+  // Normalize line breaks and spaces for consistent processing
   const normalized = content.replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
   
   try {
-    // Extract name using various patterns - significantly expanded patterns
-    const namePatterns = [
-      /name:?\s*([A-Za-z\s.'-]{3,30})/i,
-      /CONSUMER(?:\s+NAME)?:?\s*([A-Za-z\s.'-]{3,30})/i,
-      /(?:PERSONAL|CONSUMER) INFORMATION[^\n]{0,50}(?:name|consumer)(?:[^\n]{0,10})?:?\s*([A-Za-z\s.'-]{3,30})/i,
-      /report for:?\s*([A-Za-z\s.'-]{3,30})/i,
-      /prepared for:?\s*([A-Za-z\s.'-]{3,30})/i,
-      /consumer:?\s*([A-Za-z\s.'-]{3,30})/i,
-      /applicant:?\s*([A-Za-z\s.'-]{3,30})/i,
-      /(?:^|\n)([A-Z][A-Za-z\s.'-]{2,20}\s+[A-Z][A-Za-z\s.'-]{2,20})(?:\n|$)/,
-      /(?:^|\n)([A-Z][A-Za-z\s.'-]{2,25})(?:\n|$)/,
-      /PERSONAL INFORMATION\s*\n+\s*([\w\s.'-]{3,30})/i, // Look for name after "PERSONAL INFORMATION"
-      /CREDIT REPORT\s+(?:FOR|OF)?\s+([\w\s.'-]{3,30})/i,
-      // TransUnion specific patterns
-      /credit report for\n([\w\s.'-]{3,30})/i,
-      /(\w+\s+\w+)(?:\s+Report Number:)/i,
-      /Personal Information\n([\w\s.'-]{3,30})/i,
-      // Additional patterns to catch consumer names
-      /(?:CONFIDENTIAL|SENSITIVE)\s+INFORMATION\s+(?:FOR|OF)?\s+([\w\s.'-]{3,30})\b/i,
-      /Your\s+TransUnion\s+[^\n]*\n([\w\s.'-]{3,30})\b/i,
-      /(?:CREDIT\s+)?REPORT\s+(?:FOR|OF)?\s+([\w\s.'-]{3,30})\b/i,
-      /(?:\b|^)((?:[A-Z][a-z]+\s+){1,2}[A-Z][a-z]+)(?:\n|,|\s{2}|$)/
+    // Extract name using multiple pattern recognition strategies
+    console.log("Attempting to extract consumer name");
+    
+    // First try to find typical "Consumer" or "Name" labels
+    const nameLabels = [
+      /(?:CONSUMER\s+NAME|NAME|REPORT\s+FOR)(?:[^a-zA-Z]{1,5})([A-Za-z\s.'-]{3,40})\b/i,
+      /(?:^|\n|\s{2,})(?:Consumer:?|Name:?|Prepared For:?)\s+([A-Za-z\s.'-]{3,40})\b/i,
+      /Your\s+(?:TransUnion|Experian|Equifax)\s+[^\n]{0,20}(?:\n|\s{2,})([A-Za-z\s.'-]{3,40})\b/i,
+      /Personal\s+Information[\s\n]+([A-Za-z\s.'-]{3,40})\b/i,
+      /PERSONAL\s+PROFILE[\s\n]+([A-Za-z\s.'-]{3,40})\b/i,
+      /(?:^|\n)([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})(?=\s+(?:Report|Credit|SSN|\d{3}-\d{2}))/
     ];
     
-    for (const pattern of namePatterns) {
+    // Try each name pattern until we find a match
+    for (const pattern of nameLabels) {
       const match = normalized.match(pattern);
-      if (match && match[1] && match[1].trim().length > 3) {
-        // Verify this isn't a website or company name
-        const potentialName = match[1].trim();
-        if (!potentialName.includes('.com') && 
-            !potentialName.includes('.gov') && 
-            !potentialName.toLowerCase().includes('credit') && 
-            !potentialName.toLowerCase().includes('report') &&
-            !potentialName.toLowerCase().includes('finance') &&
-            !potentialName.toLowerCase().includes('www')) {
-          personalInfo.name = potentialName;
-          console.log("Found name:", personalInfo.name);
+      if (match && match[1]) {
+        const candidateName = match[1].trim();
+        
+        // Skip obvious false positives
+        if (!candidateName.includes('.com') && 
+            !candidateName.includes('LLC') && 
+            !candidateName.toLowerCase().includes('www') &&
+            !candidateName.toLowerCase().includes('report') &&
+            candidateName.length > 3) {
+          personalInfo.name = candidateName;
+          console.log("Extracted name:", personalInfo.name);
           break;
         }
       }
     }
     
-    // Extract address - enhanced patterns
+    // If no name found with labels, try to find name patterns
+    if (!personalInfo.name) {
+      // Look for typical name formats (First Last)
+      const namePatterns = [
+        /(?:^|\n)([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})(?=\n|\s{2,})/,
+        /(?:^|\n)([A-Z][a-z]+ [A-Z]\.? [A-Z][a-z]+)(?=\n|\s{2,})/
+      ];
+      
+      for (const pattern of namePatterns) {
+        const match = normalized.match(pattern);
+        if (match && match[1]) {
+          const candidateName = match[1].trim();
+          if (candidateName.length > 5 && /[A-Za-z]\s+[A-Za-z]/.test(candidateName)) {
+            personalInfo.name = candidateName;
+            console.log("Extracted name from pattern:", personalInfo.name);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Extract address with multiple patterns and strategies
+    console.log("Attempting to extract address");
+    
+    // Street address patterns
     const addressPatterns = [
-      /(?:address|street|residence|current address)[^\n]{0,20}:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
-      /(?:PERSONAL|CONSUMER) INFORMATION[^\n]{0,100}(?:address|street|residence)[^\n]{0,20}:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
-      /(?:^|\n)(\d+\s+[A-Za-z0-9\s.#,-]{5,50})(?:\n|$)/,
-      /ADDRESS(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
-      /STREET(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
-      /RESIDENCE(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
-      /\b(\d+(?:\s*[A-Za-z]+){1,4}(?:\s*\w+\.?){0,2}(?:\s+[A-Za-z]+){0,2})\b/i,
-      // TransUnion specific patterns
-      /Current Address:\n([A-Za-z0-9\s.#,-]{5,60})/i,
-      /Address(?:es)?:\n([A-Za-z0-9\s.#,-]{5,60})/i,
-      /Residence:\n([A-Za-z0-9\s.#,-]{5,60})/i,
-      // More specific address patterns with house numbers
-      /\b(\d+(?:\s*[A-Za-z]+){1,5}(?:\s+(?:St(?:reet)?|Ave(?:nue)?|Rd|Road|Dr(?:ive)?|Ln|Lane|Blvd|Boulevard|Pkwy|Parkway|Pl|Place|Cir|Circle|Ct|Court|Way|Ter(?:race)?)\.?))\b/i
+      /(?:Address|Street|Residence)(?:[^a-zA-Z]{1,5})([0-9][A-Za-z0-9\s.#,-]{5,60})\b/i,
+      /(?:^|\n|\s{2,})(?:Address:?|Street:?|Current Address:?)\s+([0-9][A-Za-z0-9\s.#,-]{5,60})\b/i,
+      /(?:^|\n)(\d+\s+[A-Za-z0-9\s.#,-]{5,60})(?=\n|,|\s{2,})/,
+      /\b(\d+(?:\s+[A-Za-z]+){1,4}(?:\s+(?:ST|AVE|RD|DR|LN|BLVD|PKWY|CIR|CT|WAY|PL|TER|STREET|AVENUE|ROAD|DRIVE|LANE)\.?))\b/i
     ];
     
     for (const pattern of addressPatterns) {
       const match = normalized.match(pattern);
-      if (match && match[1] && match[1].trim().length > 5) {
-        const potentialAddress = match[1].trim();
-        // Skip if it looks like a business name
-        if (!/^[A-Za-z]+\s+(Inc|LLC|Corp|Company)/.test(potentialAddress)) {
-          personalInfo.address = potentialAddress;
-          console.log("Found address:", personalInfo.address);
+      if (match && match[1]) {
+        const candidateAddress = match[1].trim();
+        // Require addresses to start with a number and be long enough
+        if (/^\d+/.test(candidateAddress) && candidateAddress.length > 5) {
+          personalInfo.address = candidateAddress;
+          console.log("Extracted address:", personalInfo.address);
           break;
         }
       }
     }
     
-    // Extract city, state, zip - enhanced patterns
+    // Extract city, state, zip together or separately
+    console.log("Attempting to extract city/state/zip");
+    
+    // Try to extract the full "City, State ZIP" pattern first
     const cityStateZipPatterns = [
-      /(?:city|address|location)(?:[^\n]{0,30})?(?:\n|,|\s{2,})?\s*([A-Za-z\s.'-]{2,25})\s*,?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i,
-      /([A-Za-z\s.'-]{2,25})\s*,?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i,
-      /CITY(?:[^\n]{0,20})?:?\s*([A-Za-z\s.'-]{2,25})/i,
-      /STATE(?:[^\n]{0,20})?:?\s*([A-Z]{2})/i,
-      /ZIP(?:[^\n]{0,20})?:?\s*(\d{5}(?:-\d{4})?)/i,
-      // TransUnion specific patterns
-      /Current Address:(?:.*\n){1,2}([A-Za-z\s.'-]{2,25}),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i,
-      /Address(?:es)?:(?:.*\n){1,2}([A-Za-z\s.'-]{2,25}),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i,
-      // Address line followed by city, state zip
-      /(?:^|\n)(?:\d+[^,\n]+)(?:\n|\s{2,})([A-Za-z\s.'-]{2,25})\s*,?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i
+      /(?:^|\n|\s{2,})([A-Za-z\s.'-]{2,25}),?\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)\b/i,
+      /(?:City|Location)(?:[^a-zA-Z]{1,5})([A-Za-z\s.'-]{2,25}),?\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)\b/i,
+      /(?:^|\n)([A-Za-z\s.'-]{2,25}),?\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)\b/
     ];
     
-    // Try city, state, zip as a group first
-    for (const pattern of cityStateZipPatterns.slice(0, 2)) {
+    for (const pattern of cityStateZipPatterns) {
       const match = normalized.match(pattern);
       if (match && match[1] && match[2] && match[3]) {
         personalInfo.city = match[1].trim();
         personalInfo.state = match[2].trim();
         personalInfo.zip = match[3].trim();
-        console.log("Found city/state/zip:", personalInfo.city, personalInfo.state, personalInfo.zip);
+        console.log("Extracted city/state/zip:", personalInfo.city, personalInfo.state, personalInfo.zip);
         break;
       }
     }
     
-    // If we didn't find them as a group, try individual patterns
-    if (!personalInfo.city) {
-      const cityMatch = normalized.match(cityStateZipPatterns[2]);
-      if (cityMatch && cityMatch[1]) {
-        personalInfo.city = cityMatch[1].trim();
-        console.log("Found city:", personalInfo.city);
+    // If not found together, try individual components
+    if (!personalInfo.city || !personalInfo.state || !personalInfo.zip) {
+      // City patterns
+      if (!personalInfo.city) {
+        const cityPatterns = [
+          /City(?:[^a-zA-Z]{1,5})([A-Za-z\s.'-]{2,25})\b/i,
+          /(?:^|\n|\s{2,})City:?\s+([A-Za-z\s.'-]{2,25})\b/i
+        ];
+        
+        for (const pattern of cityPatterns) {
+          const match = normalized.match(pattern);
+          if (match && match[1]) {
+            personalInfo.city = match[1].trim();
+            console.log("Extracted city:", personalInfo.city);
+            break;
+          }
+        }
+      }
+      
+      // State patterns
+      if (!personalInfo.state) {
+        const statePatterns = [
+          /State(?:[^a-zA-Z]{1,5})([A-Z]{2})\b/i,
+          /(?:^|\n|\s{2,})State:?\s+([A-Z]{2})\b/i
+        ];
+        
+        for (const pattern of statePatterns) {
+          const match = normalized.match(pattern);
+          if (match && match[1]) {
+            personalInfo.state = match[1].trim();
+            console.log("Extracted state:", personalInfo.state);
+            break;
+          }
+        }
+      }
+      
+      // ZIP patterns
+      if (!personalInfo.zip) {
+        const zipPatterns = [
+          /(?:ZIP|Postal Code)(?:[^a-zA-Z]{1,5})(\d{5}(?:-\d{4})?)\b/i,
+          /(?:^|\n|\s{2,})(?:ZIP|Postal Code):?\s+(\d{5}(?:-\d{4})?)\b/i,
+          /\b(\d{5}(?:-\d{4})?)\b/
+        ];
+        
+        for (const pattern of zipPatterns) {
+          const match = normalized.match(pattern);
+          if (match && match[1]) {
+            personalInfo.zip = match[1].trim();
+            console.log("Extracted zip:", personalInfo.zip);
+            break;
+          }
+        }
       }
     }
     
-    if (!personalInfo.state) {
-      const stateMatch = normalized.match(cityStateZipPatterns[3]);
-      if (stateMatch && stateMatch[1]) {
-        personalInfo.state = stateMatch[1].trim();
-        console.log("Found state:", personalInfo.state);
-      }
-    }
+    // Extract SSN (last 4 digits or masked format)
+    console.log("Attempting to extract SSN");
     
-    if (!personalInfo.zip) {
-      const zipMatch = normalized.match(cityStateZipPatterns[4]);
-      if (zipMatch && zipMatch[1]) {
-        personalInfo.zip = zipMatch[1].trim();
-        console.log("Found zip:", personalInfo.zip);
-      }
-    }
-    
-    // Extract phone - enhanced patterns
-    const phonePatterns = [
-      /(?:phone|telephone|mobile|contact|cell)[^\n]{0,20}:?\s*(\(?\d{3}\)?[-.)\s]?\d{3}[-.)\s]?\d{4})/i,
-      /(?:^|\n)(\(?\d{3}\)?[-.)\s]?\d{3}[-.)\s]?\d{4})(?:\n|$)/,
-      // TransUnion specific pattern
-      /Telephone:\n(\(?\d{3}\)?[-.)\s]?\d{3}[-.)\s]?\d{4})/i
-    ];
-    
-    for (const pattern of phonePatterns) {
-      const phoneMatch = normalized.match(pattern);
-      if (phoneMatch && phoneMatch[1]) {
-        personalInfo.phone = phoneMatch[1].trim();
-        console.log("Found phone:", personalInfo.phone);
-        break;
-      }
-    }
-    
-    // Extract SSN (partial for security) - enhanced patterns
     const ssnPatterns = [
-      /(?:ssn|social security)[^\n]{0,30}(?:number)?:?\s*(?:\d{3}-\d{2}-(\d{4})|\*{3}-\*{2}-(\d{4}))/i,
-      /(?:^|\n)(?:\d{3}-\d{2}-(\d{4})|\*{3}-\*{2}-(\d{4}))(?:\n|$)/,
-      /SSN(?:[^\n]{0,20})?:?\s*(?:\d{3}-\d{2}-(\d{4})|\*{3}-\*{2}-(\d{4}))/i,
-      // TransUnion specific pattern
-      /Social Security Number:\n\d{3}-\d{2}-(\d{4})/i,
-      /SSN:\n\d{3}-\d{2}-(\d{4})/i,
-      /SSN:\n\*{3}-\*{2}-(\d{4})/i
+      /SSN(?:[^a-zA-Z]{1,5})(?:xxx-xx-|XXX-XX-|●+\s*-?\s*●+\s*-?\s*|[*]+\s*-?\s*[*]+\s*-?\s*)(\d{4})\b/i,
+      /Social Security(?:[^a-zA-Z]{1,5})(?:xxx-xx-|XXX-XX-|●+\s*-?\s*●+\s*-?\s*|[*]+\s*-?\s*[*]+\s*-?\s*)(\d{4})\b/i,
+      /(?:^|\n|\s{2,})SSN:?\s+(?:xxx-xx-|XXX-XX-|●+\s*-?\s*●+\s*-?\s*|[*]+\s*-?\s*[*]+\s*-?\s*)(\d{4})\b/i,
+      /SSN(?:[^a-zA-Z]{1,5})([*\d]+-[*\d]+-\d{4})\b/i
     ];
     
     for (const pattern of ssnPatterns) {
-      const ssnMatch = normalized.match(pattern);
-      if (ssnMatch && (ssnMatch[1] || ssnMatch[2])) {
-        const lastFour = ssnMatch[1] || ssnMatch[2];
-        personalInfo.ssn = `xxx-xx-${lastFour}`;
-        console.log("Found SSN (last 4)");
+      const match = normalized.match(pattern);
+      if (match && match[1]) {
+        // If we have a complete (even if masked) SSN, use it
+        if (match[1].includes('-')) {
+          personalInfo.ssn = match[1].trim();
+        } else {
+          personalInfo.ssn = `XXX-XX-${match[1].trim()}`;
+        }
+        console.log("Extracted SSN (masked):", personalInfo.ssn);
         break;
       }
     }
     
-    // Extract date of birth - enhanced patterns
+    // Extract date of birth
+    console.log("Attempting to extract date of birth");
+    
     const dobPatterns = [
-      /(?:dob|date of birth|birth date)[^\n]{0,20}:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})/i,
-      /(?:^|\n)(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})(?:\n|$)/,
-      /BIRTH(?:[^\n]{0,20})?:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})/i,
-      // TransUnion specific pattern
-      /Date of Birth:\n(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})/i
+      /(?:Date of Birth|DOB|Birth Date)(?:[^a-zA-Z]{1,5})(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})\b/i,
+      /(?:^|\n|\s{2,})(?:Date of Birth|DOB|Birth Date):?\s+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})\b/i
     ];
     
     for (const pattern of dobPatterns) {
-      const dobMatch = normalized.match(pattern);
-      if (dobMatch && dobMatch[1]) {
-        personalInfo.dob = dobMatch[1].trim();
-        console.log("Found DOB:", personalInfo.dob);
+      const match = normalized.match(pattern);
+      if (match && match[1]) {
+        personalInfo.dob = match[1].trim();
+        console.log("Extracted DOB:", personalInfo.dob);
         break;
       }
     }
     
-    // Save to localStorage for the letter generation
-    if (personalInfo.name) localStorage.setItem('userName', personalInfo.name);
-    if (personalInfo.address) localStorage.setItem('userAddress', personalInfo.address);
-    if (personalInfo.city) localStorage.setItem('userCity', personalInfo.city);
-    if (personalInfo.state) localStorage.setItem('userState', personalInfo.state);
-    if (personalInfo.zip) localStorage.setItem('userZip', personalInfo.zip);
+    // Extract phone number
+    console.log("Attempting to extract phone number");
     
-    // Log extraction results
-    console.log("Personal info extraction complete:", Object.keys(personalInfo)
+    const phonePatterns = [
+      /(?:Phone|Telephone|Mobile)(?:[^a-zA-Z]{1,5})(\(?\d{3}\)?[- .]?\d{3}[- .]?\d{4})\b/i,
+      /(?:^|\n|\s{2,})(?:Phone|Telephone|Mobile):?\s+(\(?\d{3}\)?[- .]?\d{3}[- .]?\d{4})\b/i
+    ];
+    
+    for (const pattern of phonePatterns) {
+      const match = normalized.match(pattern);
+      if (match && match[1]) {
+        personalInfo.phone = match[1].trim();
+        console.log("Extracted phone:", personalInfo.phone);
+        break;
+      }
+    }
+    
+    // Save to localStorage ONLY if we extracted real data
+    if (personalInfo.name && personalInfo.name.length > 3 && !personalInfo.name.includes('.gov')) {
+      localStorage.setItem('userName', personalInfo.name);
+      console.log("Saved real name to localStorage:", personalInfo.name);
+    }
+    
+    if (personalInfo.address && personalInfo.address.length > 5) {
+      localStorage.setItem('userAddress', personalInfo.address);
+      console.log("Saved real address to localStorage:", personalInfo.address);
+    }
+    
+    if (personalInfo.city && personalInfo.city.length > 2) {
+      localStorage.setItem('userCity', personalInfo.city);
+      console.log("Saved real city to localStorage:", personalInfo.city);
+    }
+    
+    if (personalInfo.state && personalInfo.state.length === 2) {
+      localStorage.setItem('userState', personalInfo.state);
+      console.log("Saved real state to localStorage:", personalInfo.state);
+    }
+    
+    if (personalInfo.zip && personalInfo.zip.length >= 5) {
+      localStorage.setItem('userZip', personalInfo.zip);
+      console.log("Saved real zip to localStorage:", personalInfo.zip);
+    }
+    
+    // Validate extracted data to avoid "finance.gov" type errors
+    if (personalInfo.name && (
+        personalInfo.name.includes('.gov') || 
+        personalInfo.name.includes('.com') || 
+        personalInfo.name.includes('LLC') ||
+        personalInfo.name.toLowerCase().includes('apache') ||
+        personalInfo.name.toLowerCase().includes('version')
+    )) {
+      console.warn("Invalid name detected, clearing:", personalInfo.name);
+      personalInfo.name = '';
+      localStorage.removeItem('userName');
+    }
+    
+    // Final log of extraction results
+    const fieldsFound = Object.keys(personalInfo)
       .filter(key => personalInfo[key as keyof PersonalInfo])
-      .length, "fields found");
+      .length;
       
+    console.log("Personal info extraction complete:", fieldsFound, "fields found");
+    console.log("Extracted info:", {
+      name: personalInfo.name || '(not found)',
+      address: personalInfo.address || '(not found)',
+      city: personalInfo.city || '(not found)',
+      state: personalInfo.state || '(not found)',
+      zip: personalInfo.zip || '(not found)'
+    });
+    
     return personalInfo;
   } catch (error) {
     console.error("Error extracting personal information:", error);
-    // Return whatever we have so far
     return personalInfo;
   }
 };

@@ -1,161 +1,188 @@
 
 /**
  * Credit Report PDF Extractor Module
- * This module handles text extraction from PDF files using various methods
+ * Specialized in extracting text from PDF files with enhanced detection for credit reports
  */
 
 export const extractTextFromPDF = async (file: File): Promise<string> => {
   console.log(`Extracting text from ${file.name} (${file.type})`);
   
   try {
-    // Check if it's a PDF by MIME type or extension
+    // Verify if file is a PDF by MIME type or extension
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
     
     if (!isPdf) {
-      // For non-PDF files, just read as text
       console.log("Extracting as text file (not PDF)");
       const text = await file.text();
       console.log(`Extracted ${text.length} characters from text file`);
       return text;
     }
     
-    // For PDF files, we try multiple extraction methods
+    // For PDF files, we use multiple extraction methods for better results
     console.log("Extracting as PDF file");
     
-    // First try with advanced extraction methods
+    // First attempt: Use FileReader to read as text
     try {
-      const pdfJs = await importPdfJs();
-      if (pdfJs) {
-        const text = await extractUsingPdfJs(file, pdfJs);
-        if (text && text.length > 200) {
-          console.log(`Successfully extracted ${text.length} characters using PDF.js`);
-          return text;
-        }
+      const fileText = await readFileAsText(file);
+      if (fileText && fileText.length > 500) {
+        console.log(`PDF basic text extraction successful: ${fileText.length} characters`);
+        // Display a sample for debugging
+        console.log("Text sample:", fileText.substring(0, 300));
+        return fileText;
       }
-    } catch (pdfJsError) {
-      console.warn("PDF.js extraction failed:", pdfJsError);
+    } catch (e) {
+      console.warn("Basic text extraction failed:", e);
     }
     
-    // Fallback to basic extraction
-    console.log("Falling back to basic text extraction");
+    // Second attempt: Use arrayBuffer for binary processing
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const text = await basicPdfTextExtraction(arrayBuffer);
-      if (text && text.length > 100) {
-        console.log(`Extracted ${text.length} characters using basic method`);
-        return text;
+      const binaryStr = new TextDecoder().decode(new Uint8Array(arrayBuffer));
+      
+      // Look for text patterns in the binary data
+      const extractedText = extractTextFromBinary(binaryStr);
+      
+      if (extractedText && extractedText.length > 500) {
+        console.log(`Binary extraction successful: ${extractedText.length} characters`);
+        console.log("Text sample:", extractedText.substring(0, 300));
+        return extractedText;
       }
-    } catch (basicError) {
-      console.warn("Basic PDF extraction failed:", basicError);
+    } catch (e) {
+      console.warn("Binary extraction failed:", e);
     }
     
-    // Last resort: try to read as plain text
-    console.log("All PDF extraction methods failed, trying as plain text");
-    const textContent = await file.text();
-    console.log(`Read ${textContent.length} characters as plain text`);
-    return textContent;
+    // Last resort - try content sniffing
+    console.log("Attempting content sniffing from PDF");
+    const textContent = await sniffPdfContent(file);
+    console.log(`Content sniffing result: ${textContent.length} characters`);
+    console.log("Text sample:", textContent.substring(0, 300));
     
+    return textContent;
   } catch (error) {
     console.error("Error in PDF text extraction:", error);
-    throw new Error(`Failed to extract text from file: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to extract text from PDF: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
-// Dynamically import PDF.js
-const importPdfJs = async () => {
-  try {
-    // This simulates dynamically importing PDF.js
-    // In a real implementation, this would use a proper PDF.js library
-    return {
-      getDocument: async (data: ArrayBuffer) => {
-        return {
-          promise: Promise.resolve({
-            numPages: 1,
-            getPage: async (pageNum: number) => {
-              return {
-                getTextContent: async () => {
-                  return { items: [] };
-                }
-              };
-            }
-          })
-        };
+// Enhanced FileReader promise wrapper
+const readFileAsText = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        if (e.target?.result) {
+          resolve(e.target.result.toString());
+        } else {
+          reject(new Error("Failed to read file content"));
+        }
+      } catch (error) {
+        reject(error);
       }
     };
-  } catch (error) {
-    console.error("Failed to import PDF.js:", error);
-    return null;
-  }
+    
+    reader.onerror = (e) => {
+      reject(new Error(`Error reading file: ${e}`));
+    };
+    
+    reader.readAsText(file);
+  });
 };
 
-// Extract text using PDF.js (simulated)
-const extractUsingPdfJs = async (file: File, pdfJs: any): Promise<string> => {
+// Extract text from binary data
+const extractTextFromBinary = (binaryStr: string): string => {
+  let extractedText = "";
+  
+  // Pattern for finding text blocks in PDF binary data
+  const textPatterns = [
+    /BT\s*\/(.*?)\s+Tf\s*(.*?)ET/g,
+    /\((.*?)\)/g,
+    /<([0-9A-Fa-f]{4,})>/g,
+    /\/(.*?)\s+\d+\s+Tf/g
+  ];
+  
+  // Extract text using patterns
+  textPatterns.forEach(pattern => {
+    let match;
+    while ((match = pattern.exec(binaryStr)) !== null) {
+      if (match[1] && match[1].length > 3) {
+        // Filter out binary garbage
+        if (/[a-zA-Z0-9\s.,;:]{3,}/.test(match[1])) {
+          extractedText += match[1] + "\n";
+        }
+      }
+    }
+  });
+  
+  // Credit report specific content extraction
+  const creditReportKeywords = [
+    "credit report", "personal information", "consumer", "account", "payment history", 
+    "inquiry", "public record", "experian", "equifax", "transunion", "fico", "score",
+    "date opened", "balance", "credit limit", "payment status"
+  ];
+  
+  creditReportKeywords.forEach(keyword => {
+    const keywordRegex = new RegExp(`[^\\n]{0,50}${keyword}[^\\n]{0,50}`, 'gi');
+    let keywordMatch;
+    while ((keywordMatch = keywordRegex.exec(binaryStr)) !== null) {
+      if (keywordMatch[0]) {
+        extractedText += keywordMatch[0] + "\n";
+      }
+    }
+  });
+  
+  return extractedText;
+};
+
+// Last resort: Content sniffing by slicing the file
+const sniffPdfContent = async (file: File): Promise<string> => {
   try {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfJs.getDocument(arrayBuffer).promise;
+    // Read as ArrayBuffer to access binary data
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
     
-    let fullText = '';
-    
-    // Simulate extracting from a single page PDF
-    const page = await pdf.getPage(1);
-    const content = await page.getTextContent();
-    
-    if (content.items && content.items.length > 0) {
-      // In a real implementation, we would process the text items from PDF.js
-      fullText = "Simulated PDF.js extraction (would have real content)";
+    // Convert to string for easier processing
+    let content = '';
+    for (let i = 0; i < bytes.length; i++) {
+      // Only include printable ASCII characters and common whitespace
+      if ((bytes[i] >= 32 && bytes[i] <= 126) || [9, 10, 13].includes(bytes[i])) {
+        content += String.fromCharCode(bytes[i]);
+      }
     }
     
-    return fullText;
+    // Clean up the content
+    content = content.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    
+    // Look for sections that might contain readable text (consecutive alphabetic characters)
+    let extractedText = '';
+    const sections = content.match(/[a-zA-Z\s.,;:]{10,}/g) || [];
+    
+    sections.forEach(section => {
+      if (section.length > 10) {
+        extractedText += section + '\n';
+      }
+    });
+    
+    // Add additional targeted extraction for common credit report fields
+    const nameMatch = content.match(/name\s*[:\.\s]+\s*([a-zA-Z\s.-]{3,40})/i);
+    if (nameMatch && nameMatch[1]) {
+      extractedText += `CONSUMER NAME: ${nameMatch[1]}\n`;
+    }
+    
+    const addressMatch = content.match(/address\s*[:\.\s]+\s*([a-zA-Z0-9\s.,#-]{5,60})/i);
+    if (addressMatch && addressMatch[1]) {
+      extractedText += `ADDRESS: ${addressMatch[1]}\n`;
+    }
+    
+    const ssnMatch = content.match(/ssn\s*[:\.\s]+\s*([\d-*]{4,11})/i);
+    if (ssnMatch && ssnMatch[1]) {
+      extractedText += `SSN: ${ssnMatch[1]}\n`;
+    }
+    
+    return extractedText;
   } catch (error) {
-    console.error("Error extracting text using PDF.js:", error);
+    console.error("Error in PDF content sniffing:", error);
     return "";
   }
 };
 
-// Basic PDF text extraction using pattern matching (simplified version)
-const basicPdfTextExtraction = async (buffer: ArrayBuffer): Promise<string> => {
-  const bytes = new Uint8Array(buffer);
-  let textContent = "";
-  
-  // Convert to string for easier processing
-  const content = Array.from(bytes).map(b => String.fromCharCode(b)).join('');
-  
-  // Find blocks of text by looking for common patterns in PDF text objects
-  const patterns = [
-    /BT\s*\/(.*?)\s+(\d+)\s+Tf\s*(.*?)ET/g,
-    /\(([^)]{3,})\)/g,
-    /<([0-9A-Fa-f]{4,})>/g
-  ];
-  
-  for (const pattern of patterns) {
-    let match;
-    while ((match = pattern.exec(content)) !== null) {
-      // Extract the likely text content from the match
-      const extracted = match[1] || match[0];
-      
-      // Skip binary data and short strings
-      if (extracted.length > 3 && /[a-zA-Z0-9\s.,;:]{3,}/.test(extracted)) {
-        textContent += extracted + "\n";
-      }
-    }
-  }
-  
-  // Look for common credit report keywords to extract meaningful context
-  const keywords = [
-    "CREDIT REPORT", "PERSONAL INFORMATION", "ACCOUNTS", "ACCOUNT HISTORY", 
-    "INQUIRIES", "PUBLIC RECORDS", "EXPERIAN", "EQUIFAX", "TRANSUNION",
-    "PAYMENT HISTORY", "BALANCE", "CREDIT LIMIT", "LATE PAYMENT"
-  ];
-  
-  for (const keyword of keywords) {
-    const index = content.indexOf(keyword);
-    if (index !== -1) {
-      // Extract a chunk of text around the keyword
-      const start = Math.max(0, index - 100);
-      const end = Math.min(content.length, index + keyword.length + 200);
-      textContent += content.substring(start, end) + "\n";
-    }
-  }
-  
-  return textContent;
-};

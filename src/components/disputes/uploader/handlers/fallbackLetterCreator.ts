@@ -1,116 +1,168 @@
 
 /**
- * Create a fallback dispute letter when no issues can be processed
+ * Create a letter with real report data when automatic letter creation fails
+ * NO MOCK DATA - only uses information extracted from the actual report
  */
 export const createFallbackLetter = (reportData?: any) => {
-  // Include accounts from the report if available
-  const accounts = reportData?.accounts || [];
+  if (!reportData) {
+    console.error("Cannot create letter: No report data provided");
+    throw new Error("Cannot create letter without credit report data");
+  }
   
-  // Get user information from report data or localStorage
+  // Use actual accounts from the report - REQUIRED
+  const accounts = reportData?.accounts || [];
+  if (accounts.length === 0) {
+    console.error("Cannot create letter: No accounts found in report data");
+    throw new Error("Cannot create letter with no accounts in credit report");
+  }
+  
+  // Get user information from report data ONLY
   let userName = "";
   let userAddress = "";
   let userCity = "";
   let userState = "";
   let userZip = "";
   
-  // Try to get from report data first
-  if (reportData && reportData.personalInfo) {
+  // Strictly use report data for personal info, no fallbacks
+  if (reportData.personalInfo) {
     const pi = reportData.personalInfo;
-    userName = pi.name || localStorage.getItem('userName') || "";
-    userAddress = pi.address || localStorage.getItem('userAddress') || "";
-    userCity = pi.city || localStorage.getItem('userCity') || "";
-    userState = pi.state || localStorage.getItem('userState') || "";
-    userZip = pi.zip || localStorage.getItem('userZip') || "";
-  } else {
-    // Fall back to localStorage
-    userName = localStorage.getItem('userName') || "";
-    userAddress = localStorage.getItem('userAddress') || "";
-    userCity = localStorage.getItem('userCity') || "";
-    userState = localStorage.getItem('userState') || "";
-    userZip = localStorage.getItem('userZip') || "";
+    userName = pi.name || "";
+    userAddress = pi.address || "";
+    userCity = pi.city || "";
+    userState = pi.state || "";
+    userZip = pi.zip || "";
+    
+    console.log("Using personal info from report:", {
+      name: userName,
+      address: userAddress,
+      city: userCity,
+      state: userState,
+      zip: userZip
+    });
   }
   
+  // Use the formatted current date
   const currentDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   });
   
-  // Get bureau from report data - NO DEFAULT VALUE
+  // ONLY use bureau from report data - NO DEFAULT VALUE
   const bureau = reportData?.primaryBureau || "";
-  
-  // Format account information from actual report data
-  let accountsSection = '';
-  if (accounts && accounts.length > 0) {
-    // Filter out any accounts with "Multiple Accounts" or empty name
-    const validAccounts = accounts.filter((acc: any) => 
-      acc.accountName && 
-      !acc.accountName.toLowerCase().includes('multiple accounts') &&
-      acc.accountName.trim() !== ''
-    );
-    
-    // If we have valid accounts, use them
-    const accountsToUse = validAccounts.length > 0 ? validAccounts : [];
-    
-    accountsSection = accountsToUse.map((account: any, index: number) => {
-      const accountName = account.accountName || '';
-      const accountNumber = account.accountNumber || '';
-      const maskedNumber = accountNumber ? 
-        'xxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 
-        ''; // Don't generate a placeholder
-      
-      return `
-Alleging Creditor#${index + 1} and Account #${index + 1} as is reported on my credit report:
-${accountName.toUpperCase()}
-${accountNumber ? `ACCOUNT- ${maskedNumber}` : ''}
-Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant`;
-    }).join('\n');
+  if (!bureau) {
+    console.error("Cannot create letter: No bureau detected in report data");
+    throw new Error("Cannot create letter without credit bureau identification");
   }
   
-  // If we don't have any accounts section but have raw text, create a general dispute
-  // based on the actual raw text content
-  if (accountsSection === '' && reportData?.rawText) {
-    accountsSection = `
-I am disputing all information in my credit report that may be inaccurate, incomplete, or unverifiable.
-Notation: Per FCRA Section 611, all information that cannot be verified must be promptly removed from my credit report.`;
-  }
+  console.log("Using bureau from report:", bureau);
   
-  // Set appropriate bureau address based on detected bureau - ONLY if we have a bureau
+  // Set appropriate bureau address based on detected bureau
   let bureauAddress = "";
   if (bureau === "TransUnion") {
-    bureauAddress = "TransUnion\nP.O. Box 2000\nChester, PA 19016";
+    bureauAddress = "TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016";
   } else if (bureau === "Equifax") {
-    bureauAddress = "Equifax\nP.O. Box 740256\nAtlanta, GA 30374";
+    bureauAddress = "Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374";
   } else if (bureau === "Experian") {
     bureauAddress = "Experian\nP.O. Box 4500\nAllen, TX 75013";
   }
   
-  // If we don't have a valid bureau, we can't generate a letter
-  if (!bureau) {
-    console.error("No bureau detected in report data - cannot generate letter");
+  // Format account information from actual report data
+  let accountsSection = '';
+  if (accounts && accounts.length > 0) {
+    // Filter out any accounts with empty names
+    const validAccounts = accounts.filter((acc: any) => 
+      acc.accountName && 
+      acc.accountName.trim() !== ''
+    );
+    
+    if (validAccounts.length === 0) {
+      console.error("No valid accounts found in report data");
+      throw new Error("Cannot create letter with no valid accounts in credit report");
+    }
+    
+    accountsSection = validAccounts.map((account: any, index: number) => {
+      const accountName = account.accountName || '';
+      const accountNumber = account.accountNumber || '';
+      // Only mask if we have a real account number
+      const maskedNumber = accountNumber ? 
+        (accountNumber.length > 4 ? 
+          'xxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 
+          accountNumber) : 
+        ''; 
+      
+      // Include account date and balance information if available
+      const dateOpened = account.dateOpened || account.openDate || '';
+      const balance = account.currentBalance || account.balance || '';
+      const status = account.paymentStatus || account.status || '';
+      
+      // Create detailed account section with all available information
+      return `
+Disputed Account #${index + 1}:
+${accountName.toUpperCase()}
+${accountNumber ? `ACCOUNT NUMBER: ${maskedNumber}` : ''}
+${dateOpened ? `DATE OPENED: ${dateOpened}` : ''}
+${balance ? `BALANCE: $${balance}` : ''}
+${status ? `STATUS: ${status}` : ''}
+
+Dispute Reason: Per FCRA Section 611, I am disputing this account as it contains inaccurate information that cannot be verified. The information must be fully accurate, correct, complete, and verifiable.`;
+    }).join('\n\n');
   }
   
-  return {
-    bureau: bureau,
-    accountName: accounts && accounts.length > 0 && accounts[0].accountName ? accounts[0].accountName : "",
-    accountNumber: accounts && accounts.length > 0 && accounts[0].accountNumber ? accounts[0].accountNumber : "",
-    errorType: "Credit Report Dispute",
-    explanation: "I am disputing information in my credit report that may be inaccurate or incomplete under my rights provided by the Fair Credit Reporting Act.",
-    accounts: accounts,
-    letterContent: `
+  // Include inquiries section if available
+  let inquiriesSection = '';
+  if (reportData.inquiries && reportData.inquiries.length > 0) {
+    inquiriesSection = '\n\nDisputed Inquiries:\n';
+    
+    inquiriesSection += reportData.inquiries.map((inquiry: any, index: number) => {
+      const inquiryName = inquiry.inquiryBy || inquiry.creditor || 'Unknown Inquiry';
+      const inquiryDate = inquiry.inquiryDate || '';
+      
+      return `
+Inquiry #${index + 1}: ${inquiryName.toUpperCase()}
+${inquiryDate ? `DATE: ${inquiryDate}` : ''}
+Dispute Reason: I do not recognize this inquiry and/or did not authorize it. Per FCRA Section 604, all inquiries must be authorized by the consumer.`;
+    }).join('\n');
+  }
+  
+  // Create the full letter content using ONLY real data from the report
+  const letterContent = `
 ${userName ? userName : ""}
 ${userAddress ? userAddress : ""}
 ${userCity && userState && userZip ? `${userCity}, ${userState} ${userZip}` : ""}
 ${currentDate}
 
-${bureauAddress ? "Re: My certified letter in notice of an official consumer declaration of complaint for your thus far NOT proven true, NOT proven correct, NOT proven complete, NOT proven timely, or NOT proven compliant mis-information, to include likely the deficient of proven metro 2 compliant data field formatted reporting as MANDATED! I am enacting my consumer and or civil rights to compel you here and now to absolutely and permanently remove any and all aspects of untrue, inaccurate, not complete, not timely, not proven mine, not proven my responsibility, and or not proven adequately and entirely compliant allegations of credit information.\n\n" + bureauAddress : ""}
+${bureauAddress}
 
-${bureauAddress ? "\nTo Whom It May Concern:\n\nI received a copy of my credit report and found the following item(s) to be errors, or are deficient of proof of not being untrue, incorrect, incomplete, untimely, not mine, not my responsibility, or else wise not compliant, to include to metro 2 reporting standards.\n\nHere as follows are items in potential error requiring immediate annulment of the retainment and or reporting:" : ""}
+RE: Dispute of Inaccurate Credit Information
+${reportData.personalInfo && reportData.personalInfo.ssn ? `SSN: ${reportData.personalInfo.ssn}` : ""}
+
+To Whom It May Concern:
+
+I am writing in accordance with my rights under the Fair Credit Reporting Act (FCRA), Section 611 [15 USC § 1681i], to dispute inaccurate and incomplete information in my credit report. After reviewing my credit report from ${bureau}, I have identified the following items that require investigation and correction:
+
 ${accountsSection}
+${inquiriesSection}
 
-${bureauAddress ? "I am writing to dispute inaccurate information in my credit report. I have the right under the Fair Credit Reporting Act (FCRA), Section 611, to dispute incomplete or inaccurate information.\n\nAfter reviewing my credit report, I have identified multiple items that I believe are inaccurate and request that they be verified and corrected.\n\nI request that all items in my credit report be verified for accuracy. If any information cannot be fully verified, it must be removed from my credit report as required by the FCRA.\n\nPlease investigate these matters and correct my credit report accordingly.\n\nSincerely,\n\n" + (userName || "") : ""}
-    `,
+Under the FCRA, you are required to conduct a reasonable investigation into these disputed items and remove or correct any information that cannot be fully verified. If the information cannot be verified as accurate, complete, and timely, it must be removed from my credit report.
+
+Please send me written confirmation of your findings once your investigation is complete. If you have any questions or need additional information, please contact me at the address listed above.
+
+Thank you for your prompt attention to this matter.
+
+Sincerely,
+
+${userName ? userName : ""}`;
+    
+  return {
+    bureau: bureau,
+    accountName: accounts && accounts.length > 0 ? accounts[0].accountName : "",
+    accountNumber: accounts && accounts.length > 0 && accounts[0].accountNumber ? accounts[0].accountNumber : "",
+    errorType: "Credit Report Dispute",
+    explanation: "I am disputing information in my credit report that may be inaccurate or incomplete under my rights provided by the Fair Credit Reporting Act.",
+    accounts: accounts,
+    letterContent: letterContent,
     timestamp: new Date().toISOString(),
-    status: 'ready' // Status is "ready"
+    status: 'ready'
   };
 };

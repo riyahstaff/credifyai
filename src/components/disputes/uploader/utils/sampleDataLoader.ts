@@ -1,8 +1,10 @@
 
 /**
- * This file no longer preloads sample data
+ * This module no longer provides sample data
+ * It exists only for backward compatibility
  */
+
 export const preloadSampleData = async () => {
-  console.log("DISABLED: No sample data will be preloaded - only using real user data");
+  console.log("REMOVED: Sample data preload function called but does nothing - only real data is used");
   return [];
 };

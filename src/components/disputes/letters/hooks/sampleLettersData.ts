@@ -1,4 +1,9 @@
 
+/**
+ * Letter Types and Utilities - NO MOCK DATA
+ * This file only contains types and an empty function for backward compatibility
+ */
+
 export interface Letter {
   id: number;
   title: string;
@@ -19,9 +24,10 @@ export interface Letter {
 }
 
 /**
- * Returns empty array to ensure no more mock letters are used
+ * Always returns an empty array - NO MOCK LETTERS
+ * This exists only for backward compatibility
  */
 export const getSampleLetters = (): Letter[] => {
-  console.log("getSampleLetters called - returning EMPTY array - NO MOCK DATA");
+  console.log("REMOVED: getSampleLetters called but returns empty array - NO MOCK DATA");
   return [];
 };
