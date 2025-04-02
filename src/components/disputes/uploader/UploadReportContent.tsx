@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
+import { CreditReportData, CreditReportAccount, IdentifiedIssue } from '@/utils/creditReport/types';
 import FileUploader from '@/components/disputes/uploader/FileUploader';
 import AnalysisStateHandler from '@/components/disputes/uploader/AnalysisStateHandler';
 import AnalysisError from '@/components/disputes/uploader/AnalysisError';
@@ -14,15 +13,7 @@ interface UploadReportContentProps {
   fileSize: string;
   reportData: CreditReportData | null;
   uploadedFile: File | null;
-  issues: Array<{
-    type: string;
-    title: string;
-    description: string;
-    impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
-    impactColor: string;
-    account?: CreditReportAccount;
-    laws: string[];
-  }>;
+  issues: IdentifiedIssue[];
   letterGenerated: boolean;
   analysisError: string | null;
   onResetUpload: () => void;
