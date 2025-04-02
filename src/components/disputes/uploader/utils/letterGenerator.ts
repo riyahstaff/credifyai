@@ -1,7 +1,8 @@
+
 /**
  * Generate dispute letters for credit report issues
  */
-import { CreditReportAccount, CreditReportData } from '@/utils/creditReportParser';
+import { CreditReportAccount, CreditReportData } from '@/utils/creditReport/types';
 import { determineBureau, getBureauAddress } from './bureauUtils';
 import { generateFallbackLatePaymentDisputeLetter } from '@/utils/creditReport/disputeLetters/fallbackTemplates/latePaymentLetter';
 
@@ -19,6 +20,7 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
     
     // Extract user personal information from report data if available
     const userInfo = extractUserInfo(reportData);
+    console.log("Extracted user info for letters:", userInfo);
     
     // Store user information in localStorage for retrieval in templates
     if (userInfo.name) localStorage.setItem('userName', userInfo.name);
@@ -52,12 +54,12 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
       
       const accountNumber = issue.account?.accountNumber || '';
       
-      // Get user info - try multiple localStorage keys for backward compatibility
-      const userName = localStorage.getItem('userName') || localStorage.getItem('name') || userInfo.name || "[YOUR NAME]";
-      const userAddress = localStorage.getItem('userAddress') || userInfo.address || "[YOUR ADDRESS]";
-      const userCity = localStorage.getItem('userCity') || userInfo.city || "[CITY]";
-      const userState = localStorage.getItem('userState') || userInfo.state || "[STATE]";
-      const userZip = localStorage.getItem('userZip') || userInfo.zip || "[ZIP]";
+      // Get user info with fallbacks to ensure we have values
+      const userName = userInfo.name || localStorage.getItem('userName') || localStorage.getItem('name') || "Your Name";
+      const userAddress = userInfo.address || localStorage.getItem('userAddress') || "Your Address";
+      const userCity = userInfo.city || localStorage.getItem('userCity') || "Your City";
+      const userState = userInfo.state || localStorage.getItem('userState') || "Your State";
+      const userZip = userInfo.zip || localStorage.getItem('userZip') || "Your ZIP";
       
       // Create dispute data object
       const disputeData = {
@@ -77,10 +79,12 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
       if (issue.type === 'late_payment') {
         letterContent = generateFallbackLatePaymentDisputeLetter();
         
-        // Replace placeholders with actual values
+        // Replace placeholders with actual values - be thorough to catch all placeholder patterns
         letterContent = letterContent
           .replace(/\[YOUR NAME\]/g, userName)
+          .replace(/\/ArialBold/g, userName) // Replace formatting tags with name
           .replace(/\[YOUR ADDRESS\]/g, userAddress)
+          .replace(/\[CITY\],\s*\[STATE\]\s*\[ZIP\]/g, `${userCity}, ${userState} ${userZip}`)
           .replace(/\[CITY\], \[STATE\] \[ZIP\]/g, `${userCity}, ${userState} ${userZip}`)
           .replace(/\[BUREAU\]/g, bureau)
           .replace(/\[BUREAU ADDRESS\]/g, bureauAddress)
@@ -169,6 +173,15 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         letterContent += `- Copy of Social Security Card\n`;
       }
       
+      // Final cleanup of any remaining placeholders or formatting tags
+      letterContent = letterContent
+        .replace(/\/ArialBold/g, '')
+        .replace(/\[YOUR NAME\]/g, userName)
+        .replace(/\[YOUR ADDRESS\]/g, userAddress)
+        .replace(/\[CITY\], \[STATE\] \[ZIP\]/g, `${userCity}, ${userState} ${userZip}`)
+        .replace(/\[CITY\],\s*\[STATE\]\s*\[ZIP\]/g, `${userCity}, ${userState} ${userZip}`)
+        .replace(/\[(.*?)\]/g, ''); // Remove any remaining brackets
+      
       // Create basic letter structure with an incrementing ID to ensure each letter is unique
       return {
         id: letterId + index,
@@ -235,39 +248,72 @@ function extractUserInfo(reportData: CreditReportData | null): {
     zip?: string; 
   } = {};
   
-  if (!reportData) return userInfo;
+  if (!reportData) {
+    console.log("No report data available for extracting user info");
+    return userInfo;
+  }
+  
+  console.log("Extracting user info from report data:", reportData.personalInfo);
   
   // Try to extract name from personal info
   if (reportData.personalInfo && reportData.personalInfo.name) {
     userInfo.name = reportData.personalInfo.name;
+    console.log("Extracted name:", userInfo.name);
   }
   
   // Try to extract address from personal info
-  if (reportData.personalInfo && reportData.personalInfo.address) {
-    const address = reportData.personalInfo.address;
+  if (reportData.personalInfo) {
+    // Direct assignment if available
+    if (reportData.personalInfo.address) {
+      userInfo.address = reportData.personalInfo.address;
+    }
     
-    // Try to parse address into components
-    const addressParts = address.split(',');
-    if (addressParts.length >= 2) {
-      userInfo.address = addressParts[0].trim();
+    if (reportData.personalInfo.city) {
+      userInfo.city = reportData.personalInfo.city;
+    }
+    
+    if (reportData.personalInfo.state) {
+      userInfo.state = reportData.personalInfo.state;
+    }
+    
+    if (reportData.personalInfo.zip) {
+      userInfo.zip = reportData.personalInfo.zip;
+    }
+    
+    // If we have an address but not city/state/zip, try to parse them from the address
+    if (userInfo.address && (!userInfo.city || !userInfo.state || !userInfo.zip)) {
+      const address = userInfo.address;
       
-      // Try to extract city, state, zip from the remaining parts
-      const locationParts = addressParts[1].trim().split(' ');
-      if (locationParts.length >= 2) {
-        // Last part is likely zip code
-        userInfo.zip = locationParts[locationParts.length - 1];
+      // Try to parse address into components
+      const addressParts = address.split(',');
+      if (addressParts.length >= 2) {
+        if (!userInfo.address) {
+          userInfo.address = addressParts[0].trim();
+        }
         
-        // Second to last part is likely state
-        userInfo.state = locationParts[locationParts.length - 2];
-        
-        // Everything else is likely city
-        userInfo.city = locationParts.slice(0, locationParts.length - 2).join(' ');
+        // Try to extract city, state, zip from the remaining parts
+        const locationParts = addressParts[1].trim().split(' ');
+        if (locationParts.length >= 2) {
+          // Last part is likely zip code
+          if (!userInfo.zip) {
+            userInfo.zip = locationParts[locationParts.length - 1];
+          }
+          
+          // Second to last part is likely state
+          if (!userInfo.state) {
+            userInfo.state = locationParts[locationParts.length - 2];
+          }
+          
+          // Everything else is likely city
+          if (!userInfo.city) {
+            userInfo.city = locationParts.slice(0, locationParts.length - 2).join(' ');
+          }
+        }
       }
-    } else {
-      userInfo.address = address;
     }
   }
   
+  console.log("Final extracted user info:", userInfo);
   return userInfo;
 }
 
