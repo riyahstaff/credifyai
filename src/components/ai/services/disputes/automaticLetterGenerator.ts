@@ -8,6 +8,8 @@ import {
   findSampleDispute
 } from '@/utils/creditReport/disputeLetters';
 import { useToast } from '@/hooks/use-toast';
+import { CreditReportData } from '@/utils/creditReport/types';
+import { generateEnhancedDisputeLetter } from '@/lib/supabase/letterGenerator';
 
 export const generateAutomaticDisputeLetter = async (
   targetDispute: RecommendedDispute,
@@ -20,6 +22,25 @@ export const generateAutomaticDisputeLetter = async (
     
     // IMPORTANT: Always enable test mode subscription to bypass subscription page
     sessionStorage.setItem('testModeSubscription', 'true');
+    
+    // Check if we have report data in session storage
+    let creditReportData: CreditReportData | null = null;
+    const storedReportData = sessionStorage.getItem('creditReportData');
+    
+    if (storedReportData) {
+      try {
+        creditReportData = JSON.parse(storedReportData) as CreditReportData;
+        console.log("Found stored credit report data for auto-generation:", 
+          creditReportData ? {
+            personalInfo: creditReportData.personalInfo,
+            accounts: creditReportData.accounts?.length,
+            bureaus: creditReportData.bureaus
+          } : "No report data"
+        );
+      } catch (e) {
+        console.error("Error parsing stored credit report data:", e);
+      }
+    }
     
     // Create user info with defaults if profile properties are missing
     const userInfo = {
@@ -94,64 +115,25 @@ Reason for Dispute: ${targetDispute.reason}
       console.error("Error finding sample dispute letter:", error);
     }
     
-    // If we couldn't use a sample letter, proceed with the advanced generation
+    // If we couldn't use a sample letter, use the enhanced generator
     if (!usedSampleLetter) {
       try {
-        console.log("Generating advanced dispute letter format");
+        console.log("Using enhanced letter generator with credit report data");
         
-        // Create the account section in the proper format
-        const accountSection = `
-DISPUTED ITEM(S):
-Account Name: ${formattedAccountName}
-Account Number: ${formattedAccountNumber}
-Reason for Dispute: ${targetDispute.reason}
-`;
-        
-        // Generate a complete letter with proper formatting
-        letterContent = `Credit Report #: ${creditReportNumber}
-Today is ${new Date().toLocaleDateString('en-US', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric'
-})}
-
-${userInfo.name}
-${userInfo.address}
-${userInfo.city}, ${userInfo.state} ${userInfo.zip}
-
-${targetDispute.bureau}
-${getBureauAddress(targetDispute.bureau)}
-
-Re: Dispute of Inaccurate Information - ${targetDispute.reason} Account #1
-
-To Whom It May Concern:
-
-I am writing to dispute the following information in my credit report. I have identified the following item(s) that are inaccurate or incomplete:
-${accountSection}
-
-Under the Fair Credit Reporting Act (FCRA), you are required to:
-1. Conduct a reasonable investigation into the information I am disputing
-2. Forward all relevant information that I provide to the furnisher
-3. Review and consider all relevant information
-4. Provide me the results of your investigation
-5. Delete the disputed information if it cannot be verified
-
-I am disputing this information as it is inaccurate and the creditor may be unable to provide adequate verification as required by law. The industry standard Metro 2 format requires specific, accurate reporting practices that have not been followed in this case.
-
-${targetDispute.description}
-
-Please investigate this matter and provide me with the results within 30 days as required by the FCRA.
-
-Sincerely,
-
-${userInfo.name}
-
-Enclosures:
-- Copy of ID
-- Copy of social security card
-- Copy of utility bill`;
+        // Use our enhanced generator with the credit report data
+        letterContent = await generateEnhancedDisputeLetter(
+          targetDispute.reason,
+          {
+            accountName: formattedAccountName,
+            accountNumber: formattedAccountNumber,
+            errorDescription: targetDispute.description,
+            bureau: targetDispute.bureau
+          },
+          userInfo,
+          creditReportData // Pass the credit report data
+        );
       } catch (error) {
-        console.error("Error generating advanced letter:", error);
+        console.error("Error generating enhanced letter:", error);
         
         // Use a very simple fallback if all else fails
         letterContent = `Credit Report #: ${creditReportNumber}

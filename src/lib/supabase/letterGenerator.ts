@@ -1,13 +1,16 @@
+
 import { fetchDisputeTemplate } from './legalTemplates';
 import { getRelevantFCRASections } from './legalTemplates';
 import { getSuccessfulDisputeExamples } from './disputeLetters';
 import { DISPUTE_TEMPLATES } from './constants';
+import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
 
 /**
  * Enhanced function to generate comprehensive dispute letters using templates and FCRA provisions
  * @param disputeType Type of dispute (identity theft, incorrect balance, etc.)
  * @param accountDetails Details about the account being disputed
  * @param userInfo User's personal information
+ * @param creditReportData Optional full credit report data for enhanced letter generation
  * @returns Generated dispute letter
  */
 export async function generateEnhancedDisputeLetter(
@@ -24,7 +27,8 @@ export async function generateEnhancedDisputeLetter(
     city?: string;
     state?: string;
     zip?: string;
-  }
+  },
+  creditReportData?: CreditReportData | null
 ): Promise<string> {
   try {
     console.log("Generating dispute letter with:", { disputeType, accountDetails, userInfo });
@@ -61,8 +65,16 @@ export async function generateEnhancedDisputeLetter(
       day: 'numeric'
     });
     
-    // Generate a unique credit report number
-    const creditReportNumber = 'CR' + Math.floor(Math.random() * 10000000);
+    // Generate a unique credit report number or use one from the report if available
+    let creditReportNumber = 'CR' + Math.floor(Math.random() * 10000000);
+    
+    // If we have credit report data, try to extract a report number
+    if (creditReportData && creditReportData.rawText) {
+      const reportNumberMatch = creditReportData.rawText.match(/Report\s*#?:?\s*(\w+[-\d]+)/i);
+      if (reportNumberMatch && reportNumberMatch[1]) {
+        creditReportNumber = reportNumberMatch[1];
+      }
+    }
     
     // Bureau addresses
     const bureauAddresses = {
@@ -91,25 +103,48 @@ Account Number: ${accountNumber}
 Reason for Dispute: ${disputeType}
 `;
 
-    // Handle empty user information with clear logging
-    if (!userInfo.name || userInfo.name === "[YOUR NAME]") {
-      console.warn("Missing user name in letter generation");
+    // Use personal info from credit report if available
+    let finalUserInfo = { ...userInfo };
+    
+    if (creditReportData && creditReportData.personalInfo) {
+      console.log("Using personal info from credit report:", creditReportData.personalInfo);
+      
+      // Only use credit report data if the user info is empty or placeholder
+      if (!finalUserInfo.name || finalUserInfo.name === "[YOUR NAME]") {
+        finalUserInfo.name = creditReportData.personalInfo.name || finalUserInfo.name;
+      }
+      
+      if (!finalUserInfo.address || finalUserInfo.address === "[YOUR ADDRESS]") {
+        finalUserInfo.address = creditReportData.personalInfo.address || finalUserInfo.address;
+      }
+      
+      if (!finalUserInfo.city || finalUserInfo.city === "[CITY]") {
+        finalUserInfo.city = creditReportData.personalInfo.city || finalUserInfo.city;
+      }
+      
+      if (!finalUserInfo.state || finalUserInfo.state === "[STATE]") {
+        finalUserInfo.state = creditReportData.personalInfo.state || finalUserInfo.state;
+      }
+      
+      if (!finalUserInfo.zip || finalUserInfo.zip === "[ZIP]") {
+        finalUserInfo.zip = creditReportData.personalInfo.zip || finalUserInfo.zip;
+      }
     }
     
     // Format address with proper line breaks
     let formattedAddress = '';
-    if (userInfo.address && userInfo.address !== "[YOUR ADDRESS]") {
-      formattedAddress = userInfo.address;
+    if (finalUserInfo.address && finalUserInfo.address !== "[YOUR ADDRESS]") {
+      formattedAddress = finalUserInfo.address;
     } else {
       formattedAddress = "[YOUR ADDRESS]";
     }
     
     let locationInfo = '';
-    if (userInfo.city && userInfo.state && userInfo.zip && 
-        userInfo.city !== "[CITY]" && 
-        userInfo.state !== "[STATE]" && 
-        userInfo.zip !== "[ZIP]") {
-      locationInfo = `${userInfo.city}, ${userInfo.state} ${userInfo.zip}`;
+    if (finalUserInfo.city && finalUserInfo.state && finalUserInfo.zip && 
+        finalUserInfo.city !== "[CITY]" && 
+        finalUserInfo.state !== "[STATE]" && 
+        finalUserInfo.zip !== "[ZIP]") {
+      locationInfo = `${finalUserInfo.city}, ${finalUserInfo.state} ${finalUserInfo.zip}`;
     } else {
       locationInfo = "[CITY], [STATE] [ZIP]";
     }
@@ -118,7 +153,7 @@ Reason for Dispute: ${disputeType}
     let letterContent = `Credit Report #: ${creditReportNumber}
 Today is ${currentDate}
 
-${userInfo.name || '[YOUR NAME]'}
+${finalUserInfo.name || '[YOUR NAME]'}
 ${formattedAddress}
 ${locationInfo}
 
@@ -148,7 +183,7 @@ Please investigate this matter and provide me with the results within 30 days as
 
 Sincerely,
 
-${userInfo.name || '[YOUR NAME]'}
+${finalUserInfo.name || '[YOUR NAME]'}
 
 Enclosures:
 - Copy of ID

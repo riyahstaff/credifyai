@@ -53,6 +53,14 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
     if (reportData && reportData.accounts && reportData.accounts.length > 0) {
       setAccounts(reportData.accounts);
       console.log("Loaded accounts from report data:", reportData.accounts);
+      
+      // Store report data in session storage for letter generation
+      try {
+        sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
+        console.log("Stored credit report data in session storage for letter generation");
+      } catch (error) {
+        console.error("Error storing credit report data:", error);
+      }
     }
   }, [reportData]);
   
@@ -67,7 +75,6 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
     }
   });
   
-  // Update form values when selectedAccount changes
   useEffect(() => {
     if (selectedAccount) {
       console.log("Selected account changed, updating form:", selectedAccount);
@@ -77,7 +84,6 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
     }
   }, [selectedAccount, form]);
   
-  // Update form values when selectedTemplate changes
   useEffect(() => {
     if (selectedTemplate) {
       form.setValue('errorType', selectedTemplate.name || 'Late Payment Dispute');
@@ -88,10 +94,8 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
     console.log("Submitting form with values:", values);
     console.log("Selected account data:", selectedAccount);
     
-    // Ensure account number is properly formatted
     let formattedAccountNumber = selectedAccount?.accountNumber || values.accountNumber || '';
     if (formattedAccountNumber) {
-      // If it's already formatted, leave it alone; otherwise format it
       if (!formattedAccountNumber.includes('xx-xxxx-')) {
         formattedAccountNumber = formattedAccountNumber.length > 4
           ? `xx-xxxx-${formattedAccountNumber.slice(-4)}`
@@ -99,16 +103,13 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
       }
     }
     
-    // Format account name consistently
     const formattedAccountName = (selectedAccount?.accountName || values.accountName || 'Unknown Account').toUpperCase();
     
-    // Make sure to include all account details
     const disputeData = {
       ...values,
       accountName: formattedAccountName,
       accountNumber: formattedAccountNumber || "xx-xxxx-1000",
       
-      // Add actual account details to ensure they're included in the letter
       actualAccountInfo: selectedAccount ? {
         ...selectedAccount,
         name: formattedAccountName,
@@ -119,11 +120,13 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
         status: selectedAccount.paymentStatus
       } : null,
       
-      // Add all accounts from the credit report
-      allAccounts: reportData?.accounts || []
+      allAccounts: reportData?.accounts || [],
+      
+      reportDataId: reportData?.id || null,
+      
+      personalInfo: reportData?.personalInfo || null
     };
     
-    // Log the dispute data for debugging
     console.log("Generating dispute with data:", disputeData);
     
     onGenerate(disputeData);
@@ -177,7 +180,6 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Account Selection */}
           <div className="space-y-6">
             <div>
               <FormLabel className="text-credify-navy dark:text-white text-sm font-semibold">
@@ -201,7 +203,6 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
             />
           </div>
           
-          {/* Credit Bureau Selection */}
           <FormField
             control={form.control}
             name="bureau"
@@ -221,7 +222,6 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
             )}
           />
           
-          {/* Error Type Selection */}
           <FormField
             control={form.control}
             name="errorType"
@@ -241,7 +241,6 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
             )}
           />
           
-          {/* Explanation */}
           <FormField
             control={form.control}
             name="explanation"

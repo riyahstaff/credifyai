@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { generateEnhancedDisputeLetter } from '@/lib/supabase/letterGenerator';
+import { CreditReportData } from '@/utils/creditReport/types';
 
 interface Letter {
   id: number;
@@ -47,9 +49,24 @@ export const useDisputeLetterGenerator = ({
     console.log('Generating dispute with full data:', disputeData);
     
     try {
-      // Get user info from local storage or use placeholder
-      // If we have actual account data, use it
-      const actualAccountInfo = disputeData.actualAccountInfo || {};
+      // Check if we have report data in session storage
+      let creditReportData: CreditReportData | null = null;
+      const storedReportData = sessionStorage.getItem('creditReportData');
+      
+      if (storedReportData) {
+        try {
+          creditReportData = JSON.parse(storedReportData) as CreditReportData;
+          console.log("Found stored credit report data:", 
+            creditReportData ? {
+              personalInfo: creditReportData.personalInfo,
+              accounts: creditReportData.accounts?.length,
+              bureaus: creditReportData.bureaus
+            } : "No report data"
+          );
+        } catch (e) {
+          console.error("Error parsing stored credit report data:", e);
+        }
+      }
       
       // Extract user info from storage or dispute data
       const userInfo = {
@@ -61,7 +78,10 @@ export const useDisputeLetterGenerator = ({
       };
       
       console.log("User info for letter:", userInfo);
-      console.log("Account info for letter:", actualAccountInfo);
+      console.log("Account info for letter:", disputeData.actualAccountInfo || disputeData);
+      
+      // Get actual account info from the dispute data
+      const actualAccountInfo = disputeData.actualAccountInfo || {};
       
       // Clean up account name and format it consistently
       const accountName = actualAccountInfo.name || disputeData.accountName || "Unknown Account";
@@ -72,9 +92,6 @@ export const useDisputeLetterGenerator = ({
       const accountNumber = rawAccountNumber.length > 4
         ? `xx-xxxx-${rawAccountNumber.slice(-4)}`
         : `xx-xxxx-${rawAccountNumber}`;
-      
-      // Generate a credit report number
-      const creditReportNumber = `CR${Math.floor(Math.random() * 10000000)}`;
       
       // If letterContent is not provided, generate it
       if (!disputeData.letterContent) {
@@ -87,7 +104,8 @@ export const useDisputeLetterGenerator = ({
             errorDescription: disputeData.explanation,
             bureau: disputeData.bureau
           },
-          userInfo
+          userInfo,
+          creditReportData // Pass the credit report data to enhance the letter
         );
         
         // Make sure the letter has the correct format for the account section
@@ -103,12 +121,6 @@ Reason for Dispute: ${disputeData.errorType}
           disputeData.letterContent = disputeData.letterContent.replace(
             /DISPUTED ITEM\(S\):[\s\S]*?(?=\n\nUnder)/,
             accountSection
-          );
-          
-          // Replace credit report number
-          disputeData.letterContent = disputeData.letterContent.replace(
-            /Credit Report #: [A-Z0-9]+/,
-            `Credit Report #: ${creditReportNumber}`
           );
         }
       }
