@@ -123,8 +123,8 @@ const DisputeForm: React.FC<DisputeFormProps> = ({
       
       allAccounts: reportData?.accounts || [],
       
-      // Fix: Change reportData?.id to a string ID or null since id doesn't exist in CreditReportData
-      reportDataId: null,
+      // Generate a unique report ID using timestamp if the report doesn't have an ID
+      reportDataId: `report-${Date.now()}`,
       
       personalInfo: reportData?.personalInfo || null
     };
