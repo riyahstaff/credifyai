@@ -39,8 +39,8 @@ export const identifyIssues = (reportData: CreditReportData): IdentifiedIssue[] 
     
     // Check for accounts with negative status descriptions
     reportData.accounts.forEach(account => {
-      // Safe access to latestStatus with fallback to status
-      const statusText = account.latestStatus || account.status || '';
+      // Safe access to status with multiple fallbacks
+      const statusText = account.latestStatus || account.status || account.paymentStatus || '';
       
       if (statusText && containsNegativeTerms(statusText)) {
         const creditorDisplay = account.creditorName || account.creditor || account.accountName;
@@ -84,12 +84,18 @@ export const identifyIssues = (reportData: CreditReportData): IdentifiedIssue[] 
     
     // Check for accounts with high credit utilization
     reportData.accounts.forEach(account => {
-      if (typeof account.creditLimit === 'number' || typeof account.creditLimit === 'string') {
-        let creditLimit = typeof account.creditLimit === 'string' 
-          ? parseFloat(account.creditLimit.replace(/[$,]/g, '')) 
-          : account.creditLimit;
+      if (account.creditLimit !== undefined) {
+        let creditLimit: number = 0;
+        
+        // Parse credit limit safely
+        if (typeof account.creditLimit === 'string') {
+          creditLimit = parseFloat(account.creditLimit.replace(/[$,]/g, ''));
+        } else if (typeof account.creditLimit === 'number') {
+          creditLimit = account.creditLimit;
+        }
           
         let balance = 0;
+        // Parse balance safely
         if (typeof account.balance === 'string') {
           balance = parseFloat(account.balance.replace(/[$,]/g, ''));
         } else if (typeof account.balance === 'number') {

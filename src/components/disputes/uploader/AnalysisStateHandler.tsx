@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { CreditReportData, CreditReportAccount } from '@/utils/creditReportParser';
+import { CreditReportData, CreditReportAccount, IdentifiedIssue } from '@/utils/creditReport/types';
 import AnalyzingReport from './AnalyzingReport';
 import ReportAnalysisResults from './ReportAnalysisResults';
 import UploadConfirmation from './UploadConfirmation';
@@ -15,15 +15,7 @@ interface AnalysisStateHandlerProps {
   fileSize: string;
   reportData: CreditReportData | null;
   uploadedFile: File | null;
-  issues: Array<{
-    type: string;
-    title: string;
-    description: string;
-    impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
-    impactColor: string;
-    account?: CreditReportAccount;
-    laws: string[];
-  }>;
+  issues: IdentifiedIssue[];
   letterGenerated: boolean;
   analysisError: string | null;
   onResetUpload: () => void;
@@ -109,7 +101,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
           
           {showReportPreview && (
             <div className="mt-4">
-              <ReportPreview reportData={reportData} />
+              <ReportPreview reportData={reportData} uploadedFile={uploadedFile} />
             </div>
           )}
         </div>

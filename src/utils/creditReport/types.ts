@@ -2,34 +2,31 @@ export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
   accountType?: string;
+  creditor?: string;
   balance?: number | string;
   currentBalance?: number | string;
-  creditLimit?: number | string;
-  paymentStatus?: string;
-  dateOpened?: string;
-  lastActivity?: string;
   status?: string;
-  isNegative?: boolean;
-  dateReported?: string;
+  paymentStatus?: string;
   bureau?: string;
-  remarks?: string[];
+  dateOpened?: string;
   openDate?: string;
+  dateReported?: string;
   lastReportedDate?: string;
-  highBalance?: number | string;
-  creditor?: string;
-  creditorName?: string;
+  isNegative?: boolean;
   latestStatus?: string;
+  creditorName?: string;
   paymentHistory?: string;
+  creditLimit?: number | string;
   accountHolderName?: string;
   ssn?: string;
 }
 
 export interface CreditReportInquiry {
   inquiryDate: string;
-  inquiryBy: string;
-  type: string;
-  bureau?: string;
   creditor?: string;
+  inquiryBy?: string;
+  bureau?: string;
+  type?: string;
   inquiryCompany?: string;
 }
 
@@ -53,10 +50,10 @@ export interface IdentifiedIssue {
   type: string;
   title: string;
   description: string;
-  impact: "High Impact" | "Critical Impact" | "Medium Impact";
+  impact: 'High Impact' | 'Critical Impact' | 'Medium Impact' | 'Low Impact';
   impactColor: string;
-  laws: any[];
   account?: CreditReportAccount;
+  laws: string[];
 }
 
 export interface AnalysisResults {
