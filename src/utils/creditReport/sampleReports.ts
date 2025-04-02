@@ -1,44 +1,19 @@
 
 /**
- * Sample Reports Loader
- * This module handles loading sample credit reports from Supabase
+ * This file no longer loads sample credit reports - we only use real uploaded reports
  */
 import { CreditReportData } from './types';
 import { parseReportContent } from './parser';
-import { listSampleReports, downloadSampleReport } from '@/lib/supabase';
 
-// Store sample reports data cache
+// No sample reports cache - we only use real data
 let sampleReportsCache: CreditReportData[] = [];
 
 /**
- * Load all sample credit reports from Supabase Storage
- * This helps CLEO learn from past successful disputes
+ * This function now returns an empty array to ensure no mock data is used
  */
 export const loadSampleReports = async (): Promise<CreditReportData[]> => {
-  if (sampleReportsCache.length > 0) {
-    return sampleReportsCache;
-  }
-  
-  try {
-    const sampleFiles = await listSampleReports();
-    
-    const reports: CreditReportData[] = [];
-    
-    for (const file of sampleFiles) {
-      const sampleFile = await downloadSampleReport(file.name);
-      if (sampleFile) {
-        const reportData = await processCreditReport(new File([sampleFile], file.name));
-        reports.push(reportData);
-      }
-    }
-    
-    sampleReportsCache = reports;
-    console.log(`Loaded ${reports.length} sample credit reports`);
-    return reports;
-  } catch (error) {
-    console.error('Error loading sample reports:', error);
-    return [];
-  }
+  console.log("No sample reports will be loaded - only using real data");
+  return [];
 };
 
 /**
@@ -62,7 +37,6 @@ export const processCreditReport = async (file: File): Promise<CreditReportData>
 
 /**
  * Extract text from a file by reading it as text
- * Simplified version for the sample reports
  */
 async function extractTextFromFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

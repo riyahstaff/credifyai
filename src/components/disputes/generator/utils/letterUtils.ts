@@ -11,14 +11,6 @@ export const processDisputeData = async (disputeData: DisputeData, testMode: boo
     hasActualAccount: !!disputeData.actualAccountInfo
   });
   
-  if (testMode) {
-    // Add a test mode flag as an additional property
-    disputeData = { 
-      ...disputeData, 
-      testMode: true // Using the [key: string]: any from the interface
-    };
-  }
-  
   // Get legal references relevant to this dispute
   const legalRefs = getLegalReferencesForDispute(disputeData.errorType, disputeData.explanation);
   disputeData.legalReferences = legalRefs;
@@ -33,7 +25,7 @@ export const processDisputeData = async (disputeData: DisputeData, testMode: boo
       console.log("Found stored credit report data with primaryBureau:", reportData.primaryBureau);
       
       // Use the primary bureau from the report if available and no bureau specified
-      if (reportData.primaryBureau && (!disputeData.bureau || disputeData.bureau === "Experian")) {
+      if (reportData.primaryBureau && (!disputeData.bureau || disputeData.bureau === "TransUnion")) {
         disputeData.bureau = reportData.primaryBureau;
         console.log("Using primary bureau from report:", disputeData.bureau);
       }
@@ -52,11 +44,11 @@ export const processDisputeData = async (disputeData: DisputeData, testMode: boo
   // First try to use personal info from the credit report
   if (reportData && reportData.personalInfo) {
     const pi = reportData.personalInfo;
-    userName = pi.name || localStorage.getItem('userName') || "[YOUR NAME]";
-    userAddress = pi.address || localStorage.getItem('userAddress') || "[YOUR ADDRESS]";
-    userCity = pi.city || localStorage.getItem('userCity') || "[CITY]";
-    userState = pi.state || localStorage.getItem('userState') || "[STATE]";
-    userZip = pi.zip || localStorage.getItem('userZip') || "[ZIP]";
+    userName = pi.name || localStorage.getItem('userName') || "";
+    userAddress = pi.address || localStorage.getItem('userAddress') || "";
+    userCity = pi.city || localStorage.getItem('userCity') || "";
+    userState = pi.state || localStorage.getItem('userState') || "";
+    userZip = pi.zip || localStorage.getItem('userZip') || "";
     
     console.log("Using personal info from credit report:", {
       name: userName,
@@ -67,20 +59,20 @@ export const processDisputeData = async (disputeData: DisputeData, testMode: boo
     });
   } else {
     // Fall back to localStorage if no report data
-    userName = localStorage.getItem('userName') || "[YOUR NAME]";
-    userAddress = localStorage.getItem('userAddress') || "[YOUR ADDRESS]";
-    userCity = localStorage.getItem('userCity') || "[CITY]";
-    userState = localStorage.getItem('userState') || "[STATE]";
-    userZip = localStorage.getItem('userZip') || "[ZIP]";
+    userName = localStorage.getItem('userName') || "";
+    userAddress = localStorage.getItem('userAddress') || "";
+    userCity = localStorage.getItem('userCity') || "";
+    userState = localStorage.getItem('userState') || "";
+    userZip = localStorage.getItem('userZip') || "";
   }
   
-  // Add user information
+  // Add user information - only if we have real data
   disputeData.userInfo = {
-    name: userName,
-    address: userAddress,
-    city: userCity,
-    state: userState,
-    zip: userZip
+    name: userName || "[YOUR NAME]",
+    address: userAddress || "[YOUR ADDRESS]",
+    city: userCity || "[CITY]",
+    state: userState || "[STATE]",
+    zip: userZip || "[ZIP]"
   };
   
   // Add report data to dispute data for enhanced letter generation
@@ -109,7 +101,7 @@ export const processDisputeData = async (disputeData: DisputeData, testMode: boo
           accountNumber: accountNumber,
           errorDescription: disputeData.explanation,
           bureau: disputeData.bureau,
-          relevantReportText: reportData?.rawText?.substring(0, 500) // Add snippet of report text
+          relevantReportText: reportData?.rawText?.substring(0, 10000) // Add more report text
         },
         disputeData.userInfo,
         reportData

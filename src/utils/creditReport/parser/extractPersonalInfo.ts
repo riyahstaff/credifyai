@@ -47,15 +47,26 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
       /(?:^|\n)([A-Z][A-Za-z\s.'-]{2,20}\s+[A-Z][A-Za-z\s.'-]{2,20})(?:\n|$)/,
       /(?:^|\n)([A-Z][A-Za-z\s.'-]{2,25})(?:\n|$)/,
       /PERSONAL INFORMATION\s*\n+\s*([\w\s.'-]{3,30})/i, // Look for name after "PERSONAL INFORMATION"
-      /CREDIT REPORT\s+(?:FOR|OF)?\s+([\w\s.'-]{3,30})/i
+      /CREDIT REPORT\s+(?:FOR|OF)?\s+([\w\s.'-]{3,30})/i,
+      // TransUnion specific patterns
+      /credit report for\n([\w\s.'-]{3,30})/i,
+      /(\w+\s+\w+)(?:\s+Report Number:)/i,
+      /Personal Information\n([\w\s.'-]{3,30})/i
     ];
     
     for (const pattern of namePatterns) {
       const match = normalized.match(pattern);
       if (match && match[1] && match[1].trim().length > 3) {
-        personalInfo.name = match[1].trim();
-        console.log("Found name:", personalInfo.name);
-        break;
+        // Verify this isn't a website or company name
+        const potentialName = match[1].trim();
+        if (!potentialName.includes('.com') && 
+            !potentialName.includes('.gov') && 
+            !potentialName.toLowerCase().includes('credit') && 
+            !potentialName.toLowerCase().includes('report')) {
+          personalInfo.name = potentialName;
+          console.log("Found name:", personalInfo.name);
+          break;
+        }
       }
     }
     
@@ -67,15 +78,22 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
       /ADDRESS(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
       /STREET(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
       /RESIDENCE(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
-      /\b(\d+(?:\s*[A-Za-z]+){1,4}(?:\s*\w+\.?){0,2}(?:\s+[A-Za-z]+){0,2})\b/i
+      /\b(\d+(?:\s*[A-Za-z]+){1,4}(?:\s*\w+\.?){0,2}(?:\s+[A-Za-z]+){0,2})\b/i,
+      // TransUnion specific patterns
+      /Current Address:\n([A-Za-z0-9\s.#,-]{5,60})/i,
+      /Address:\n([A-Za-z0-9\s.#,-]{5,60})/i
     ];
     
     for (const pattern of addressPatterns) {
       const match = normalized.match(pattern);
       if (match && match[1] && match[1].trim().length > 5) {
-        personalInfo.address = match[1].trim();
-        console.log("Found address:", personalInfo.address);
-        break;
+        const potentialAddress = match[1].trim();
+        // Skip if it looks like a business name
+        if (!/^[A-Za-z]+\s+(Inc|LLC|Corp|Company)/.test(potentialAddress)) {
+          personalInfo.address = potentialAddress;
+          console.log("Found address:", personalInfo.address);
+          break;
+        }
       }
     }
     
@@ -85,7 +103,9 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
       /([A-Za-z\s.'-]{2,25})\s*,?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i,
       /CITY(?:[^\n]{0,20})?:?\s*([A-Za-z\s.'-]{2,25})/i,
       /STATE(?:[^\n]{0,20})?:?\s*([A-Z]{2})/i,
-      /ZIP(?:[^\n]{0,20})?:?\s*(\d{5}(?:-\d{4})?)/i
+      /ZIP(?:[^\n]{0,20})?:?\s*(\d{5}(?:-\d{4})?)/i,
+      // TransUnion specific patterns
+      /Current Address:(?:.*\n){1,2}([A-Za-z\s.'-]{2,25}),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i
     ];
     
     // Try city, state, zip as a group first
@@ -128,7 +148,9 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
     // Extract phone - enhanced patterns
     const phonePatterns = [
       /(?:phone|telephone|mobile|contact|cell)[^\n]{0,20}:?\s*(\(?\d{3}\)?[-.)\s]?\d{3}[-.)\s]?\d{4})/i,
-      /(?:^|\n)(\(?\d{3}\)?[-.)\s]?\d{3}[-.)\s]?\d{4})(?:\n|$)/
+      /(?:^|\n)(\(?\d{3}\)?[-.)\s]?\d{3}[-.)\s]?\d{4})(?:\n|$)/,
+      // TransUnion specific pattern
+      /Telephone:\n(\(?\d{3}\)?[-.)\s]?\d{3}[-.)\s]?\d{4})/i
     ];
     
     for (const pattern of phonePatterns) {
@@ -144,7 +166,11 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
     const ssnPatterns = [
       /(?:ssn|social security)[^\n]{0,30}(?:number)?:?\s*(?:\d{3}-\d{2}-(\d{4})|\*{3}-\*{2}-(\d{4}))/i,
       /(?:^|\n)(?:\d{3}-\d{2}-(\d{4})|\*{3}-\*{2}-(\d{4}))(?:\n|$)/,
-      /SSN(?:[^\n]{0,20})?:?\s*(?:\d{3}-\d{2}-(\d{4})|\*{3}-\*{2}-(\d{4}))/i
+      /SSN(?:[^\n]{0,20})?:?\s*(?:\d{3}-\d{2}-(\d{4})|\*{3}-\*{2}-(\d{4}))/i,
+      // TransUnion specific pattern
+      /Social Security Number:\n\d{3}-\d{2}-(\d{4})/i,
+      /SSN:\n\d{3}-\d{2}-(\d{4})/i,
+      /SSN:\n\*{3}-\*{2}-(\d{4})/i
     ];
     
     for (const pattern of ssnPatterns) {
@@ -161,7 +187,9 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
     const dobPatterns = [
       /(?:dob|date of birth|birth date)[^\n]{0,20}:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})/i,
       /(?:^|\n)(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})(?:\n|$)/,
-      /BIRTH(?:[^\n]{0,20})?:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})/i
+      /BIRTH(?:[^\n]{0,20})?:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})/i,
+      // TransUnion specific pattern
+      /Date of Birth:\n(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})/i
     ];
     
     for (const pattern of dobPatterns) {

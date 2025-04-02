@@ -6,19 +6,40 @@ export const createFallbackLetter = (reportData?: any) => {
   // Include accounts from the report if available
   const accounts = reportData?.accounts || [];
   
-  // Get user information from localStorage
-  const userName = localStorage.getItem('userName') || localStorage.getItem('name') || "[YOUR NAME]";
-  const userAddress = localStorage.getItem('userAddress') || "[YOUR ADDRESS]";
-  const userCity = localStorage.getItem('userCity') || "[CITY]";
-  const userState = localStorage.getItem('userState') || "[STATE]";
-  const userZip = localStorage.getItem('userZip') || "[ZIP]";
+  // Get user information from report data or localStorage
+  let userName = "";
+  let userAddress = "";
+  let userCity = "";
+  let userState = "";
+  let userZip = "";
+  
+  // Try to get from report data first
+  if (reportData && reportData.personalInfo) {
+    const pi = reportData.personalInfo;
+    userName = pi.name || localStorage.getItem('userName') || "[YOUR NAME]";
+    userAddress = pi.address || localStorage.getItem('userAddress') || "[YOUR ADDRESS]";
+    userCity = pi.city || localStorage.getItem('userCity') || "[CITY]";
+    userState = pi.state || localStorage.getItem('userState') || "[STATE]";
+    userZip = pi.zip || localStorage.getItem('userZip') || "[ZIP]";
+  } else {
+    // Fall back to localStorage
+    userName = localStorage.getItem('userName') || "[YOUR NAME]";
+    userAddress = localStorage.getItem('userAddress') || "[YOUR ADDRESS]";
+    userCity = localStorage.getItem('userCity') || "[CITY]";
+    userState = localStorage.getItem('userState') || "[STATE]";
+    userZip = localStorage.getItem('userZip') || "[ZIP]";
+  }
+  
   const currentDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   });
   
-  // Format account information
+  // Get bureau from report data
+  const bureau = reportData?.primaryBureau || "TransUnion";
+  
+  // Format account information from actual report data
   let accountsSection = '';
   if (accounts && accounts.length > 0) {
     // Filter out any accounts with "Multiple Accounts" or empty name
@@ -28,13 +49,11 @@ export const createFallbackLetter = (reportData?: any) => {
       acc.accountName.trim() !== ''
     );
     
-    // If no valid accounts found, create generic placeholders
-    const accountsToUse = validAccounts.length > 0 ? validAccounts : 
-      [{ accountName: 'CREDIT ACCOUNT 1', accountNumber: '1234' },
-       { accountName: 'CREDIT ACCOUNT 2', accountNumber: '5678' }];
+    // If we have valid accounts, use them
+    const accountsToUse = validAccounts.length > 0 ? validAccounts : [];
     
     accountsSection = accountsToUse.map((account: any, index: number) => {
-      const accountName = account.accountName || `CREDIT ACCOUNT ${index + 1}`;
+      const accountName = account.accountName || `ACCOUNT ${index + 1}`;
       const accountNumber = account.accountNumber || '';
       const maskedNumber = accountNumber ? 
         'xxxxxxxx' + accountNumber.substring(Math.max(0, accountNumber.length - 4)) : 
@@ -48,8 +67,25 @@ Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be
     }).join('\n');
   }
   
+  // If we don't have any accounts section but have raw text, create a general dispute
+  if (accountsSection === '' && reportData?.rawText) {
+    accountsSection = `
+I am disputing all information in my credit report that may be inaccurate, incomplete, or unverifiable.
+Notation: Per FCRA Section 611, all information that cannot be verified must be promptly removed from my credit report.`;
+  }
+  
+  // Set appropriate bureau address based on detected bureau
+  let bureauAddress = "";
+  if (bureau === "TransUnion") {
+    bureauAddress = "TransUnion\nP.O. Box 2000\nChester, PA 19016";
+  } else if (bureau === "Equifax") {
+    bureauAddress = "Equifax\nP.O. Box 740256\nAtlanta, GA 30374";
+  } else if (bureau === "Experian") {
+    bureauAddress = "Experian\nP.O. Box 4500\nAllen, TX 75013";
+  }
+  
   return {
-    bureau: "Experian",
+    bureau: bureau,
     accountName: accounts && accounts.length > 0 && accounts[0].accountName 
       ? accounts[0].accountName 
       : "All Credit Accounts",
@@ -67,9 +103,7 @@ ${currentDate}
 
 Re: My certified letter in notice of an official consumer declaration of complaint for your thus far NOT proven true, NOT proven correct, NOT proven complete, NOT proven timely, or NOT proven compliant mis-information, to include likely the deficient of proven metro 2 compliant data field formatted reporting as MANDATED! I am enacting my consumer and or civil rights to compel you here and now to absolutely and permanently remove any and all aspects of untrue, inaccurate, not complete, not timely, not proven mine, not proven my responsibility, and or not proven adequately and entirely compliant allegations of credit information.
 
-Experian
-P.O. Box 4500
-Allen, TX 75013
+${bureauAddress}
 
 To Whom It May Concern:
 

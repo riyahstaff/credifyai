@@ -33,29 +33,51 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
     htmlContent: convertReportToHtml(content, isPdf) // Add HTML formatted content with PDF flag
   };
   
-  // Check which bureaus are mentioned in the report
+  // Conduct more thorough search for bureau identification
   const lowerContent = content.toLowerCase();
-  reportData.bureaus.experian = lowerContent.includes('experian');
-  reportData.bureaus.equifax = lowerContent.includes('equifax');
-  reportData.bureaus.transunion = lowerContent.includes('transunion');
+  
+  // More comprehensive checks for each bureau
+  reportData.bureaus.experian = 
+    lowerContent.includes('experian') || 
+    lowerContent.includes('experian credit report') ||
+    lowerContent.includes('experian.com');
+    
+  reportData.bureaus.equifax = 
+    lowerContent.includes('equifax') || 
+    lowerContent.includes('equifax credit report') ||
+    lowerContent.includes('equifax.com');
+    
+  reportData.bureaus.transunion = 
+    lowerContent.includes('transunion') || 
+    lowerContent.includes('trans union') ||
+    lowerContent.includes('transunion credit report') ||
+    lowerContent.includes('transunion.com');
   
   console.log("Detected bureaus:", reportData.bureaus);
   
-  // Determine primary bureau for dispute letters
+  // Determine primary bureau with proper capitalization for dispute letters
   if (reportData.bureaus.transunion) {
     reportData.primaryBureau = "TransUnion";
   } else if (reportData.bureaus.equifax) {
     reportData.primaryBureau = "Equifax";
   } else if (reportData.bureaus.experian) {
     reportData.primaryBureau = "Experian";
+  } else {
+    // Deeper analysis - search for more specific bureau indicators
+    if (lowerContent.includes('tu') && !lowerContent.includes('equifax') && !lowerContent.includes('experian')) {
+      reportData.bureaus.transunion = true;
+      reportData.primaryBureau = "TransUnion";
+    } else if (lowerContent.includes('fico') && lowerContent.includes('score') && lowerContent.includes('tu')) {
+      reportData.bureaus.transunion = true;
+      reportData.primaryBureau = "TransUnion";
+    } else {
+      // Default to TransUnion as you specified; removed "Experian" default
+      reportData.primaryBureau = "TransUnion";
+    }
   }
   
-  if (reportData.primaryBureau) {
-    console.log(`Determined primary bureau: ${reportData.primaryBureau}`);
-  } else {
-    console.log("No bureau detected, defaulting to Experian");
-    reportData.primaryBureau = "Experian";
-  }
+  // Log the determined primary bureau
+  console.log(`Determined primary bureau: ${reportData.primaryBureau}`);
   
   // Extract personal information - this is critical for letter generation
   reportData.personalInfo = extractPersonalInfo(content);
@@ -98,31 +120,47 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
     accountTypeSummary: {},
     
     // Additional recommendation fields
-    totalDiscrepancies: Math.min(reportData.accounts.length * 2, 10), // Simulated discrepancies
-    highSeverityIssues: Math.floor(Math.random() * 3) + 1, // 1-3 high severity issues
-    accountsWithIssues: Math.min(reportData.accounts.length, 5),
+    totalDiscrepancies: reportData.accounts.filter(a => a.isNegative).length,
+    highSeverityIssues: reportData.accounts.filter(a => a.isNegative).length,
+    accountsWithIssues: reportData.accounts.filter(a => a.isNegative).length,
     recommendedDisputes: [] // Will be populated below
   };
   
   // If we have actual account data, generate more accurate recommendedDisputes
   if (reportData.accounts.length > 0) {
     // Create properly typed RecommendedDispute objects
-    const recommendedDisputes: RecommendedDispute[] = reportData.accounts.slice(0, 3).map((account, index) => {
-      return {
-        id: `dispute-${index}`,
-        type: "Account Error",
-        title: `Issue with ${account.accountName}`,
-        bureau: reportData.primaryBureau || account.bureau || "Experian",
-        accountName: account.accountName,
-        accountNumber: account.accountNumber || "",
-        reason: "Inaccurate Information",
-        description: "This account contains information that may be inaccurate.",
-        impact: "High", // Using valid enum value
-        severity: "high",
-        // Add new fields that were causing TypeScript errors
-        sampleDisputeLanguage: "I am disputing this account as it contains inaccurate information."
-      };
-    });
+    const recommendedDisputes: RecommendedDispute[] = reportData.accounts
+      .filter(acc => acc.isNegative)
+      .map((account, index) => {
+        let reason = "Inaccurate Information";
+        let type = "Account Error";
+        
+        // Determine better reason based on account data
+        if (account.paymentStatus?.toLowerCase().includes('late')) {
+          reason = "Late Payment Dispute";
+          type = "Late Payment";
+        } else if (account.status?.toLowerCase().includes('collection')) {
+          reason = "Collection Account Dispute";
+          type = "Collection";
+        } else if (account.remarks?.some(r => r.toLowerCase().includes('charge'))) {
+          reason = "Charge-Off Dispute";
+          type = "Charge-Off";
+        }
+        
+        return {
+          id: `dispute-${index}`,
+          type: type,
+          title: `Issue with ${account.accountName}`,
+          bureau: reportData.primaryBureau || account.bureau || "TransUnion",
+          accountName: account.accountName,
+          accountNumber: account.accountNumber || "",
+          reason: reason,
+          description: `This account contains information that may be inaccurate.`,
+          impact: "High", // Using valid enum value
+          severity: "high",
+          sampleDisputeLanguage: `I am disputing this account as it contains inaccurate information.`
+        };
+      });
     
     // Add the properly formatted recommended disputes
     if (reportData.analysisResults) {
