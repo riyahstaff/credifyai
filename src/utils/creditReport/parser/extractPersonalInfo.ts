@@ -35,13 +35,17 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
   const normalized = content.replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
   
   try {
-    // Extract name using various patterns
+    // Extract name using various patterns - significantly expanded patterns
     const namePatterns = [
       /name:?\s*([A-Za-z\s.'-]{3,30})/i,
       /CONSUMER(?:\s+NAME)?:?\s*([A-Za-z\s.'-]{3,30})/i,
       /(?:PERSONAL|CONSUMER) INFORMATION[^\n]{0,50}(?:name|consumer)(?:[^\n]{0,10})?:?\s*([A-Za-z\s.'-]{3,30})/i,
       /report for:?\s*([A-Za-z\s.'-]{3,30})/i,
-      /prepared for:?\s*([A-Za-z\s.'-]{3,30})/i
+      /prepared for:?\s*([A-Za-z\s.'-]{3,30})/i,
+      /consumer:?\s*([A-Za-z\s.'-]{3,30})/i,
+      /applicant:?\s*([A-Za-z\s.'-]{3,30})/i,
+      /(?:^|\n)([A-Z][A-Za-z\s.'-]{2,20}\s+[A-Z][A-Za-z\s.'-]{2,20})(?:\n|$)/,
+      /(?:^|\n)([A-Z][A-Za-z\s.'-]{2,25})(?:\n|$)/
     ];
     
     for (const pattern of namePatterns) {
@@ -53,10 +57,14 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
       }
     }
     
-    // Extract address
+    // Extract address - enhanced patterns
     const addressPatterns = [
-      /(?:address|street|residence|current address)[^\n]{0,20}:?\s*([A-Za-z0-9\s.#,-]{5,50})/i,
-      /(?:PERSONAL|CONSUMER) INFORMATION[^\n]{0,100}(?:address|street|residence)[^\n]{0,20}:?\s*([A-Za-z0-9\s.#,-]{5,50})/i
+      /(?:address|street|residence|current address)[^\n]{0,20}:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
+      /(?:PERSONAL|CONSUMER) INFORMATION[^\n]{0,100}(?:address|street|residence)[^\n]{0,20}:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
+      /(?:^|\n)(\d+\s+[A-Za-z0-9\s.#,-]{5,50})(?:\n|$)/,
+      /ADDRESS(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
+      /STREET(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i,
+      /RESIDENCE(?:[^\n]{0,20})?:?\s*([A-Za-z0-9\s.#,-]{5,60})/i
     ];
     
     for (const pattern of addressPatterns) {
@@ -68,13 +76,17 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
       }
     }
     
-    // Extract city, state, zip
+    // Extract city, state, zip - enhanced patterns
     const cityStateZipPatterns = [
       /(?:city|address|location)(?:[^\n]{0,30})?(?:\n|,|\s{2,})?\s*([A-Za-z\s.'-]{2,25})\s*,?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i,
-      /([A-Za-z\s.'-]{2,25})\s*,?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i
+      /([A-Za-z\s.'-]{2,25})\s*,?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/i,
+      /CITY(?:[^\n]{0,20})?:?\s*([A-Za-z\s.'-]{2,25})/i,
+      /STATE(?:[^\n]{0,20})?:?\s*([A-Z]{2})/i,
+      /ZIP(?:[^\n]{0,20})?:?\s*(\d{5}(?:-\d{4})?)/i
     ];
     
-    for (const pattern of cityStateZipPatterns) {
+    // Try city, state, zip as a group first
+    for (const pattern of cityStateZipPatterns.slice(0, 2)) {
       const match = normalized.match(pattern);
       if (match && match[1] && match[2] && match[3]) {
         personalInfo.city = match[1].trim();
@@ -85,29 +97,77 @@ export const extractPersonalInfo = (content: string): PersonalInfo => {
       }
     }
     
-    // Extract phone
-    const phonePattern = /(?:phone|telephone|mobile|contact)[^\n]{0,20}:?\s*(\(?\d{3}\)?[-.)\s]?\d{3}[-.)\s]?\d{4})/i;
-    const phoneMatch = normalized.match(phonePattern);
-    if (phoneMatch && phoneMatch[1]) {
-      personalInfo.phone = phoneMatch[1].trim();
-      console.log("Found phone:", personalInfo.phone);
+    // If we didn't find them as a group, try individual patterns
+    if (!personalInfo.city) {
+      const cityMatch = normalized.match(cityStateZipPatterns[2]);
+      if (cityMatch && cityMatch[1]) {
+        personalInfo.city = cityMatch[1].trim();
+        console.log("Found city:", personalInfo.city);
+      }
     }
     
-    // Extract SSN (partial for security)
-    const ssnPattern = /(?:ssn|social security)[^\n]{0,30}(?:number)?:?\s*(?:\d{3}-\d{2}-(\d{4})|\*{3}-\*{2}-(\d{4}))/i;
-    const ssnMatch = normalized.match(ssnPattern);
-    if (ssnMatch && (ssnMatch[1] || ssnMatch[2])) {
-      const lastFour = ssnMatch[1] || ssnMatch[2];
-      personalInfo.ssn = `xxx-xx-${lastFour}`;
-      console.log("Found SSN (last 4)");
+    if (!personalInfo.state) {
+      const stateMatch = normalized.match(cityStateZipPatterns[3]);
+      if (stateMatch && stateMatch[1]) {
+        personalInfo.state = stateMatch[1].trim();
+        console.log("Found state:", personalInfo.state);
+      }
     }
     
-    // Extract date of birth
-    const dobPattern = /(?:dob|date of birth|birth date)[^\n]{0,20}:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})/i;
-    const dobMatch = normalized.match(dobPattern);
-    if (dobMatch && dobMatch[1]) {
-      personalInfo.dob = dobMatch[1].trim();
-      console.log("Found DOB:", personalInfo.dob);
+    if (!personalInfo.zip) {
+      const zipMatch = normalized.match(cityStateZipPatterns[4]);
+      if (zipMatch && zipMatch[1]) {
+        personalInfo.zip = zipMatch[1].trim();
+        console.log("Found zip:", personalInfo.zip);
+      }
+    }
+    
+    // Extract phone - enhanced patterns
+    const phonePatterns = [
+      /(?:phone|telephone|mobile|contact|cell)[^\n]{0,20}:?\s*(\(?\d{3}\)?[-.)\s]?\d{3}[-.)\s]?\d{4})/i,
+      /(?:^|\n)(\(?\d{3}\)?[-.)\s]?\d{3}[-.)\s]?\d{4})(?:\n|$)/
+    ];
+    
+    for (const pattern of phonePatterns) {
+      const phoneMatch = normalized.match(pattern);
+      if (phoneMatch && phoneMatch[1]) {
+        personalInfo.phone = phoneMatch[1].trim();
+        console.log("Found phone:", personalInfo.phone);
+        break;
+      }
+    }
+    
+    // Extract SSN (partial for security) - enhanced patterns
+    const ssnPatterns = [
+      /(?:ssn|social security)[^\n]{0,30}(?:number)?:?\s*(?:\d{3}-\d{2}-(\d{4})|\*{3}-\*{2}-(\d{4}))/i,
+      /(?:^|\n)(?:\d{3}-\d{2}-(\d{4})|\*{3}-\*{2}-(\d{4}))(?:\n|$)/,
+      /SSN(?:[^\n]{0,20})?:?\s*(?:\d{3}-\d{2}-(\d{4})|\*{3}-\*{2}-(\d{4}))/i
+    ];
+    
+    for (const pattern of ssnPatterns) {
+      const ssnMatch = normalized.match(pattern);
+      if (ssnMatch && (ssnMatch[1] || ssnMatch[2])) {
+        const lastFour = ssnMatch[1] || ssnMatch[2];
+        personalInfo.ssn = `xxx-xx-${lastFour}`;
+        console.log("Found SSN (last 4)");
+        break;
+      }
+    }
+    
+    // Extract date of birth - enhanced patterns
+    const dobPatterns = [
+      /(?:dob|date of birth|birth date)[^\n]{0,20}:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})/i,
+      /(?:^|\n)(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})(?:\n|$)/,
+      /BIRTH(?:[^\n]{0,20})?:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})/i
+    ];
+    
+    for (const pattern of dobPatterns) {
+      const dobMatch = normalized.match(pattern);
+      if (dobMatch && dobMatch[1]) {
+        personalInfo.dob = dobMatch[1].trim();
+        console.log("Found DOB:", personalInfo.dob);
+        break;
+      }
     }
     
     // Save to localStorage for the letter generation

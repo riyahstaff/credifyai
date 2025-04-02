@@ -46,12 +46,25 @@ export const useDisputeLetterGenerator = ({
 
   const handleGenerateDispute = async (disputeData: any) => {
     setIsGenerating(true);
-    console.log('Generating dispute with full data:', disputeData);
+    console.log('Generating dispute with full data:', {
+      accountName: disputeData.accountName,
+      accountNumber: disputeData.accountNumber,
+      bureau: disputeData.bureau,
+      errorType: disputeData.errorType,
+      hasActualAccount: !!disputeData.actualAccountInfo
+    });
     
     try {
-      // Check if we have report data in session storage
+      // First check if we have report data in session storage
       let creditReportData: CreditReportData | null = null;
       const storedReportData = sessionStorage.getItem('creditReportData');
+      let rawReportText = '';
+      const lastReportText = sessionStorage.getItem('lastReportText');
+      
+      if (lastReportText) {
+        rawReportText = lastReportText;
+        console.log("Found stored raw report text, length:", rawReportText.length);
+      }
       
       if (storedReportData) {
         try {
@@ -59,8 +72,11 @@ export const useDisputeLetterGenerator = ({
           console.log("Found stored credit report data:", 
             creditReportData ? {
               personalInfo: creditReportData.personalInfo,
-              accounts: creditReportData.accounts?.length,
-              bureaus: creditReportData.bureaus
+              accountsCount: creditReportData.accounts?.length,
+              bureausDetected: Object.entries(creditReportData.bureaus)
+                .filter(([_, present]) => present)
+                .map(([bureau]) => bureau)
+                .join(', ')
             } : "No report data"
           );
         } catch (e) {
@@ -88,21 +104,47 @@ export const useDisputeLetterGenerator = ({
       const formattedAccountName = accountName.toUpperCase();
       
       // Format account number with proper masking
-      const rawAccountNumber = actualAccountInfo.number || disputeData.accountNumber || "1000";
-      const accountNumber = rawAccountNumber.length > 4
-        ? `xx-xxxx-${rawAccountNumber.slice(-4)}`
-        : `xx-xxxx-${rawAccountNumber}`;
+      const rawAccountNumber = actualAccountInfo.number || disputeData.accountNumber || "";
+      let accountNumber = rawAccountNumber;
+      
+      if (rawAccountNumber) {
+        if (rawAccountNumber.length > 4 && !rawAccountNumber.includes('xx-xxxx-')) {
+          accountNumber = `xx-xxxx-${rawAccountNumber.slice(-4)}`;
+        } else if (!rawAccountNumber.includes('xx-xxxx-')) {
+          accountNumber = `xx-xxxx-${rawAccountNumber}`;
+        }
+      } else {
+        // If no account number, create a placeholder
+        accountNumber = "xx-xxxx-1000";
+      }
+      
+      // Try to find actual report data relevant to this account
+      let relevantReportText = '';
+      
+      if (rawReportText && formattedAccountName && formattedAccountName !== "UNKNOWN ACCOUNT") {
+        // Create a regex to find text around the account name
+        const accountNamePattern = new RegExp(`([^]*?${formattedAccountName}[^]*?)(?=\\n\\n|$)`, 'i');
+        const match = rawReportText.match(accountNamePattern);
+        
+        if (match && match[1]) {
+          relevantReportText = match[1];
+          console.log(`Found relevant report text for ${formattedAccountName}, length: ${relevantReportText.length}`);
+        }
+      }
       
       // If letterContent is not provided, generate it
       if (!disputeData.letterContent) {
         // Generate letter content with detailed account information
+        console.log("Generating enhanced dispute letter with real report data");
+        
         disputeData.letterContent = await generateEnhancedDisputeLetter(
           disputeData.errorType,
           {
             accountName: formattedAccountName,
             accountNumber: accountNumber,
             errorDescription: disputeData.explanation,
-            bureau: disputeData.bureau
+            bureau: disputeData.bureau,
+            relevantReportText: relevantReportText // Pass the relevant report text
           },
           userInfo,
           creditReportData // Pass the credit report data to enhance the letter
@@ -125,10 +167,18 @@ Reason for Dispute: ${disputeData.errorType}
         }
       }
       
+      // Ensure the letter has the correct dispute reason
+      let letterTitle = disputeData.errorType;
+      
+      // Add the account name to the title if available
+      if (formattedAccountName && formattedAccountName !== "UNKNOWN ACCOUNT") {
+        letterTitle = `${disputeData.errorType} (${formattedAccountName})`;
+      }
+      
       // Create a new letter from the dispute data
       const newLetter = {
         id: Date.now(),
-        title: `${disputeData.errorType} (${formattedAccountName})`,
+        title: letterTitle,
         recipient: disputeData.bureau,
         createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         status: 'ready', // Status is "ready"
