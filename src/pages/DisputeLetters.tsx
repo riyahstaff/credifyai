@@ -26,6 +26,16 @@ const DisputeLetters = () => {
     console.log("DisputeLetters page: User auth state:", user ? "Logged in" : "Not logged in");
     console.log("DisputeLetters page: Profile:", profile ? `Profile loaded (${profile.full_name || 'no name'})` : "No profile");
     
+    // Store user profile in localStorage for letter generation
+    if (profile) {
+      localStorage.setItem('userProfile', JSON.stringify(profile));
+      
+      // Also store individual fields for backward compatibility
+      if (profile.full_name) {
+        localStorage.setItem('userName', profile.full_name);
+      }
+    }
+    
     // Always enable test subscription if we're on this page (key change)
     if (!hasTestSubscription && !profile?.has_subscription) {
       console.log("Setting test subscription to allow viewing dispute letters");

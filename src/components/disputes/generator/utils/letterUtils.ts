@@ -41,10 +41,22 @@ export const processDisputeData = async (disputeData: DisputeData, testMode: boo
   let userState = '';
   let userZip = '';
   
-  // First try to use personal info from the credit report
+  // Get user info from auth context first (most reliable)
+  const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+  if (userProfile?.full_name) {
+    console.log("Using name from user profile:", userProfile.full_name);
+    userName = userProfile.full_name;
+  }
+  
+  // Then try to use personal info from the credit report
   if (reportData && reportData.personalInfo) {
     const pi = reportData.personalInfo;
-    userName = pi.name || localStorage.getItem('userName') || "";
+    
+    // Only use report data if more complete than auth data
+    if (!userName || userName === '[YOUR NAME]') {
+      userName = pi.name || localStorage.getItem('userName') || "";
+    }
+    
     userAddress = pi.address || localStorage.getItem('userAddress') || "";
     userCity = pi.city || localStorage.getItem('userCity') || "";
     userState = pi.state || localStorage.getItem('userState') || "";
@@ -59,7 +71,9 @@ export const processDisputeData = async (disputeData: DisputeData, testMode: boo
     });
   } else {
     // Fall back to localStorage if no report data
-    userName = localStorage.getItem('userName') || "";
+    if (!userName) {
+      userName = localStorage.getItem('userName') || "";
+    }
     userAddress = localStorage.getItem('userAddress') || "";
     userCity = localStorage.getItem('userCity') || "";
     userState = localStorage.getItem('userState') || "";
@@ -136,6 +150,12 @@ export const processDisputeData = async (disputeData: DisputeData, testMode: boo
         }),
       };
       
+      // Save user name to localStorage for later reference
+      if (disputeData.userInfo?.name && disputeData.userInfo.name !== "[YOUR NAME]") {
+        localStorage.setItem('userName', disputeData.userInfo.name);
+      }
+      
+      // Store the updated letter in session storage
       sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(updatedLetter));
       console.log("Updated existing letter in session storage");
     } else {
@@ -153,6 +173,11 @@ export const processDisputeData = async (disputeData: DisputeData, testMode: boo
         letterContent: disputeData.letterContent,
         ...disputeData
       };
+      
+      // Save user info to localStorage for future use
+      if (disputeData.userInfo?.name && disputeData.userInfo.name !== "[YOUR NAME]") {
+        localStorage.setItem('userName', disputeData.userInfo.name);
+      }
       
       sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(newLetter));
       console.log("Created new letter in session storage");

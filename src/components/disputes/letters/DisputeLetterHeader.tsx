@@ -10,8 +10,10 @@ interface DisputeLetterHeaderProps {
 }
 
 const DisputeLetterHeader: React.FC<DisputeLetterHeaderProps> = ({ testMode = false }) => {
-  const { profile } = useAuth();
-  const userName = profile?.full_name?.split(' ')[0] || 'User';
+  const { profile, user } = useAuth();
+  
+  // Improved name extraction logic
+  const userName = profile?.full_name || user?.email?.split('@')[0] || 'User';
 
   return (
     <div className="mb-6">
