@@ -1,4 +1,3 @@
-
 /**
  * Main Issue Identification Module
  * Enhanced functions for identifying potential credit report issues
@@ -217,13 +216,17 @@ export const identifyIssues = (data: CreditReportData): Array<{
                         account.type?.toLowerCase().includes('collection')
           };
           
+          // Fix impact type to use allowed literals
+          const impactLevel: 'High Impact' | 'Critical Impact' | 'Medium Impact' = 
+            combinedAccount.isNegative ? 'Critical Impact' : 'Medium Impact';
+          
           return {
             type: combinedAccount.isNegative ? 'negative_account' : 'account_verification',
             title: `Issue with ${account.name}`,
             description: combinedAccount.isNegative ? 
               `This account shows negative information that may be inaccurate or unverifiable.` :
               `This account requires verification of all reported information including balance, payment history, and dates.`,
-            impact: combinedAccount.isNegative ? 'Critical Impact' : 'Medium Impact',
+            impact: impactLevel,
             impactColor: combinedAccount.isNegative ? 'red' : 'yellow',
             account: combinedAccount,
             laws: ['FCRA § 611', 'FCRA § 623']
@@ -251,11 +254,14 @@ export const identifyIssues = (data: CreditReportData): Array<{
         detailedInfo = extractDetailedAccountInfo(account.name, data.rawText);
       }
       
+      // Use a valid impact level
+      const impactLevel: 'High Impact' | 'Critical Impact' | 'Medium Impact' = 'Medium Impact';
+      
       return {
         type: 'account_verification',
         title: `Issue with ${account.name}`,
         description: `This account requires verification of all reported information.`,
-        impact: 'Medium Impact',
+        impact: impactLevel,
         impactColor: 'yellow',
         account: {
           ...account,
@@ -290,4 +296,28 @@ export const identifyIssues = (data: CreditReportData): Array<{
   console.log(`Returning ${uniqueIssues.length} unique issues after deduplication (from ${issues.length} total)`);
   
   return uniqueIssues;
+};
+
+/**
+ * Add generic issues for specific accounts
+ */
+export const addFallbackGenericIssues = (): Array<{
+  type: string;
+  title: string;
+  description: string;
+  impact: 'High Impact' | 'Critical Impact' | 'Medium Impact';
+  impactColor: string;
+  account?: any;
+  laws: string[];
+}> => {
+  return [
+    {
+      type: 'account_verification',
+      title: 'Account Verification Required',
+      description: 'All accounts on your credit report must be fully verified by the creditor with complete records. Request verification of accounts to ensure accuracy and proper documentation.',
+      impact: 'High Impact',
+      impactColor: 'orange',
+      laws: ['FCRA § 611', 'FCRA § 623']
+    }
+  ];
 };

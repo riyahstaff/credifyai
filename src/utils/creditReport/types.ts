@@ -1,4 +1,3 @@
-
 export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
@@ -14,7 +13,6 @@ export interface CreditReportAccount {
   dateReported?: string;
   bureau?: string;
   remarks?: string[];
-  // Add missing fields that caused errors
   openDate?: string;
   lastReportedDate?: string;
   highBalance?: number | string;
@@ -40,7 +38,6 @@ export interface RecommendedDispute {
   description: string;
   impact: "High" | "Medium" | "Low";
   severity: string;
-  // Add missing fields that caused errors
   sampleDisputeLanguage?: string;
   legalBasis?: LegalReference[];
   applicability?: string;
@@ -69,27 +66,21 @@ export interface CreditReportData {
     equifax: boolean;
     transunion: boolean;
   };
-  personalInfo?: {
-    name?: string;
-    address?: string;
-    ssn?: string;
-    dob?: string;
-    city?: string;
-    state?: string;
-    zip?: string;
-  };
+  personalInfo?: PersonalInfo;
   accounts: CreditReportAccount[];
   inquiries: CreditReportInquiry[];
   publicRecords: any[];
   rawText?: string;
   htmlContent?: string;
+  isSampleData?: boolean;
   analysisResults?: AnalysisResults;
 }
 
-// Add missing types needed by other modules
-export interface UserInfo {
+export interface PersonalInfo {
   name?: string;
   address?: string;
+  ssn?: string;
+  dob?: string;
   city?: string;
   state?: string;
   zip?: string;
@@ -112,7 +103,6 @@ export interface SampleDisputeLetter {
   legalCitations: string[];
 }
 
-// Define type for CreditReportPublicRecord
 export interface CreditReportPublicRecord {
   type: string;
   date: string;

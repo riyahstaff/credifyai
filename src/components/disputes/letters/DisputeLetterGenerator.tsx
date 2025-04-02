@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -143,8 +142,7 @@ export const useDisputeLetterGenerator = ({
             accountName: formattedAccountName,
             accountNumber: accountNumber,
             errorDescription: disputeData.explanation,
-            bureau: disputeData.bureau,
-            relevantReportText: relevantReportText // Pass the relevant report text
+            bureau: disputeData.bureau
           },
           userInfo,
           creditReportData // Pass the credit report data to enhance the letter

@@ -1,4 +1,3 @@
-
 /**
  * Generic Issue Identification
  * Functions for identifying generic credit report issues
@@ -126,7 +125,7 @@ export const addGenericIssues = (
 };
 
 /**
- * Add fallback generic issues when no accounts could be found or parsed
+ * Add fallback generic issues when no specific issues are found
  */
 export const addFallbackGenericIssues = (): Array<{
   type: string;

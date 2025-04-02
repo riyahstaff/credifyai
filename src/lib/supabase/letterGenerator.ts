@@ -20,6 +20,7 @@ export async function generateEnhancedDisputeLetter(
     accountNumber?: string;
     errorDescription: string;
     bureau: string;
+    relevantReportText?: string; // Add this as an optional parameter
   },
   userInfo: {
     name: string;
