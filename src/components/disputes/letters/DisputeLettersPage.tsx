@@ -54,7 +54,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-credify-navy-dark">
-      <Navbar id="main-navbar" />
+      <Navbar />
       
       <main 
         className="flex-grow pt-24 pb-20"
