@@ -5,16 +5,30 @@ import DisputeLettersList from './DisputeLettersList';
 import DisputeGenerator from '../DisputeGenerator';
 import { Loader2 } from 'lucide-react';
 
+interface Letter {
+  id: number;
+  title: string;
+  recipient: string;
+  createdAt: string;
+  status: string;
+  bureaus: string[];
+  content: string;
+  accountName?: string;
+  accountNumber?: string;
+  errorType?: string;
+}
+
 interface DisputeLettersTabsProps {
   selectedView: string;
   onViewChange: (view: string) => void;
-  letters: any[];
+  letters: Letter[];
   isLoading: boolean;
-  onViewLetter: (letter: any) => void;
-  onDownloadLetter: (letter: any) => void;
-  onSendLetter: (letter: any) => void;
+  selectedLetter: Letter | null;
+  onSelectLetter: (letter: Letter) => void;
+  onCreateLetter: () => void;
   onGenerateDispute: (disputeData: any) => void;
   hideGeneratorTab?: boolean;
+  testMode?: boolean;
 }
 
 const DisputeLettersTabs: React.FC<DisputeLettersTabsProps> = ({
@@ -22,11 +36,12 @@ const DisputeLettersTabs: React.FC<DisputeLettersTabsProps> = ({
   onViewChange,
   letters,
   isLoading,
-  onViewLetter,
-  onDownloadLetter,
-  onSendLetter,
+  selectedLetter,
+  onSelectLetter,
+  onCreateLetter,
   onGenerateDispute,
-  hideGeneratorTab = false
+  hideGeneratorTab = false,
+  testMode = false
 }) => {
   return (
     <Tabs value={selectedView} onValueChange={onViewChange} className="w-full mb-8">
@@ -50,9 +65,11 @@ const DisputeLettersTabs: React.FC<DisputeLettersTabsProps> = ({
         ) : letters && letters.length > 0 ? (
           <DisputeLettersList 
             letters={letters}
-            onViewLetter={onViewLetter}
-            onDownloadLetter={onDownloadLetter}
-            onSendLetter={onSendLetter}
+            selectedLetter={selectedLetter}
+            onSelectLetter={onSelectLetter}
+            isLoading={isLoading}
+            onCreateLetter={onCreateLetter}
+            testMode={testMode}
           />
         ) : (
           <div className="text-center py-12 bg-gray-50 dark:bg-credify-navy/10 rounded-xl border border-gray-200 dark:border-gray-700/30">
