@@ -16,25 +16,25 @@ const FCRA_SECTIONS: Record<string, LegalReference> = {
     code: 'FCRA § 611',
     title: 'Procedure in case of disputed accuracy',
     description: 'Requires credit bureaus to investigate disputed information and remove or correct inaccurate items.',
-    text: 'If the completeness or accuracy of any item of information contained in a consumer's file at a consumer reporting agency is disputed by the consumer and the consumer notifies the agency directly, or indirectly through a reseller, of such dispute, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate.'
+    text: "If the completeness or accuracy of any item of information contained in a consumer's file at a consumer reporting agency is disputed by the consumer and the consumer notifies the agency directly, or indirectly through a reseller, of such dispute, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate."
   },
   '623': {
     code: 'FCRA § 623',
     title: 'Responsibilities of furnishers of information to consumer reporting agencies',
     description: 'Outlines the duties of companies that provide information to credit bureaus.',
-    text: 'A person shall not furnish information relating to a consumer to any consumer reporting agency if the person knows or has reasonable cause to believe that the information is inaccurate.'
+    text: "A person shall not furnish information relating to a consumer to any consumer reporting agency if the person knows or has reasonable cause to believe that the information is inaccurate."
   },
   '605': {
     code: 'FCRA § 605',
     title: 'Requirements relating to information contained in consumer reports',
     description: 'Limits how long negative information can stay on your credit report.',
-    text: 'Accounts placed for collection or charged to profit and loss which antedate the report by more than seven years may not be reported.'
+    text: "Accounts placed for collection or charged to profit and loss which antedate the report by more than seven years may not be reported."
   },
   '615': {
     code: 'FCRA § 615',
     title: 'Requirements on users of consumer reports',
     description: 'Requires notification when information in your credit report has been used against you.',
-    text: 'If any person takes any adverse action with respect to any consumer that is based in whole or in part on any information contained in a consumer report, the person shall provide notice to the consumer.'
+    text: "If any person takes any adverse action with respect to any consumer that is based in whole or in part on any information contained in a consumer report, the person shall provide notice to the consumer."
   }
 };
 
@@ -44,13 +44,13 @@ const FDCPA_SECTIONS: Record<string, LegalReference> = {
     code: 'FDCPA § 807',
     title: 'False or misleading representations',
     description: 'Prohibits debt collectors from using false, deceptive, or misleading practices.',
-    text: 'A debt collector may not use any false, deceptive, or misleading representation or means in connection with the collection of any debt.'
+    text: "A debt collector may not use any false, deceptive, or misleading representation or means in connection with the collection of any debt."
   },
   '809': {
     code: 'FDCPA § 809',
     title: 'Validation of debts',
     description: 'Requires debt collectors to verify a debt when disputed.',
-    text: 'If the consumer notifies the debt collector in writing within the thirty-day period that the debt, or any portion thereof, is disputed, the debt collector shall cease collection of the debt until the debt collector obtains verification of the debt.'
+    text: "If the consumer notifies the debt collector in writing within the thirty-day period that the debt, or any portion thereof, is disputed, the debt collector shall cease collection of the debt until the debt collector obtains verification of the debt."
   }
 };
 
