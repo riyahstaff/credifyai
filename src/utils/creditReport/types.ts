@@ -17,6 +17,11 @@ export interface CreditReportAccount {
   lastReportedDate?: string;
   highBalance?: number | string;
   creditor?: string;
+  creditorName?: string;
+  latestStatus?: string;
+  paymentHistory?: string;
+  accountHolderName?: string;
+  ssn?: string;
 }
 
 export interface CreditReportInquiry {
@@ -25,6 +30,7 @@ export interface CreditReportInquiry {
   type: string;
   bureau?: string;
   creditor?: string;
+  inquiryCompany?: string;
 }
 
 export interface RecommendedDispute {
@@ -41,6 +47,16 @@ export interface RecommendedDispute {
   sampleDisputeLanguage?: string;
   legalBasis?: LegalReference[];
   applicability?: string;
+}
+
+export interface IdentifiedIssue {
+  type: string;
+  title: string;
+  description: string;
+  impact: "High Impact" | "Critical Impact" | "Medium Impact";
+  impactColor: string;
+  laws: any[];
+  account?: CreditReportAccount;
 }
 
 export interface AnalysisResults {

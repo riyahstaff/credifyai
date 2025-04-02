@@ -48,8 +48,8 @@ export function identifyIssues(report: CreditReportData): IdentifiedIssue[] {
     negativeAccounts.forEach(account => {
       issues.push({
         type: 'Negative Account',
-        title: `Negative Account: ${account.creditorName || 'Unknown Creditor'}`,
-        description: `Dispute the negative status of account ${account.accountNumber || 'Unknown Account'} with ${account.creditorName || 'creditor'}.`,
+        title: `Negative Account: ${account.creditorName || account.creditor || 'Unknown Creditor'}`,
+        description: `Dispute the negative status of account ${account.accountNumber || 'Unknown Account'} with ${account.creditorName || account.creditor || 'creditor'}.`,
         impact: "High Impact",
         impactColor: 'text-red-500',
         laws: [FCRA_LAWS.accuracy, FCRA_LAWS.verification]
@@ -69,8 +69,8 @@ export function identifyIssues(report: CreditReportData): IdentifiedIssue[] {
     latePaymentAccounts.forEach(account => {
       issues.push({
         type: 'Late Payment',
-        title: `Late Payments: ${account.creditorName || 'Unknown Creditor'}`,
-        description: `Dispute late payments for account ${account.accountNumber || 'Unknown Account'} with ${account.creditorName || 'creditor'}.`,
+        title: `Late Payments: ${account.creditorName || account.creditor || 'Unknown Creditor'}`,
+        description: `Dispute late payments for account ${account.accountNumber || 'Unknown Account'} with ${account.creditorName || account.creditor || 'creditor'}.`,
         impact: "High Impact",
         impactColor: 'text-red-500',
         laws: [FCRA_LAWS.accuracy, FCRA_LAWS.verification]
@@ -81,8 +81,12 @@ export function identifyIssues(report: CreditReportData): IdentifiedIssue[] {
   // Look for high balances
   const highUtilizationAccounts = report.accounts.filter(account => {
     if (account.creditLimit && account.balance) {
-      const limit = parseFloat(account.creditLimit.replace(/[^0-9.]/g, ''));
-      const balance = parseFloat(account.balance.replace(/[^0-9.]/g, ''));
+      const limit = typeof account.creditLimit === 'string' 
+        ? parseFloat(account.creditLimit.replace(/[^0-9.]/g, '')) 
+        : account.creditLimit;
+      const balance = typeof account.balance === 'string' 
+        ? parseFloat(account.balance.replace(/[^0-9.]/g, '')) 
+        : account.balance;
       return limit > 0 && (balance / limit > 0.7);
     }
     return false;
@@ -92,7 +96,7 @@ export function identifyIssues(report: CreditReportData): IdentifiedIssue[] {
     highUtilizationAccounts.forEach(account => {
       issues.push({
         type: 'High Utilization',
-        title: `High Credit Utilization: ${account.creditorName || 'Unknown Creditor'}`,
+        title: `High Credit Utilization: ${account.creditorName || account.creditor || 'Unknown Creditor'}`,
         description: `Your credit utilization for ${account.accountNumber || 'this account'} is above 70%, which can negatively impact your score.`,
         impact: "Medium Impact",
         impactColor: 'text-amber-500',
@@ -144,6 +148,7 @@ export function identifyIssues(report: CreditReportData): IdentifiedIssue[] {
   // Add unauthorized inquiries if there are inquiries without recognizable names
   const potentialUnauthorizedInquiries = report.inquiries?.filter(inquiry => 
     !inquiry.inquiryCompany || 
+    !inquiry.inquiryBy || 
     inquiry.inquiryCompany.includes("UNKNOWN") ||
     inquiry.inquiryCompany.includes("undefined")
   );

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { CreditReportData } from '@/utils/creditReport/types';
 import { parseReportContent } from '@/utils/creditReport/parser/parseReportContent';
@@ -156,14 +155,13 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
     console.log("Starting analysis of credit report:", uploadedFile.name);
     
     // Show a longer-running analysis toast for PDFs
-    let analysisToastId: string | undefined = undefined;
+    let analysisToastId: string | undefined;
     if (uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf')) {
       const toastResult = toast.toast({
         title: "PDF Processing",
         description: "Analyzing your credit report PDF. This may take a moment...",
       });
-      
-      analysisToastId = toastResult?.id; // Safely access id with optional chaining
+      analysisToastId = toastResult?.id;
     }
     
     console.log("Processing uploaded report:", uploadedFile.name);
