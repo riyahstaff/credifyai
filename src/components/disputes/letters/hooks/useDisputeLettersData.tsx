@@ -13,13 +13,13 @@ export const useDisputeLettersData = (testMode: boolean = false) => {
   useEffect(() => {
     console.log("Loading dispute letters...");
     // Load letters from session storage
-    const storedLetters = loadLettersFromStorage();
+    const result = loadLettersFromStorage();
     
-    if (storedLetters && storedLetters.length > 0) {
-      console.log(`Successfully parsed ${storedLetters.length} letters from storage`);
+    if (result.foundLetters && result.letters.length > 0) {
+      console.log(`Successfully parsed ${result.letters.length} letters from storage`);
       
       // Check if the letters have actual content
-      const hasValidContent = storedLetters.some(letter => 
+      const hasValidContent = result.letters.some(letter => 
         letter.content && 
         letter.content.length > 100 && 
         !letter.content.includes("Sample dispute letter content")
@@ -27,8 +27,8 @@ export const useDisputeLettersData = (testMode: boolean = false) => {
       
       if (hasValidContent) {
         console.log("Found valid letters with substantial content");
-        setLetters(storedLetters);
-        setSelectedLetter(storedLetters[0]);
+        setLetters(result.letters);
+        setSelectedLetter(result.selectedLetter);
       }
     }
     
@@ -36,11 +36,11 @@ export const useDisputeLettersData = (testMode: boolean = false) => {
   }, []);
 
   const addLetter = (letterData: any) => {
-    const newLetter = formatLetterFromStorage(letterData);
+    const newLetter = formatLetterFromStorage(letterData, letters.length);
     const updatedLetters = [...letters, newLetter];
     setLetters(updatedLetters);
     setSelectedLetter(newLetter);
-    saveLettersToStorage(updatedLetters);
+    saveLettersToStorage(updatedLetters, newLetter);
   };
 
   const saveLetter = (letter: Letter) => {
@@ -48,7 +48,7 @@ export const useDisputeLettersData = (testMode: boolean = false) => {
       l.id === letter.id ? letter : l
     );
     setLetters(updatedLetters);
-    saveLettersToStorage(updatedLetters);
+    saveLettersToStorage(updatedLetters, letter);
   };
 
   return {
