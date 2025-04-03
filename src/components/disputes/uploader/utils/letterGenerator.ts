@@ -1,4 +1,3 @@
-
 /**
  * Generate dispute letters for credit report issues
  */
@@ -92,7 +91,7 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         letterContent = generateFallbackLatePaymentDisputeLetter();
         
         // Replace placeholders with actual values - be thorough to catch all placeholder patterns
-        letterContent = letterContent
+        let updatedContent = letterContent
           .replace(/\[YOUR NAME\]/g, userName)
           .replace(/\/ArialBold/g, userName) // Replace formatting tags with name
           .replace(/\[YOUR ADDRESS\]/g, userAddress)
@@ -121,72 +120,76 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
             }).join('\n');
             
             // Replace the placeholder disputed items section with our multi-account format
-            letterContent = letterContent.replace(
+            updatedContent = updatedContent.replace(
               /DISPUTED ITEMS:\n- \*\*Creditor:\*\* \[ACCOUNT_NAME\]\n- \*\*Account #:\*\* \[ACCOUNT_NUMBER\]\n- \*\*Alleged Late Payments:\*\* \[DATES OF REPORTED LATE PAYMENTS\]\n\n/,
               `DISPUTED ITEMS:\n${accountsSection}\n`
             );
           }
         }
+        
+        letterContent = updatedContent;
       } else {
         // For other issue types, use standard letter template
         // Generate a properly formatted dispute letter
-        letterContent = `Credit Report #: CR${Math.floor(Math.random() * 10000000)}\nToday is ${new Date().toLocaleDateString('en-US', {
+        let standardContent = `Credit Report #: CR${Math.floor(Math.random() * 10000000)}\nToday is ${new Date().toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',
           day: 'numeric'
         })}\n\n`;
         
         // Add sender information
-        letterContent += `${userName}\n`;
-        letterContent += `${userAddress}\n`;
-        letterContent += `${userCity}, ${userState} ${userZip}\n\n`;
+        standardContent += `${userName}\n`;
+        standardContent += `${userAddress}\n`;
+        standardContent += `${userCity}, ${userState} ${userZip}\n\n`;
         
         // Add recipient information
-        letterContent += `${bureau}\n`;
-        letterContent += `${bureauAddress}\n\n`;
+        standardContent += `${bureau}\n`;
+        standardContent += `${bureauAddress}\n\n`;
         
         // Add subject line
-        letterContent += `Re: Dispute of Inaccurate Information - ${accountName}\n\n`;
+        standardContent += `Re: Dispute of Inaccurate Information - ${accountName}\n\n`;
         
         // Add salutation and introduction
-        letterContent += `To Whom It May Concern:\n\n`;
-        letterContent += `I am writing to dispute the following information in my credit report. I have identified the following item(s) that are inaccurate or incomplete:\n\n`;
+        standardContent += `To Whom It May Concern:\n\n`;
+        standardContent += `I am writing to dispute the following information in my credit report. I have identified the following item(s) that are inaccurate or incomplete:\n\n`;
         
         // Add account details
-        letterContent += `DISPUTED ITEM(S):\n`;
-        letterContent += `Account Name: ${accountName.toUpperCase()}\n`;
+        standardContent += `DISPUTED ITEM(S):\n`;
+        standardContent += `Account Name: ${accountName.toUpperCase()}\n`;
         if (accountNumber) {
-          letterContent += `Account Number: ${'x'.repeat(Math.max(0, accountNumber.length - 4))}${accountNumber.slice(-4)}\n`;
+          standardContent += `Account Number: ${'x'.repeat(Math.max(0, accountNumber.length - 4))}${accountNumber.slice(-4)}\n`;
         } else {
           // Generate a placeholder number if none exists
           const placeholderNum = `xx-xxxx-${1000 + index}`;
-          letterContent += `Account Number: ${placeholderNum}\n`;
+          standardContent += `Account Number: ${placeholderNum}\n`;
         }
-        letterContent += `Reason for Dispute: ${disputeData.reason}\n\n`;
+        standardContent += `Reason for Dispute: ${disputeData.reason}\n\n`;
         
         // Add explanation
-        letterContent += `${disputeData.explanation}\n\n`;
+        standardContent += `${disputeData.explanation}\n\n`;
         
         // Add legal basis with Metro 2 verbiage
-        letterContent += `According to the Fair Credit Reporting Act, Section 611 (15 U.S.C. § 1681i), you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified. Furthermore, under the CDIA Metro 2® Format which is MANDATED for all furnishers, all aspects of an account must be reported with precise accuracy, including proper use of specific codes that communicate payment status.\n\n`;
+        standardContent += `According to the Fair Credit Reporting Act, Section 611 (15 U.S.C. § 1681i), you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified. Furthermore, under the CDIA Metro 2® Format which is MANDATED for all furnishers, all aspects of an account must be reported with precise accuracy, including proper use of specific codes that communicate payment status.\n\n`;
         
-        letterContent += `Per CRSA enacted, CDIA implemented laws, ANY and ALL reporting must be deleted if not CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility, and also fully Metro 2 compliant. The information being reported fails to comply with these strict standards and must be removed immediately.\n\n`;
+        standardContent += `Per CRSA enacted, CDIA implemented laws, ANY and ALL reporting must be deleted if not CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility, and also fully Metro 2 compliant. The information being reported fails to comply with these strict standards and must be removed immediately.\n\n`;
         
         // Add request
-        letterContent += `Please investigate this matter and correct your records within the 30-day timeframe provided by the FCRA. Additionally, please provide me with notification of the results of your investigation and a free updated copy of my credit report if changes are made, as required by law.\n\n`;
+        standardContent += `Please investigate this matter and correct your records within the 30-day timeframe provided by the FCRA. Additionally, please provide me with notification of the results of your investigation and a free updated copy of my credit report if changes are made, as required by law.\n\n`;
         
         // Add closing
-        letterContent += `Sincerely,\n\n`;
-        letterContent += `${userName}\n\n`;
+        standardContent += `Sincerely,\n\n`;
+        standardContent += `${userName}\n\n`;
         
         // Add enclosures
-        letterContent += `Enclosures:\n`;
-        letterContent += `- Copy of Driver's License\n`;
-        letterContent += `- Copy of Social Security Card\n`;
+        standardContent += `Enclosures:\n`;
+        standardContent += `- Copy of Driver's License\n`;
+        standardContent += `- Copy of Social Security Card\n`;
+        
+        letterContent = standardContent;
       }
       
       // Final cleanup of any remaining placeholders or formatting tags
-      letterContent = letterContent
+      let finalContent = letterContent
         .replace(/\/ArialBold/g, '')
         .replace(/\[YOUR NAME\]/g, userName)
         .replace(/\[YOUR ADDRESS\]/g, userAddress)
@@ -203,8 +206,8 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
         accountName: accountName,
         accountNumber: accountNumber,
         errorType: issue.type || 'Credit Error',
-        content: letterContent,
-        letterContent: letterContent,
+        content: finalContent,
+        letterContent: finalContent,
         status: 'ready', // Explicitly set to 'ready', not 'draft'
         createdAt: new Date().toLocaleDateString('en-US', { 
           month: 'short', day: 'numeric', year: 'numeric' 

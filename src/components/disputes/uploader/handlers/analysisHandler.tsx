@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { CreditReportData, IdentifiedIssue } from '@/utils/creditReport/types';
 import { parseReportContent } from '@/utils/creditReport/parser/parseReportContent';
@@ -97,12 +98,6 @@ export const analyzeReport = async (
       onProgress?.(40);
     }
     
-    // In test mode, if text is too short, use a sample for testing
-    if (isTestMode && textContent.length < 500) {
-      console.log("Text content too short in test mode, using sample data");
-      textContent = generateSampleCreditReportText();
-    }
-    
     if (!textContent || textContent.length < 100) {
       console.error("Extracted text is too short to be a valid credit report");
       throw new Error("The file doesn't appear to contain valid credit report data");
@@ -116,18 +111,7 @@ export const analyzeReport = async (
     onProgress?.(50);
     console.log("Parsing report content, processing text...");
     
-    // In test mode, add a specific marker so we can identify test data
-    if (isTestMode) {
-      textContent += "\nTEST_MODE_MARKER\n";
-    }
-    
     const reportData = parseReportContent(textContent, isPdf);
-    
-    // Explicitly set test mode flag for test mode data
-    if (isTestMode) {
-      reportData.isSampleData = true;
-      reportData.isTestMode = true;
-    }
     
     // Save the raw text to session storage for debugging and further analysis
     try {
@@ -157,11 +141,6 @@ export const analyzeReport = async (
     try {
       sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
       console.log("Saved complete report data to session storage");
-      
-      // In test mode, ensure we have the test subscription flag set
-      if (isTestMode) {
-        sessionStorage.setItem('testModeSubscription', 'true');
-      }
     } catch (storageError) {
       console.warn("Could not store full report data in session storage:", storageError);
     }
@@ -176,17 +155,7 @@ export const analyzeReport = async (
   }
 };
 
-export const handleAnalysisComplete = async ({
-  uploadedFile,
-  setReportData,
-  setIssues,
-  setLetterGenerated,
-  setAnalysisError,
-  setAnalyzing,
-  setAnalyzed,
-  toast,
-  testMode = false
-}: AnalysisHandlerProps) => {
+export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
   const {
     uploadedFile,
     setReportData,
@@ -195,7 +164,8 @@ export const handleAnalysisComplete = async ({
     setAnalysisError,
     setAnalyzing,
     setAnalyzed,
-    toast
+    toast,
+    testMode
   } = params;
 
   try {
@@ -227,16 +197,8 @@ export const handleAnalysisComplete = async ({
       reportData = await analyzeReport(uploadedFile);
       clearTimeout(analysisTimeout);
     } catch (analysisError) {
-      console.error("Analysis error, using fallback:", analysisError);
-      
-      if (isTestMode) {
-        // In test mode, continue with fallback data
-        completeAnalysisWithFallbackData();
-        return; // Exit early as we've handled the error
-      } else {
-        // In normal mode, report the error
-        throw analysisError;
-      }
+      console.error("Analysis error:", analysisError);
+      throw analysisError;
     }
     
     if (analysisToastId) {
@@ -245,12 +207,6 @@ export const handleAnalysisComplete = async ({
     
     if (!reportData) {
       throw new Error("Failed to parse credit report");
-    }
-    
-    // Mark as using sample data in test mode
-    if (isTestMode) {
-      reportData.isSampleData = true;
-      reportData.isTestMode = true;
     }
     
     setReportData(reportData);
