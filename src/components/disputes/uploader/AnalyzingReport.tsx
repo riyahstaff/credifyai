@@ -9,7 +9,7 @@ interface AnalyzingReportProps {
 
 const AnalyzingReport: React.FC<AnalyzingReportProps> = ({ 
   onAnalysisComplete,
-  timeout = 10000  // Default 10-second timeout
+  timeout = 8000  // Reduced default timeout to 8 seconds
 }) => {
   const [progress, setProgress] = useState(10);
   const [stage, setStage] = useState('Starting analysis');
@@ -22,8 +22,8 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
     // Update progress using a variable increment for more realistic feedback
     const progressInterval = setInterval(() => {
       setProgress(prev => {
-        // Slow down as we approach 90%
-        const increment = prev < 50 ? 5 : prev < 80 ? 3 : 1;
+        // Faster progress for better user experience
+        const increment = prev < 50 ? 8 : prev < 80 ? 5 : 2;
         const newProgress = Math.min(prev + increment, 90);
         return newProgress;
       });
@@ -41,7 +41,15 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
         if (progress < 80) return 'Generating recommendations';
         return 'Finalizing analysis';
       });
-    }, 2000);
+    }, 1500); // Faster stage updates
+    
+    // Show warning after 50% of timeout
+    const warningTimeout = setTimeout(() => {
+      if (progress < 80 && !isCompleted) {
+        setShowTimeoutWarning(true);
+        console.log("Showing analysis timeout warning to user");
+      }
+    }, timeout * 0.5);
     
     // Mark as complete after timeout
     // This ensures the analysis eventually "completes" even if there's a problem
@@ -58,20 +66,15 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
         console.log("Calling onAnalysisComplete from timeout handler");
         onAnalysisComplete();
       }, 1000);
-      
-      // Show timeout warning if it's taking too long
-      if (timeElapsed > timeout) {
-        setShowTimeoutWarning(true);
-        console.warn("Credit report analysis is taking longer than expected");
-      }
     }, timeout);
     
     return () => {
       clearInterval(progressInterval);
       clearInterval(stageInterval);
       clearTimeout(timeoutId);
+      clearTimeout(warningTimeout);
     };
-  }, [onAnalysisComplete, progress, timeElapsed, timeout]);
+  }, [onAnalysisComplete, progress, timeElapsed, timeout, isCompleted]);
   
   // Effect for logging
   useEffect(() => {
@@ -125,8 +128,7 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
             <div>
               <h4 className="font-medium text-amber-800 dark:text-amber-300">Processing is taking longer than expected</h4>
               <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                Your report is being processed but is taking longer than usual. You can continue waiting
-                or try uploading a different format of your credit report.
+                Your report is being processed but is taking longer than usual. The analysis will complete automatically in a few seconds.
               </p>
             </div>
           </div>

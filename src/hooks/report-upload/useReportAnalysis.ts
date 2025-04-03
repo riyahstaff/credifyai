@@ -1,5 +1,5 @@
 
-import { MutableRefObject } from 'react';
+import { MutableRefObject, useCallback } from 'react';
 import { CreditReportData, IdentifiedIssue } from '@/utils/creditReport/types';
 import { handleAnalysisComplete } from '@/components/disputes/uploader/handlers/analysisHandler';
 import { useToast } from '@/hooks/use-toast';
@@ -16,10 +16,12 @@ export const useReportAnalysis = (
 ) => {
   const { toast } = useToast();
   
-  const startAnalysis = () => {
+  // Enhance startAnalysis to include a timeout mechanism
+  const startAnalysis = useCallback(() => {
     if (uploadedFile) {
       console.log("Starting analysis of uploaded file:", uploadedFile.name);
       setAnalyzing(true);
+      
       // Create a compatible toast object for the handler
       const toastObject = {
         toast: toast,
@@ -30,6 +32,15 @@ export const useReportAnalysis = (
       // Check if we're in test mode
       const isTestMode = sessionStorage.getItem('testModeSubscription') === 'true';
       console.log("Starting analysis with test mode:", isTestMode ? "enabled" : "disabled");
+      
+      // Set up a backup timeout to force complete if the analysis gets stuck
+      const analysisTimeout = setTimeout(() => {
+        console.log("Analysis timeout reached - forcing completion");
+        if (!analysisCompleted.current) {
+          console.log("Analysis did not complete in time - triggering manual completion");
+          onAnalysisComplete();
+        }
+      }, 30000); // 30 second timeout
       
       try {
         handleAnalysisComplete({
@@ -45,8 +56,13 @@ export const useReportAnalysis = (
         
         // Debug: Log current state of analysis
         console.log("Analysis initiated successfully");
+        
+        return () => {
+          clearTimeout(analysisTimeout);
+        };
       } catch (error) {
         console.error("Error initiating analysis:", error);
+        clearTimeout(analysisTimeout);
         setAnalysisError(error instanceof Error ? error.message : "Unknown error occurred");
         setAnalyzing(false);
         toast({
@@ -59,9 +75,9 @@ export const useReportAnalysis = (
       console.error("Attempted to start analysis without an uploaded file");
       setAnalysisError("No file was uploaded");
     }
-  };
+  }, [uploadedFile, setReportData, setIssues, setLetterGenerated, setAnalysisError, setAnalyzing, setAnalyzed, toast, analysisCompleted]);
 
-  const onAnalysisComplete = () => {
+  const onAnalysisComplete = useCallback(() => {
     // Mark analysis as complete
     console.log("Analysis marked as complete");
     analysisCompleted.current = true;
@@ -91,7 +107,8 @@ export const useReportAnalysis = (
             dob: "01/01/1980",
             ssn: "XXX-XX-1234"
           },
-          isSampleData: true
+          isSampleData: true,
+          isTestMode: true
         };
         
         try {
@@ -101,7 +118,7 @@ export const useReportAnalysis = (
         }
       }
     }
-  };
+  }, [setAnalyzed, setAnalyzing]);
 
   return {
     onAnalysisComplete,
