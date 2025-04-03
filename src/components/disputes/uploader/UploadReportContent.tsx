@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CreditReportData, CreditReportAccount, IdentifiedIssue } from '@/utils/creditReport/types';
 import FileUploader from '@/components/disputes/uploader/FileUploader';
 import AnalysisStateHandler from '@/components/disputes/uploader/AnalysisStateHandler';
@@ -47,6 +47,22 @@ const UploadReportContent: React.FC<UploadReportContentProps> = ({
   useBackend = true,
   testMode
 }) => {
+  // Ensure test mode subscription is set when in test mode
+  useEffect(() => {
+    if (testMode) {
+      console.log("Test mode detected in UploadReportContent - enabling test subscription");
+      sessionStorage.setItem('testModeSubscription', 'true');
+    }
+  }, [testMode]);
+
+  // When file is uploaded, also ensure test subscription is enabled
+  useEffect(() => {
+    if (fileUploaded && testMode) {
+      console.log("File uploaded in test mode - ensuring test subscription is enabled");
+      sessionStorage.setItem('testModeSubscription', 'true');
+    }
+  }, [fileUploaded, testMode]);
+
   return (
     <div className="bg-white dark:bg-credify-navy/20 rounded-xl shadow-soft border border-gray-100 dark:border-gray-700/30 p-6 md:p-8 mb-8">
       {!fileUploaded ? (
