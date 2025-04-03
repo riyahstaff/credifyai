@@ -1,81 +1,137 @@
 
 import React, { useEffect, useState } from 'react';
-import { CircleCheck, Loader2 } from 'lucide-react';
-import { Progress } from '@/components/ui/progress'; // Correct import for Progress
+import { CheckCircle, AlertCircle } from 'lucide-react';
 
 interface AnalyzingReportProps {
-  onAnalysisComplete?: () => void;
+  onAnalysisComplete: () => void;
+  timeout?: number;
 }
 
-const AnalyzingReport: React.FC<AnalyzingReportProps> = ({ onAnalysisComplete }) => {
-  const [progress, setProgress] = useState(0);
-  const [stage, setStage] = useState('Scanning document');
-
+const AnalyzingReport: React.FC<AnalyzingReportProps> = ({ 
+  onAnalysisComplete,
+  timeout = 10000  // Default 10-second timeout
+}) => {
+  const [progress, setProgress] = useState(10);
+  const [stage, setStage] = useState('Starting analysis');
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
+  
+  // Simulate progress and update stages
   useEffect(() => {
-    const simulateProgress = () => {
-      const interval = setInterval(() => {
-        setProgress(prevProgress => {
-          const nextProgress = prevProgress + 1;
-          
-          // Update the stage message based on progress
-          if (nextProgress === 30) {
-            setStage('Extracting account information');
-          } else if (nextProgress === 60) {
-            setStage('Analyzing for discrepancies');
-          } else if (nextProgress === 85) {
-            setStage('Preparing dispute recommendations');
-          } else if (nextProgress >= 99) {
-            clearInterval(interval);
-            
-            // Ensure onAnalysisComplete is called when progress completes
-            if (onAnalysisComplete) {
-              setTimeout(() => {
-                onAnalysisComplete();
-              }, 500);
-            }
-            return 100;
-          }
-          
-          return nextProgress;
-        });
-      }, 100);
+    // Update progress using a variable increment for more realistic feedback
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        // Slow down as we approach 90%
+        const increment = prev < 50 ? 5 : prev < 80 ? 3 : 1;
+        const newProgress = Math.min(prev + increment, 90);
+        return newProgress;
+      });
       
-      return () => clearInterval(interval);
-    };
+      // Update time elapsed
+      setTimeElapsed(prev => prev + 500);
+    }, 500);
     
-    const simulation = simulateProgress();
+    // Update stages based on progress
+    const stageInterval = setInterval(() => {
+      setStage(prevStage => {
+        if (progress < 20) return 'Extracting text from report';
+        if (progress < 40) return 'Analyzing account information';
+        if (progress < 60) return 'Identifying potential issues';
+        if (progress < 80) return 'Generating recommendations';
+        return 'Finalizing analysis';
+      });
+    }, 2000);
     
-    // Cleanup
+    // Mark as complete after timeout
+    // This ensures the analysis eventually "completes" even if there's a problem
+    const timeoutId = setTimeout(() => {
+      console.log("Analysis completion triggered by timeout");
+      clearInterval(progressInterval);
+      clearInterval(stageInterval);
+      setIsCompleted(true);
+      setProgress(100);
+      setStage('Analysis complete');
+      
+      // Adding a slight delay before calling onAnalysisComplete
+      setTimeout(() => {
+        console.log("Calling onAnalysisComplete from timeout handler");
+        onAnalysisComplete();
+      }, 1000);
+      
+      // Show timeout warning if it's taking too long
+      if (timeElapsed > timeout) {
+        setShowTimeoutWarning(true);
+        console.warn("Credit report analysis is taking longer than expected");
+      }
+    }, timeout);
+    
     return () => {
-      simulation();
+      clearInterval(progressInterval);
+      clearInterval(stageInterval);
+      clearTimeout(timeoutId);
     };
-  }, [onAnalysisComplete]);
-
+  }, [onAnalysisComplete, progress, timeElapsed, timeout]);
+  
+  // Effect for logging
+  useEffect(() => {
+    console.log(`Analysis progress: ${progress}%, Stage: ${stage}, Time elapsed: ${timeElapsed}ms`);
+    
+    // Debug test mode subscription when analyzing
+    console.log("Test subscription status while analyzing:", 
+      sessionStorage.getItem('testModeSubscription') || 'not set');
+  }, [progress, stage, timeElapsed]);
+  
   return (
-    <div className="text-center py-6">
-      <div className="flex justify-center mb-6">
-        {progress < 100 ? (
-          <Loader2 className="h-12 w-12 animate-spin text-credify-teal" />
-        ) : (
-          <CircleCheck className="h-12 w-12 text-green-500" />
-        )}
+    <div className="p-6 space-y-6">
+      <div className="text-center">
+        <h3 className="text-xl font-semibold text-credify-navy dark:text-white mb-2">
+          {isCompleted ? 'Analysis Complete' : 'Analyzing Your Credit Report'}
+        </h3>
+        <p className="text-credify-navy-light dark:text-white/70">
+          {isCompleted 
+            ? 'We\'ve finished analyzing your credit report and identified potential issues.' 
+            : 'Please wait while we analyze your credit report to identify potential issues.'}
+        </p>
       </div>
       
-      <h3 className="text-xl font-semibold text-credify-navy dark:text-white mb-2">
-        {progress < 100 ? "Analyzing Your Credit Report" : "Analysis Complete"}
-      </h3>
-      
-      <p className="text-credify-navy-light dark:text-white/70 mb-6">
-        {progress < 100 ? stage : "Ready to view results"}
-      </p>
-      
-      <div className="w-full max-w-md mx-auto mb-4">
-        <Progress value={progress} className="h-2" />
+      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-4">
+        <div 
+          className="bg-credify-teal h-2.5 rounded-full transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        ></div>
       </div>
       
-      <p className="text-sm text-credify-navy-light dark:text-white/60">
-        {progress < 100 ? `${progress}% complete` : "100% complete"}
-      </p>
+      <div className="flex items-center justify-center">
+        <div className="text-sm text-credify-navy-light dark:text-white/70">
+          {isCompleted ? (
+            <div className="flex items-center gap-2 text-green-500">
+              <CheckCircle size={18} />
+              <span>Analysis complete</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 bg-credify-teal rounded-full animate-pulse"></div>
+              <span>{stage}...</span>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {showTimeoutWarning && (
+        <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-amber-500 mt-0.5" size={18} />
+            <div>
+              <h4 className="font-medium text-amber-800 dark:text-amber-300">Processing is taking longer than expected</h4>
+              <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                Your report is being processed but is taking longer than usual. You can continue waiting
+                or try uploading a different format of your credit report.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

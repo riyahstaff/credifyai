@@ -52,6 +52,13 @@ const UploadReportContent: React.FC<UploadReportContentProps> = ({
     if (testMode) {
       console.log("Test mode detected in UploadReportContent - enabling test subscription");
       sessionStorage.setItem('testModeSubscription', 'true');
+      
+      // Additional debugging for test mode
+      console.log("Current session storage state:", {
+        testModeSubscription: sessionStorage.getItem('testModeSubscription'),
+        pendingDisputeLetter: sessionStorage.getItem('pendingDisputeLetter') ? 'exists' : 'missing',
+        creditReportData: sessionStorage.getItem('creditReportData') ? 'exists' : 'missing'
+      });
     }
   }, [testMode]);
 
@@ -60,8 +67,22 @@ const UploadReportContent: React.FC<UploadReportContentProps> = ({
     if (fileUploaded && testMode) {
       console.log("File uploaded in test mode - ensuring test subscription is enabled");
       sessionStorage.setItem('testModeSubscription', 'true');
+      
+      // Additional logging when file is uploaded in test mode
+      console.log("Upload state in test mode:", { analyzing, analyzed, letterGenerated });
     }
-  }, [fileUploaded, testMode]);
+  }, [fileUploaded, testMode, analyzing, analyzed, letterGenerated]);
+  
+  // Add additional logging for analysis state changes
+  useEffect(() => {
+    console.log("Analysis state changed:", { 
+      analyzing, 
+      analyzed, 
+      error: analysisError ? 'present' : 'none',
+      issues: issues.length,
+      letterGenerated
+    });
+  }, [analyzing, analyzed, analysisError, issues, letterGenerated]);
 
   return (
     <div className="bg-white dark:bg-credify-navy/20 rounded-xl shadow-soft border border-gray-100 dark:border-gray-700/30 p-6 md:p-8 mb-8">
