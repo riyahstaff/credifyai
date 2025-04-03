@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { CreditReportData, IdentifiedIssue } from '@/utils/creditReport/types';
 import { parseReportContent } from '@/utils/creditReport/parser/parseReportContent';
@@ -9,17 +8,14 @@ import { addFallbackGenericIssues } from '@/utils/reportAnalysis/issueIdentifica
 
 export interface AnalysisHandlerProps {
   uploadedFile: File;
-  setReportData: (data: any) => void;
-  setIssues: (issues: any[]) => void;
+  setReportData: (data: CreditReportData) => void;
+  setIssues: (issues: IdentifiedIssue[]) => void;
   setLetterGenerated: (generated: boolean) => void;
   setAnalysisError: (error: string | null) => void;
   setAnalyzing: (analyzing: boolean) => void;
   setAnalyzed: (analyzed: boolean) => void;
-  toast: {
-    toast: (props: { title: string; description?: string; variant?: "default" | "destructive"; action?: React.ReactNode }) => { id?: string };
-    dismiss: (toastId?: string) => void;
-    toasts: any[];
-  };
+  toast: any;
+  testMode?: boolean;
 }
 
 export const analyzeReport = async (
@@ -180,7 +176,17 @@ export const analyzeReport = async (
   }
 };
 
-export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
+export const handleAnalysisComplete = async ({
+  uploadedFile,
+  setReportData,
+  setIssues,
+  setLetterGenerated,
+  setAnalysisError,
+  setAnalyzing,
+  setAnalyzed,
+  toast,
+  testMode = false
+}: AnalysisHandlerProps) => {
   const {
     uploadedFile,
     setReportData,

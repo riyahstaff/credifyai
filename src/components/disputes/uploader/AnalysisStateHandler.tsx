@@ -66,37 +66,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
         navigate('/dispute-letters');
       }, 1000);
     }
-    
-    // In test mode, if we've completed analysis but have no issues, try to generate one
-    if (analyzed && testMode && issues.length === 0 && !letterGenerated) {
-      console.log("Test mode with no issues - adding dummy issue");
-      
-      // Create a dummy issue if in test mode and no issues detected
-      const dummyIssue = {
-        type: "inaccurate_information",
-        title: "Inaccurate Account Information (Test)",
-        description: "This test account contains information that appears to be inaccurate.",
-        impact: "Medium Impact" as const,
-        impactColor: "orange",
-        account: reportData?.accounts[0] || {
-          accountName: "TEST ACCOUNT",
-          accountNumber: "XXXX-XXXX-1234",
-          bureau: "Experian"
-        },
-        laws: ["FCRA § 611", "FCRA § 623"]
-      };
-      
-      // Instead of modifying the issues state directly, we'll just handle generating a dispute
-      setTimeout(() => {
-        console.log("Auto-generating dispute for test mode");
-        toast({
-          title: "Test Mode",
-          description: "Automatically generating dispute letter for test mode"
-        });
-        onGenerateDispute(dummyIssue.account);
-      }, 2000);
-    }
-  }, [fileUploaded, analyzing, analyzed, letterGenerated, issues, testMode, navigate, reportData, analysisError, onGenerateDispute, toast]);
+  }, [fileUploaded, analyzing, analyzed, letterGenerated, issues, testMode, navigate, analysisError]);
   
   // Check the state and render appropriate component
   if (analyzing) {
@@ -106,45 +76,27 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     />;
   }
   
-  // If analysis is complete but we have an error, but we're in test mode,
-  // show results anyway with a warning
-  if (analyzed && analysisError && testMode) {
+  // If analysis is complete but we have an error, show error state
+  if (analyzed && analysisError) {
     return (
       <div className="space-y-4">
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-4">
-          <h3 className="text-amber-800 font-medium">Test Mode Warning</h3>
-          <p className="text-amber-700 text-sm">
-            There was an error analyzing your report, but since you're in test mode, 
-            you can proceed with test dispute letters.
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+          <h3 className="text-red-800 font-medium">Analysis Error</h3>
+          <p className="text-red-700 text-sm">
+            {analysisError}
           </p>
+          <button
+            onClick={onResetUpload}
+            className="mt-3 text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded"
+          >
+            Try Again
+          </button>
         </div>
-        
-        <ReportAnalysisResults 
-          issues={issues.length > 0 ? issues : [
-            {
-              type: "inaccurate_information",
-              title: "Inaccurate Account Information (Test)",
-              description: "This test account contains information that appears to be inaccurate.",
-              impact: "Medium Impact" as const,
-              impactColor: "orange",
-              account: reportData?.accounts[0] || {
-                accountName: "TEST ACCOUNT",
-                accountNumber: "XXXX-XXXX-1234",
-                bureau: "Experian"
-              },
-              laws: ["FCRA § 611", "FCRA § 623"]
-            }
-          ]} 
-          reportData={reportData}
-          onResetUpload={onResetUpload} 
-          onGenerateDispute={onGenerateDispute}
-          testMode={testMode}
-        />
       </div>
     );
   }
   
-  if (analyzed && !analysisError) {
+  if (analyzed) {
     return <ReportAnalysisResults 
       issues={issues} 
       reportData={reportData}

@@ -9,13 +9,15 @@ interface ReportAnalysisResultsProps {
   reportData: CreditReportData | null;
   onResetUpload: () => void;
   onGenerateDispute: (account?: CreditReportAccount) => void;
+  testMode?: boolean;
 }
 
 const ReportAnalysisResults: React.FC<ReportAnalysisResultsProps> = ({
   issues,
   reportData,
   onResetUpload,
-  onGenerateDispute
+  onGenerateDispute,
+  testMode = false
 }) => {
   const [showAllIssues, setShowAllIssues] = useState(false);
   
@@ -66,58 +68,74 @@ const ReportAnalysisResults: React.FC<ReportAnalysisResultsProps> = ({
       <div className="bg-white dark:bg-credify-navy/20 border border-gray-200 dark:border-gray-700/30 rounded-lg p-4">
         <h4 className="text-lg font-semibold text-credify-navy dark:text-white mb-3">Identified Issues</h4>
         
-        <div className="space-y-3">
-          {displayIssues.map((issue, index) => (
-            <div 
-              key={index} 
-              className="border border-gray-200 dark:border-gray-700/30 rounded-lg p-3 hover:border-credify-teal dark:hover:border-credify-teal/70"
-            >
-              <div className="flex justify-between items-start">
-                <h5 className="font-medium text-credify-navy dark:text-white">{issue.title}</h5>
-                <IssueImpactBadge impact={issue.impact} />
-              </div>
-              <p className="text-credify-navy-light dark:text-white/70 text-sm mt-1">{issue.description}</p>
-              
-              {issue.account && (
-                <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700/30">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-credify-navy-light dark:text-white/70">
-                      Account: {issue.account.accountName}
-                    </span>
-                    <button 
-                      onClick={() => onGenerateDispute(issue.account)} 
-                      className="text-xs bg-credify-teal hover:bg-credify-teal-dark text-white px-2 py-1 rounded transition-colors"
-                    >
-                      Dispute This Issue
-                    </button>
-                  </div>
+        {issues.length > 0 ? (
+          <div className="space-y-3">
+            {displayIssues.map((issue, index) => (
+              <div 
+                key={index} 
+                className="border border-gray-200 dark:border-gray-700/30 rounded-lg p-3 hover:border-credify-teal dark:hover:border-credify-teal/70"
+              >
+                <div className="flex justify-between items-start">
+                  <h5 className="font-medium text-credify-navy dark:text-white">{issue.title}</h5>
+                  <IssueImpactBadge impact={issue.impact} />
                 </div>
-              )}
+                <p className="text-credify-navy-light dark:text-white/70 text-sm mt-1">{issue.description}</p>
+                
+                {issue.account && (
+                  <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700/30">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-credify-navy-light dark:text-white/70">
+                        Account: {issue.account.accountName}
+                      </span>
+                      <button 
+                        onClick={() => onGenerateDispute(issue.account)} 
+                        className="text-xs bg-credify-teal hover:bg-credify-teal-dark text-white px-2 py-1 rounded transition-colors"
+                      >
+                        Dispute This Issue
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            
+            {issues.length > 3 && (
+              <button 
+                onClick={() => setShowAllIssues(!showAllIssues)}
+                className="w-full text-sm text-credify-teal hover:text-credify-teal-dark flex items-center justify-center p-2 border border-dashed border-gray-200 dark:border-gray-700/30 rounded-lg"
+              >
+                {showAllIssues ? (
+                  <>Show Less <ChevronUp size={16} className="ml-1" /></>
+                ) : (
+                  <>Show All {issues.length} Issues <ChevronDown size={16} className="ml-1" /></>
+                )}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="text-amber-500 mt-0.5" size={18} />
+              <div>
+                <h4 className="font-medium text-amber-800 dark:text-amber-300">No Issues Found</h4>
+                <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                  We couldn't identify any issues in your credit report. You may want to upload a different report or check the report quality.
+                </p>
+              </div>
             </div>
-          ))}
-          
-          {issues.length > 3 && (
-            <button 
-              onClick={() => setShowAllIssues(!showAllIssues)}
-              className="w-full text-sm text-credify-teal hover:text-credify-teal-dark flex items-center justify-center p-2 border border-dashed border-gray-200 dark:border-gray-700/30 rounded-lg"
-            >
-              {showAllIssues ? (
-                <>Show Less <ChevronUp size={16} className="ml-1" /></>
-              ) : (
-                <>Show All {issues.length} Issues <ChevronDown size={16} className="ml-1" /></>
-              )}
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       
       <div className="flex flex-col sm:flex-row gap-3 pt-4">
-        <button 
-          onClick={handleGenerateDisputeForAll}
-          className="flex-1 bg-credify-teal hover:bg-credify-teal-dark text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center"
-        >
-          Generate Dispute Letters
-        </button>
+        {issues.length > 0 && (
+          <button 
+            onClick={handleGenerateDisputeForAll}
+            className="flex-1 bg-credify-teal hover:bg-credify-teal-dark text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center"
+          >
+            Generate Dispute Letters
+          </button>
+        )}
         
         <button 
           onClick={onResetUpload}
