@@ -5,11 +5,13 @@ import { CheckCircle, AlertCircle } from 'lucide-react';
 interface AnalyzingReportProps {
   onAnalysisComplete: () => void;
   timeout?: number;
+  testMode?: boolean;
 }
 
 const AnalyzingReport: React.FC<AnalyzingReportProps> = ({ 
   onAnalysisComplete,
-  timeout = 8000  // Reduced default timeout to 8 seconds
+  timeout = 8000,  // Reduced default timeout to 8 seconds
+  testMode = false
 }) => {
   const [progress, setProgress] = useState(10);
   const [stage, setStage] = useState('Starting analysis');
@@ -17,20 +19,24 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
   const [isCompleted, setIsCompleted] = useState(false);
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
   
+  // Use a shorter timeout for test mode
+  const actualTimeout = testMode ? 3000 : timeout;
+  
   // Simulate progress and update stages
   useEffect(() => {
     // Update progress using a variable increment for more realistic feedback
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         // Faster progress for better user experience
-        const increment = prev < 50 ? 8 : prev < 80 ? 5 : 2;
+        // Even faster in test mode
+        const increment = testMode ? 15 : (prev < 50 ? 8 : prev < 80 ? 5 : 2);
         const newProgress = Math.min(prev + increment, 90);
         return newProgress;
       });
       
       // Update time elapsed
       setTimeElapsed(prev => prev + 500);
-    }, 500);
+    }, testMode ? 300 : 500); // Faster updates in test mode
     
     // Update stages based on progress
     const stageInterval = setInterval(() => {
@@ -41,15 +47,15 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
         if (progress < 80) return 'Generating recommendations';
         return 'Finalizing analysis';
       });
-    }, 1500); // Faster stage updates
+    }, testMode ? 800 : 1500); // Faster stage updates in test mode
     
-    // Show warning after 50% of timeout
+    // Show warning after 50% of timeout (but not in test mode)
     const warningTimeout = setTimeout(() => {
-      if (progress < 80 && !isCompleted) {
+      if (progress < 80 && !isCompleted && !testMode) {
         setShowTimeoutWarning(true);
         console.log("Showing analysis timeout warning to user");
       }
-    }, timeout * 0.5);
+    }, actualTimeout * 0.5);
     
     // Mark as complete after timeout
     // This ensures the analysis eventually "completes" even if there's a problem
@@ -66,7 +72,7 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
         console.log("Calling onAnalysisComplete from timeout handler");
         onAnalysisComplete();
       }, 1000);
-    }, timeout);
+    }, actualTimeout);
     
     return () => {
       clearInterval(progressInterval);
@@ -74,22 +80,23 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
       clearTimeout(timeoutId);
       clearTimeout(warningTimeout);
     };
-  }, [onAnalysisComplete, progress, timeElapsed, timeout, isCompleted]);
+  }, [onAnalysisComplete, progress, timeElapsed, actualTimeout, isCompleted, testMode]);
   
   // Effect for logging
   useEffect(() => {
-    console.log(`Analysis progress: ${progress}%, Stage: ${stage}, Time elapsed: ${timeElapsed}ms`);
+    console.log(`Analysis progress: ${progress}%, Stage: ${stage}, Time elapsed: ${timeElapsed}ms, Test mode: ${testMode}`);
     
     // Debug test mode subscription when analyzing
     console.log("Test subscription status while analyzing:", 
       sessionStorage.getItem('testModeSubscription') || 'not set');
-  }, [progress, stage, timeElapsed]);
+  }, [progress, stage, timeElapsed, testMode]);
   
   return (
     <div className="p-6 space-y-6">
       <div className="text-center">
         <h3 className="text-xl font-semibold text-credify-navy dark:text-white mb-2">
           {isCompleted ? 'Analysis Complete' : 'Analyzing Your Credit Report'}
+          {testMode && <span className="text-amber-500 text-sm ml-2">(Test Mode)</span>}
         </h3>
         <p className="text-credify-navy-light dark:text-white/70">
           {isCompleted 
@@ -121,7 +128,20 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
         </div>
       </div>
       
-      {showTimeoutWarning && (
+      {testMode && (
+        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div>
+              <h4 className="font-medium text-blue-800 dark:text-blue-300">Test Mode Active</h4>
+              <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                You're in test mode, so the analysis will complete quickly with sample data.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {showTimeoutWarning && !testMode && (
         <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
           <div className="flex items-start gap-3">
             <AlertCircle className="text-amber-500 mt-0.5" size={18} />

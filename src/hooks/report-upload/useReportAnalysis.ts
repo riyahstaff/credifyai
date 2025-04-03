@@ -51,7 +51,8 @@ export const useReportAnalysis = (
           setAnalysisError,
           setAnalyzing,
           setAnalyzed,
-          toast: toastObject
+          toast: toastObject,
+          isTestMode // Pass the test mode flag to the handler
         });
         
         // Debug: Log current state of analysis
@@ -65,15 +66,31 @@ export const useReportAnalysis = (
         clearTimeout(analysisTimeout);
         setAnalysisError(error instanceof Error ? error.message : "Unknown error occurred");
         setAnalyzing(false);
-        toast({
-          title: "Analysis Error",
-          description: "Failed to start credit report analysis",
-          variant: "destructive"
-        });
+        
+        // If in test mode, we can proceed anyway with dummy data
+        if (isTestMode) {
+          console.log("Test mode active - proceeding with dummy data despite error");
+          setTimeout(() => onAnalysisComplete(), 1500);
+        } else {
+          toast({
+            title: "Analysis Error",
+            description: "Failed to start credit report analysis",
+            variant: "destructive"
+          });
+        }
       }
     } else {
       console.error("Attempted to start analysis without an uploaded file");
-      setAnalysisError("No file was uploaded");
+      
+      // If in test mode, we can proceed anyway with dummy data
+      const isTestMode = sessionStorage.getItem('testModeSubscription') === 'true';
+      if (isTestMode) {
+        console.log("Test mode active - proceeding with dummy data despite missing file");
+        setAnalyzing(true);
+        setTimeout(() => onAnalysisComplete(), 1500);
+      } else {
+        setAnalysisError("No file was uploaded");
+      }
     }
   }, [uploadedFile, setReportData, setIssues, setLetterGenerated, setAnalysisError, setAnalyzing, setAnalyzed, toast, analysisCompleted]);
 
@@ -98,7 +115,18 @@ export const useReportAnalysis = (
         const dummyReportData = {
           bureaus: { experian: true, equifax: false, transunion: false },
           primaryBureau: "Experian",
-          accounts: [],
+          accounts: [
+            {
+              accountName: "TEST ACCOUNT",
+              accountNumber: "XXXX-XXXX-1234",
+              accountType: "Credit Card",
+              balance: "1000",
+              dateOpened: "01/01/2020",
+              lastReportedDate: "01/01/2023",
+              status: "Open",
+              bureau: "Experian"
+            }
+          ],
           inquiries: [],
           publicRecords: [],
           personalInfo: {
@@ -112,13 +140,33 @@ export const useReportAnalysis = (
         };
         
         try {
+          // First update state
+          setReportData(dummyReportData);
+          
+          // Then also store in session storage
           sessionStorage.setItem('creditReportData', JSON.stringify(dummyReportData));
+          
+          // Create a dummy issue if none exist
+          if (!sessionStorage.getItem('reportIssues')) {
+            const dummyIssue = {
+              type: "inaccurate_information",
+              title: "Inaccurate Account Information",
+              description: "This account contains information that appears to be inaccurate and should be verified.",
+              impact: "Medium Impact",
+              impactColor: "orange",
+              account: dummyReportData.accounts[0],
+              laws: ["FCRA § 611", "FCRA § 623"]
+            };
+            
+            setIssues([dummyIssue]);
+            sessionStorage.setItem('reportIssues', JSON.stringify([dummyIssue]));
+          }
         } catch (e) {
           console.warn("Failed to store dummy report data:", e);
         }
       }
     }
-  }, [setAnalyzed, setAnalyzing]);
+  }, [setAnalyzed, setAnalyzing, setReportData, setIssues]);
 
   return {
     onAnalysisComplete,

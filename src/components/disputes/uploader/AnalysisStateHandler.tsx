@@ -6,6 +6,7 @@ import ReportAnalysisResults from './ReportAnalysisResults';
 import UploadConfirmation from './UploadConfirmation';
 import ReportPreview from './ReportPreview';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface AnalysisStateHandlerProps {
   fileUploaded: boolean;
@@ -44,6 +45,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
 }) => {
   const [showReportPreview, setShowReportPreview] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   // Log important state changes for debugging
   useEffect(() => {
@@ -53,7 +55,8 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
       analyzed, 
       letterGenerated,
       issuesCount: issues.length,
-      testMode
+      testMode,
+      hasAnalysisError: !!analysisError
     });
     
     // If analysis is complete and letters are generated, navigate to the letters page
@@ -63,13 +66,82 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
         navigate('/dispute-letters');
       }, 1000);
     }
-  }, [fileUploaded, analyzing, analyzed, letterGenerated, issues, testMode, navigate]);
+    
+    // In test mode, if we've completed analysis but have no issues, try to generate one
+    if (analyzed && testMode && issues.length === 0 && !letterGenerated) {
+      console.log("Test mode with no issues - adding dummy issue");
+      
+      // Create a dummy issue if in test mode and no issues detected
+      const dummyIssue = {
+        type: "inaccurate_information",
+        title: "Inaccurate Account Information (Test)",
+        description: "This test account contains information that appears to be inaccurate.",
+        impact: "Medium Impact" as const,
+        impactColor: "orange",
+        account: reportData?.accounts[0] || {
+          accountName: "TEST ACCOUNT",
+          accountNumber: "XXXX-XXXX-1234",
+          bureau: "Experian"
+        },
+        laws: ["FCRA § 611", "FCRA § 623"]
+      };
+      
+      // Instead of modifying the issues state directly, we'll just handle generating a dispute
+      setTimeout(() => {
+        console.log("Auto-generating dispute for test mode");
+        toast({
+          title: "Test Mode",
+          description: "Automatically generating dispute letter for test mode"
+        });
+        onGenerateDispute(dummyIssue.account);
+      }, 2000);
+    }
+  }, [fileUploaded, analyzing, analyzed, letterGenerated, issues, testMode, navigate, reportData, analysisError, onGenerateDispute, toast]);
   
   // Check the state and render appropriate component
   if (analyzing) {
     return <AnalyzingReport 
       onAnalysisComplete={onAnalysisComplete} 
+      testMode={testMode}
     />;
+  }
+  
+  // If analysis is complete but we have an error, but we're in test mode,
+  // show results anyway with a warning
+  if (analyzed && analysisError && testMode) {
+    return (
+      <div className="space-y-4">
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+          <h3 className="text-amber-800 font-medium">Test Mode Warning</h3>
+          <p className="text-amber-700 text-sm">
+            There was an error analyzing your report, but since you're in test mode, 
+            you can proceed with test dispute letters.
+          </p>
+        </div>
+        
+        <ReportAnalysisResults 
+          issues={issues.length > 0 ? issues : [
+            {
+              type: "inaccurate_information",
+              title: "Inaccurate Account Information (Test)",
+              description: "This test account contains information that appears to be inaccurate.",
+              impact: "Medium Impact" as const,
+              impactColor: "orange",
+              account: reportData?.accounts[0] || {
+                accountName: "TEST ACCOUNT",
+                accountNumber: "XXXX-XXXX-1234",
+                bureau: "Experian"
+              },
+              laws: ["FCRA § 611", "FCRA § 623"]
+            }
+          ]} 
+          reportData={reportData}
+          onResetUpload={onResetUpload} 
+          onGenerateDispute={onGenerateDispute}
+          testMode={testMode}
+        />
+      </div>
+    );
   }
   
   if (analyzed && !analysisError) {
@@ -77,7 +149,8 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
       issues={issues} 
       reportData={reportData}
       onResetUpload={onResetUpload} 
-      onGenerateDispute={onGenerateDispute} 
+      onGenerateDispute={onGenerateDispute}
+      testMode={testMode}
     />;
   }
   
@@ -88,6 +161,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
         fileSize={fileSize} 
         onStartAnalysis={onStartAnalysis} 
         onRemoveFile={onResetUpload} 
+        testMode={testMode}
       />
       
       {reportData && (
