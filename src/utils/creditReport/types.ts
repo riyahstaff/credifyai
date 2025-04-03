@@ -90,6 +90,7 @@ export interface CreditReportData {
   rawText?: string;
   htmlContent?: string;
   isSampleData?: boolean;
+  isTestMode?: boolean; // Add the missing property
   analysisResults?: AnalysisResults;
   primaryBureau?: string;
 }
