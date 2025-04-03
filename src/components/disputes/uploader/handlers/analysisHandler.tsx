@@ -155,7 +155,7 @@ export const analyzeReport = async (
   }
 };
 
-export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
+export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
   const {
     uploadedFile,
     setReportData,
@@ -166,7 +166,7 @@ export const handleAnalysisComplete = async (params: AnalysisHandlerProps) => {
     setAnalyzed,
     toast,
     testMode
-  } = params;
+  } = props;
 
   try {
     console.log("Starting analysis of credit report:", uploadedFile.name);

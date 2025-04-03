@@ -1,3 +1,4 @@
+
 /**
  * Generate dispute letters for credit report issues
  */
@@ -189,6 +190,7 @@ export const generateDisputeLetters = async (issues: Array<any>, reportData: Cre
       }
       
       // Final cleanup of any remaining placeholders or formatting tags
+      // Use a new variable instead of reassigning to letterContent
       let finalContent = letterContent
         .replace(/\/ArialBold/g, '')
         .replace(/\[YOUR NAME\]/g, userName)
@@ -266,13 +268,14 @@ function createTestModeFallbackLetter() {
   const accountName = 'TEST ACCOUNT';
   const accountNumber = 'XXXX-XXXX-1234';
   
-  const letterContent = `CREDIT REPORT DISPUTE LETTER\nToday's Date: ${new Date().toLocaleDateString('en-US', {
+  // Use a let variable instead of const since we'll be modifying it
+  let letterContent = `CREDIT REPORT DISPUTE LETTER\nToday's Date: ${new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   })}\n\n`;
   
-  // Add sender information
+  // Add sender information - building the string in parts
   letterContent += `John Doe\n`;
   letterContent += `123 Main Street\n`;
   letterContent += `Anytown, CA 90210\n\n`;
