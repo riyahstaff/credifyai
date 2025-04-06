@@ -1,11 +1,14 @@
 
 import React from 'react';
-import { CreditReportData, IdentifiedIssue } from '@/utils/creditReport/types';
+import { CreditReportData, Issue, IdentifiedIssue } from '@/utils/creditReport/types';
 import { parseReportContent } from '@/utils/creditReport/parser/parseReportContent';
 import { extractTextFromPDF } from '@/utils/creditReport/extractors/pdfExtractor';
 import { ToastAction } from "@/components/ui/toast";
 import { identifyIssues } from '@/utils/reportAnalysis/issueIdentification/identifyIssues';
 import { addFallbackGenericIssues } from '@/utils/reportAnalysis/issueIdentification/genericIssues';
+import { supabase } from '@/lib/supabase/client';
+import { processDisputeData } from '@/components/disputes/generator/utils/letterUtils';
+import { generateEnhancedDisputeLetter } from '@/lib/supabase/letterGenerator';
 
 export interface AnalysisHandlerProps {
   uploadedFile: File;
@@ -301,6 +304,101 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
       description: `Credit report analyzed with ${fallbackIssues.length} potential issues identified.`,
     });
   }
+
+  // Updated function signature for storeCreditReport with proper types
+  async function storeCreditReport(
+    creditReportData: CreditReportData,
+    userId: string,
+    issues: Issue[]
+  ): Promise<void> {
+    try {
+      // Create a record for the credit report
+      const { error } = await supabase
+        .from('credit_reports')
+        .insert({
+          user_id: userId,
+          bureau: creditReportData.primaryBureau,
+          report_number: creditReportData.reportNumber,
+          report_date: creditReportData.reportDate,
+          personal_info: creditReportData.personalInfo,
+          accounts_count: creditReportData.accounts.length,
+          inquiries_count: creditReportData.inquiries.length,
+          issues_count: issues.length,
+          issues_summary: issues.map(issue => issue.type),
+          created_at: new Date().toISOString()
+        });
+      
+      if (error) {
+        console.error('Error storing credit report:', error);
+      }
+    } catch (error) {
+      console.error('Error storing credit report:', error);
+    }
+  }
+
+  // Updated function signature for generateDisputeLetters
+  async function generateDisputeLetters(
+    creditReportData: CreditReportData,
+    issues: Issue[],
+    userId: string
+  ): Promise<string[]> {
+    try {
+      // Group issues by bureau
+      const issuesByBureau: Record<string, Issue[]> = {};
+      
+      for (const issue of issues) {
+        if (!issuesByBureau[issue.bureau]) {
+          issuesByBureau[issue.bureau] = [];
+        }
+        
+        issuesByBureau[issue.bureau].push(issue);
+      }
+      
+      // Generate a letter for each bureau
+      const letterIds: string[] = [];
+      
+      for (const [bureau, bureauIssues] of Object.entries(issuesByBureau)) {
+        if (bureauIssues.length === 0) {
+          continue;
+        }
+        
+        // Process the dispute data
+        const processedData = processDisputeData(creditReportData, bureauIssues);
+        
+        // Generate the dispute letter
+        const letter = await generateEnhancedDisputeLetter(
+          'General Dispute', 
+          {
+            accountName: bureauIssues[0]?.accountName || 'Multiple Accounts',
+            accountNumber: bureauIssues[0]?.accountNumber,
+            errorDescription: bureauIssues[0]?.description || 'Multiple issues found',
+            bureau: bureauIssues[0]?.bureau || creditReportData.primaryBureau || 'experian'
+          },
+          {
+            name: creditReportData.personalInfo?.name || '[YOUR NAME]',
+            address: creditReportData.personalInfo?.address,
+            city: creditReportData.personalInfo?.city,
+            state: creditReportData.personalInfo?.state,
+            zip: creditReportData.personalInfo?.zip
+          }
+        );
+        
+        if (letter && letter.length > 0) {
+          // Store the letter ID
+          letterIds.push(`letter-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
+        }
+      }
+      
+      return letterIds;
+    } catch (error) {
+      console.error('Error generating dispute letters:', error);
+      return [];
+    }
+  }
+
+  // Call the storeCreditReport and generateDisputeLetters functions
+  storeCreditReport(reportData, 'user-id', generatedIssues);
+  generateDisputeLetters(reportData, generatedIssues, 'user-id');
 };
 
 // Generate sample credit report text for testing

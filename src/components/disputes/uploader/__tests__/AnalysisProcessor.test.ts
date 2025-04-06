@@ -40,7 +40,7 @@ describe('handleAnalysisComplete', () => {
 
   it('should handle successful analysis and set reportData', async () => {
     // Mock dependencies
-    const mockParams = {
+    const mockParams: AnalysisHandlerProps = {
       uploadedFile: new File(['test content'], 'test.pdf', { type: 'application/pdf' }),
       setReportData: vi.fn(),
       setIssues: vi.fn(),
