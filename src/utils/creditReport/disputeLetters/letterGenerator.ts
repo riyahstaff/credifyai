@@ -1,6 +1,10 @@
-
 import { supabase } from '@/lib/supabase/client';
-import { CreditReportData, DisputeLetter, LetterTemplate, Issue } from '../types';
+import { CreditReportData } from '../types';
+import { DisputeLetter, LetterTemplate, Issue } from '../types/letterTypes';
+
+/**
+ * Advanced dispute letter generator for credit report issues
+ */
 
 /**
  * Generates an enhanced dispute letter based on credit report data and identified issues
@@ -208,7 +212,7 @@ function generateLetterContent(
   content = content.replace(/{CREDIT_BUREAU_CITY}/g, bureauInfo.city);
   content = content.replace(/{CREDIT_BUREAU_STATE}/g, bureauInfo.state);
   content = content.replace(/{CREDIT_BUREAU_ZIP}/g, bureauInfo.zip);
-  content = content.replace(/{CREDIT_REPORT_NUMBER}/g, creditReportData.reportNumber || '');
+  content = content.replace(/{CREDIT_REPORT_NUMBER}/g, creditReportData?.reportNumber || '');
   
   // Replace account information placeholders if applicable
   if (accountName) {

@@ -41,3 +41,14 @@ export interface DisputeLetter {
   responseAt?: string;
   responseContent?: string;
 }
+
+// Additional types for dispute letter functionality
+export interface DisputePhrasesCache {
+  balanceDisputes: string[];
+  latePaymentDisputes: string[];
+  accountOwnershipDisputes: string[];
+  closedAccountDisputes: string[];
+  personalInfoDisputes: string[];
+  inquiryDisputes: string[];
+  general: string[];
+}
