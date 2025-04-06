@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { CreditReportData, Issue, IdentifiedIssue } from '@/utils/creditReport/types';
 import { parseReportContent } from '@/utils/creditReport/parser/parseReportContent';
@@ -30,7 +29,6 @@ export const analyzeReport = async (
     console.log("Starting credit report analysis for file:", file.name);
     onProgress?.(10);
     
-    // Check for test mode
     const isTestMode = sessionStorage.getItem('testModeSubscription') === 'true';
     console.log("Report analysis running in test mode:", isTestMode ? 'yes' : 'no');
     
@@ -41,21 +39,17 @@ export const analyzeReport = async (
       console.log("Processing PDF file, extracting text...");
       onProgress?.(20);
       
-      // Load PDF.js library if needed
       if (!window.pdfjsLib && !window.loadingPdfJs) {
         window.loadingPdfJs = true;
         console.log("Loading PDF.js library for better extraction");
         
         try {
-          // Try to dynamically load PDF.js
           const script = document.createElement('script');
           script.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
           document.head.appendChild(script);
           
-          // Wait for script to load
           await new Promise((resolve) => {
             script.onload = resolve;
-            // Timeout after 3 seconds
             setTimeout(resolve, 3000);
           });
           
@@ -72,20 +66,17 @@ export const analyzeReport = async (
         console.log(`Extracted ${textContent.length} characters from PDF file`);
       } catch (pdfError) {
         console.error("PDF extraction failed, falling back to raw text:", pdfError);
-        // If PDF extraction fails, try raw text as fallback
         textContent = await file.text();
       }
       
-      // Set a minimum text length threshold
       if (textContent.length < 100) {
         console.warn("Extracted text is very short, may not be valid");
-        textContent = await file.text(); // Try raw text as fallback
+        textContent = await file.text();
       }
       
       if (textContent.startsWith('%PDF')) {
         console.warn("PDF extraction resulted in binary data, not text");
         
-        // Try another extraction method as backup
         const rawText = await file.text();
         if (rawText.length > textContent.length && !rawText.startsWith('%PDF')) {
           console.log("Using raw text extraction as fallback");
@@ -106,7 +97,6 @@ export const analyzeReport = async (
       throw new Error("The file doesn't appear to contain valid credit report data");
     }
     
-    // Check if extraction only returned PDF binary
     if (textContent.startsWith('%PDF') && textContent.length < 1000) {
       throw new Error("Could not extract readable text from the PDF file. Please try a different file format or convert your PDF to text.");
     }
@@ -116,11 +106,8 @@ export const analyzeReport = async (
     
     const reportData = parseReportContent(textContent, isPdf);
     
-    // Save the raw text to session storage for debugging and further analysis
     try {
-      // Store first 50KB of text for debugging (to avoid storage limits)
       sessionStorage.setItem('lastReportText', textContent.substring(0, 50000));
-      // Store whether the original was a PDF
       sessionStorage.setItem('lastReportWasPdf', String(isPdf));
       console.log("Saved report text to session storage (first 50KB)");
     } catch (e) {
@@ -140,7 +127,6 @@ export const analyzeReport = async (
     
     onProgress?.(70);
     
-    // Store the full report data in session storage for letter generation
     try {
       sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
       console.log("Saved complete report data to session storage");
@@ -174,10 +160,8 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
   try {
     console.log("Starting analysis of credit report:", uploadedFile.name);
     
-    // Check for test mode
     const isTestMode = sessionStorage.getItem('testModeSubscription') === 'true';
     
-    // Show a longer-running analysis toast for PDFs
     let analysisToastId: string | undefined;
     if (uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf')) {
       const toastResult = toast.toast({
@@ -187,11 +171,10 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
       analysisToastId = toastResult?.id;
     }
     
-    // Set a timeout to ensure analysis completes even if stuck
     const analysisTimeout = setTimeout(() => {
       console.log("Analysis timeout triggered - forcing completion");
       completeAnalysisWithFallbackData();
-    }, 15000); // 15 second timeout
+    }, 15000);
     
     console.log("Processing uploaded report:", uploadedFile.name);
     
@@ -214,7 +197,6 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
     
     setReportData(reportData);
     
-    // Use the actual report data to identify real issues
     console.log("Identifying issues in the uploaded credit report");
     let generatedIssues = identifyIssues(reportData);
     
@@ -223,7 +205,6 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
       generatedIssues = addFallbackGenericIssues();
     }
     
-    // Always ensure we have at least 3 issues to show
     if (generatedIssues.length < 3) {
       const additionalIssues = addFallbackGenericIssues().slice(0, 3 - generatedIssues.length);
       generatedIssues = [...generatedIssues, ...additionalIssues];
@@ -242,9 +223,14 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
         <ToastAction altText="View Issues">View Issues</ToastAction> : undefined
     });
     
-    // Call the storeCreditReport and generateDisputeLetters functions
-    storeCreditReport(reportData, 'user-id', generatedIssues);
-    generateDisputeLetters(reportData, generatedIssues, 'user-id');
+    const convertedIssues: Issue[] = generatedIssues.map(issue => ({
+      ...issue,
+      bureau: issue.account?.bureau || reportData.primaryBureau || 'experian',
+      severity: determineSeverity(issue.impact)
+    }));
+    
+    storeCreditReport(reportData, 'user-id', convertedIssues);
+    generateDisputeLetters(reportData, convertedIssues, 'user-id');
     
   } catch (error) {
     console.error("Error in handleAnalysisComplete:", error);
@@ -261,11 +247,9 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
     });
   }
   
-  // Helper function to complete analysis with fallback data when there's an error
   function completeAnalysisWithFallbackData() {
     console.log("Using fallback data to complete analysis");
     
-    // Create basic report data
     const fallbackReportData: CreditReportData = {
       bureaus: {
         experian: true,
@@ -286,37 +270,31 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
       isTestMode: true
     };
     
-    // Store in session storage
     try {
       sessionStorage.setItem('creditReportData', JSON.stringify(fallbackReportData));
     } catch (e) {
       console.warn("Failed to store fallback report data:", e);
     }
     
-    // Set report data and issues
     setReportData(fallbackReportData);
     const fallbackIssues = addFallbackGenericIssues();
     setIssues(fallbackIssues);
     
-    // Complete the analysis
     setAnalyzing(false);
     setAnalyzed(true);
     
-    // Show success message
     toast.toast({
       title: "Analysis Complete",
       description: `Credit report analyzed with ${fallbackIssues.length} potential issues identified.`,
     });
   }
 
-  // Updated function signature for storeCreditReport with proper types
   async function storeCreditReport(
     creditReportData: CreditReportData,
     userId: string,
     issues: Issue[]
   ): Promise<void> {
     try {
-      // Create a record for the credit report
       const { error } = await supabase
         .from('credit_reports')
         .insert({
@@ -340,14 +318,12 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
     }
   }
 
-  // Updated function signature for generateDisputeLetters
   async function generateDisputeLetters(
     creditReportData: CreditReportData,
     issues: Issue[],
     userId: string
   ): Promise<string[]> {
     try {
-      // Group issues by bureau
       const issuesByBureau: Record<string, Issue[]> = {};
       
       for (const issue of issues) {
@@ -358,7 +334,6 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
         issuesByBureau[issue.bureau].push(issue);
       }
       
-      // Generate a letter for each bureau
       const letterIds: string[] = [];
       
       for (const [bureau, bureauIssues] of Object.entries(issuesByBureau)) {
@@ -366,10 +341,8 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
           continue;
         }
         
-        // Process the dispute data
         const processedData = processDisputeData(creditReportData, bureauIssues);
         
-        // Generate the dispute letter
         const letter = await generateEnhancedDisputeLetter(
           'General Dispute', 
           {
@@ -388,7 +361,6 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
         );
         
         if (letter && letter.length > 0) {
-          // Store the letter ID
           letterIds.push(`letter-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
         }
       }
@@ -399,9 +371,18 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
       return [];
     }
   }
+
+  function determineSeverity(impact: string): 'high' | 'medium' | 'low' {
+    if (impact === 'High Impact' || impact === 'Critical Impact') {
+      return 'high';
+    } else if (impact === 'Medium Impact') {
+      return 'medium';
+    } else {
+      return 'low';
+    }
+  }
 };
 
-// Generate sample credit report text for testing
 function generateSampleCreditReportText(): string {
   return `
 CREDIT REPORT
