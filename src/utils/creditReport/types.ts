@@ -1,4 +1,3 @@
-
 export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
@@ -90,9 +89,11 @@ export interface CreditReportData {
   rawText?: string;
   htmlContent?: string;
   isSampleData?: boolean;
-  isTestMode?: boolean; // Add the missing property
+  isTestMode?: boolean;
   analysisResults?: AnalysisResults;
   primaryBureau?: string;
+  reportNumber?: string;
+  bureau?: string;
 }
 
 export interface PersonalInfo {
@@ -103,6 +104,8 @@ export interface PersonalInfo {
   city?: string;
   state?: string;
   zip?: string;
+  employer?: string;
+  phone?: string;
 }
 
 export interface LegalReference {

@@ -1,93 +1,113 @@
-
 import { useState, useEffect } from 'react';
-import { CreditReportData } from '@/utils/creditReport/types';
-import { parseReportContent } from '@/utils/creditReport/parser/parseReportContent';
-import { extractTextFromPDF } from '@/utils/creditReport/extractors/pdfExtractor';
+import { CreditReportData, RecommendedDispute } from '@/utils/creditReport/types';
+import { identifyIssues } from '@/utils/reportAnalysis/issueIdentification';
 import { getSuccessfulDisputePhrases } from '@/utils/creditReport/disputeLetters/sampleLanguage';
-import { MessageType } from '../types';
-import { useToast } from '@/hooks/use-toast';
+import { getLegalReferencesForDispute } from '@/utils/creditReport/legalReferences';
 
-export const useReportAnalysis = () => {
-  const { toast } = useToast();
-  const [reportData, setReportData] = useState<CreditReportData | null>(null);
-  const [isProcessingFile, setIsProcessingFile] = useState(false);
-  const [sampleReportsLoaded, setSampleReportsLoaded] = useState(false);
-  const [samplePhrases, setSamplePhrases] = useState<Record<string, string[]>>({});
+export function useReportAnalysis(reportData: CreditReportData | null) {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [identifiedIssues, setIdentifiedIssues] = useState<RecommendedDispute[]>([]);
+  const [selectedIssues, setSelectedIssues] = useState<RecommendedDispute[]>([]);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
-  // Load sample reports and successful phrases on component mount
+  // Run analysis when report data changes
   useEffect(() => {
-    const loadSamples = async () => {
-      try {
-        // Load sample reports
-        const { getSampleReportData } = await import('@/utils/creditReport/disputeLetters/sampleLetters');
-        setSampleReportsLoaded(true);
-        
-        // Load successful dispute phrases
-        const phrases = await getSuccessfulDisputePhrases();
-        setSamplePhrases(phrases);
-        
-        console.log("Sample reports and phrases loaded successfully");
-      } catch (error) {
-        console.error("Error loading sample data:", error);
-      }
-    };
-    
-    loadSamples();
-  }, []);
+    if (reportData) {
+      analyzeReport(reportData);
+    } else {
+      // Reset state when report data is cleared
+      setIdentifiedIssues([]);
+      setSelectedIssues([]);
+      setAnalysisComplete(false);
+      setAnalysisError(null);
+    }
+  }, [reportData]);
 
-  const processReport = async (file: File, addMessage: (message: MessageType) => void) => {
-    setIsProcessingFile(true);
-    
+  // Analyze the credit report to identify issues
+  const analyzeReport = async (data: CreditReportData) => {
     try {
-      // Process the report
-      console.log("Starting credit report processing...");
+      setIsAnalyzing(true);
+      setAnalysisError(null);
       
-      // Extract text from the file
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-      let textContent = '';
+      console.log("Starting credit report analysis...");
       
-      if (isPdf) {
-        textContent = await extractTextFromPDF(file);
-      } else {
-        textContent = await file.text();
-      }
+      // Identify issues in the credit report
+      const issues = await identifyIssues(data);
       
-      // Parse the text content
-      const data = await parseReportContent(textContent, isPdf);
-      
-      console.log("Credit report processing complete.");
-      setReportData(data);
-      return data;
-    } catch (error) {
-      console.error("Error processing credit report:", error);
-      
-      const errorMessage: MessageType = {
-        id: Date.now().toString(),
-        content: `I encountered an error processing your credit report: ${error instanceof Error ? error.message : "Unknown error"}. Please make sure you've uploaded a valid credit report file.`,
-        sender: 'agent',
-        timestamp: new Date(),
-      };
-      
-      addMessage(errorMessage);
-      toast({
-        title: "Error processing report",
-        description: "There was an error processing your credit report. Please try a different file.",
-        variant: "destructive",
+      // Enhance issues with sample dispute language and legal references
+      const enhancedIssues = issues.map(issue => {
+        // Get sample dispute language for this type of issue
+        const sampleLanguage = getSuccessfulDisputePhrases(issue.type);
+        
+        // Get legal references for this type of issue
+        const legalRefs = getLegalReferencesForDispute(issue.type, issue.description);
+        
+        return {
+          ...issue,
+          sampleDisputeLanguage: sampleLanguage.length > 0 ? sampleLanguage[0] : undefined,
+          legalBasis: legalRefs
+        };
       });
       
-      return null;
+      console.log(`Analysis complete. Found ${enhancedIssues.length} potential issues.`);
+      
+      // Sort issues by impact/severity
+      const sortedIssues = enhancedIssues.sort((a, b) => {
+        const impactOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
+        return impactOrder[a.impact] - impactOrder[b.impact];
+      });
+      
+      setIdentifiedIssues(sortedIssues);
+      setSelectedIssues(sortedIssues.filter(issue => issue.impact === 'High'));
+      setAnalysisComplete(true);
+    } catch (error) {
+      console.error("Error analyzing credit report:", error);
+      setAnalysisError("Failed to analyze credit report. Please try again.");
     } finally {
-      setIsProcessingFile(false);
+      setIsAnalyzing(false);
     }
   };
 
-  return {
-    reportData,
-    setReportData,
-    isProcessingFile,
-    setIsProcessingFile,
-    sampleReportsLoaded,
-    samplePhrases,
-    processReport
+  // Toggle selection of an issue
+  const toggleIssueSelection = (issueId: string) => {
+    setSelectedIssues(prev => {
+      const isSelected = prev.some(issue => issue.id === issueId);
+      
+      if (isSelected) {
+        return prev.filter(issue => issue.id !== issueId);
+      } else {
+        const issueToAdd = identifiedIssues.find(issue => issue.id === issueId);
+        return issueToAdd ? [...prev, issueToAdd] : prev;
+      }
+    });
   };
-};
+
+  // Select all issues
+  const selectAllIssues = () => {
+    setSelectedIssues([...identifiedIssues]);
+  };
+
+  // Clear all selected issues
+  const clearSelectedIssues = () => {
+    setSelectedIssues([]);
+  };
+
+  // Select issues by impact level
+  const selectIssuesByImpact = (impact: 'High' | 'Medium' | 'Low') => {
+    const filteredIssues = identifiedIssues.filter(issue => issue.impact === impact);
+    setSelectedIssues(filteredIssues);
+  };
+
+  return {
+    isAnalyzing,
+    analysisComplete,
+    identifiedIssues,
+    selectedIssues,
+    analysisError,
+    toggleIssueSelection,
+    selectAllIssues,
+    clearSelectedIssues,
+    selectIssuesByImpact
+  };
+}

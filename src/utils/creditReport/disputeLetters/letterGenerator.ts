@@ -193,16 +193,18 @@ function generateLetterContent(
   // Replace personal information placeholders
   const { personalInfo } = creditReportData;
   
-  content = content.replace(/{CONSUMER_FULL_NAME}/g, personalInfo?.name || '');
-  content = content.replace(/{CONSUMER_STREET_ADDRESS}/g, personalInfo?.address || '');
-  content = content.replace(/{CONSUMER_CITY}/g, personalInfo?.city || '');
-  content = content.replace(/{CONSUMER_STATE}/g, personalInfo?.state || '');
-  content = content.replace(/{CONSUMER_ZIP}/g, personalInfo?.zip || '');
-  content = content.replace(/{CONSUMER_SSN_LAST4}/g, personalInfo?.ssn?.slice(-4) || '');
-  content = content.replace(/{CONSUMER_DOB}/g, personalInfo?.dob || '');
-  content = content.replace(/{CURRENT_DATE}/g, new Date().toLocaleDateString());
-  content = content.replace(/{CONSUMER_EMPLOYER}/g, personalInfo?.employer || '');
-  content = content.replace(/{CONSUMER_PHONE}/g, personalInfo?.phone || '');
+  if (personalInfo) {
+    content = content.replace(/{CONSUMER_FULL_NAME}/g, personalInfo.name || '');
+    content = content.replace(/{CONSUMER_STREET_ADDRESS}/g, personalInfo.address || '');
+    content = content.replace(/{CONSUMER_CITY}/g, personalInfo.city || '');
+    content = content.replace(/{CONSUMER_STATE}/g, personalInfo.state || '');
+    content = content.replace(/{CONSUMER_ZIP}/g, personalInfo.zip || '');
+    content = content.replace(/{CONSUMER_SSN_LAST4}/g, personalInfo.ssn?.slice(-4) || '');
+    content = content.replace(/{CONSUMER_DOB}/g, personalInfo.dob || '');
+    content = content.replace(/{CURRENT_DATE}/g, new Date().toLocaleDateString());
+    content = content.replace(/{CONSUMER_EMPLOYER}/g, personalInfo.employer || '');
+    content = content.replace(/{CONSUMER_PHONE}/g, personalInfo.phone || '');
+  }
   
   // Replace credit bureau specific placeholders
   const bureauInfo = getBureauInfo(bureau);
@@ -212,7 +214,7 @@ function generateLetterContent(
   content = content.replace(/{CREDIT_BUREAU_CITY}/g, bureauInfo.city);
   content = content.replace(/{CREDIT_BUREAU_STATE}/g, bureauInfo.state);
   content = content.replace(/{CREDIT_BUREAU_ZIP}/g, bureauInfo.zip);
-  content = content.replace(/{CREDIT_REPORT_NUMBER}/g, creditReportData?.reportNumber || '');
+  content = content.replace(/{CREDIT_REPORT_NUMBER}/g, creditReportData.reportNumber || '');
   
   // Replace account information placeholders if applicable
   if (accountName) {

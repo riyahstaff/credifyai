@@ -9,7 +9,7 @@ import { DisputePhrasesCache } from '../types/letterTypes';
 let disputePhrasesCache: DisputePhrasesCache = {
   balanceDisputes: [],
   latePaymentDisputes: [],
-  accountOwnershipDispishes: [],
+  accountOwnershipDisputes: [], // Fixed typo here
   closedAccountDisputes: [],
   personalInfoDisputes: [],
   inquiryDisputes: [],
@@ -177,4 +177,35 @@ export const updateDisputePhrasesCache = (newPhrases?: Partial<DisputePhrasesCac
  */
 export const getDisputePhrasesCache = (): DisputePhrasesCache => {
   return disputePhrasesCache;
+};
+
+/**
+ * Gets successful dispute phrases/examples for a specific dispute type
+ * @param disputeType Type of dispute (e.g., 'late_payment', 'inquiry')
+ * @returns Array of successful dispute phrases
+ */
+export const getSuccessfulDisputePhrases = (disputeType: string): string[] => {
+  const generalExamples = [
+    "I have reviewed my credit report and found inaccurate information that requires correction.",
+    "Under the Fair Credit Reporting Act, you are required to verify this information or remove it from my report.",
+    "I am requesting that you investigate and correct this error as required by law."
+  ];
+  
+  // Type-specific examples
+  switch(disputeType.toLowerCase()) {
+    case 'late_payment_disputes':
+      return [
+        ...generalExamples,
+        "I have never made a late payment on this account and have documentation to prove timely payments.",
+        "The late payment reported on this account is incorrect as I have always paid within the terms of our agreement."
+      ];
+    case 'inquiry_disputes':
+      return [
+        ...generalExamples,
+        "I did not authorize this inquiry on my credit report and request its immediate removal.",
+        "This inquiry was made without my consent or knowledge and violates FCRA Section 604."
+      ];
+    default:
+      return generalExamples;
+  }
 };
