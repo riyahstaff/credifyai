@@ -1,47 +1,29 @@
 
-// Import the renamed function if needed
-import { getSampleDisputeLetterTemplate } from '@/utils/creditReport/disputeLetters';
+import { 
+  getSampleDisputeLanguage 
+} from '@/utils/creditReport/disputeLetters';
 
-// Function to provide sample dispute language based on account and field types
-export const getSampleDisputeLanguage = async (
-  accountName: string, 
-  field: string, 
-  bureau: string
-): Promise<string> => {
-  // Get dispute type from field
-  let disputeType = 'general';
-  
-  const fieldLower = field.toLowerCase();
-  if (fieldLower.includes('balance')) {
-    disputeType = 'balance';
-  } else if (fieldLower.includes('payment') || fieldLower.includes('late')) {
-    disputeType = 'late_payment';
-  } else if (fieldLower.includes('status')) {
-    disputeType = 'account_status';
-  } else if (fieldLower.includes('date')) {
-    disputeType = 'dates';
-  } else if (fieldLower.includes('inquiry') || fieldLower.includes('inquiries')) {
-    disputeType = 'inquiry';
-  } else if (accountName.toLowerCase().includes('personal') || fieldLower.includes('address') || fieldLower.includes('name')) {
-    disputeType = 'personal_information';
-  } else if (fieldLower.includes('student') || accountName.toLowerCase().includes('student')) {
-    disputeType = 'student_loan';
-  }
-  
-  // Default sample language based on dispute type
-  const defaultLanguage: Record<string, string> = {
-    'balance': 'The balance shown on this account is incorrect and does not reflect my actual financial obligation. This error violates Metro 2 reporting standards which require accurate balance reporting.',
-    'late_payment': 'This account is incorrectly reported as delinquent. According to my records, all payments have been made on time. This error violates FCRA Section 623 which requires furnishers to report accurate information.',
-    'account_status': 'The account status is being reported incorrectly. This violates FCRA accuracy requirements and Metro 2 standards for proper status code reporting.',
-    'dates': 'The dates associated with this account are inaccurate and do not align with the actual account history. This violates Metro 2 standards for date reporting.',
-    'personal_information': 'My personal information is reported incorrectly. This error affects my credit profile and violates FCRA requirements for accurate consumer information.',
-    'inquiry': 'This inquiry was made without my knowledge or consent. This violates FCRA Section 604, which requires a permissible purpose for accessing my credit information.',
-    'student_loan': 'This student loan account is being reported inaccurately. Recent Department of Education changes may qualify this loan for discharge or reduction. This violates FCRA Section 623 which requires furnishers to report accurate information.',
-    'general': `The information for this account is being inaccurately reported by ${bureau}. This information is incorrect and should be investigated and corrected to reflect accurate information. This error violates both FCRA Section 611(a) accuracy requirements and Metro 2 Format standards.`
+/**
+ * Get sample dispute language for a specific dispute type
+ * @param disputeType The type of dispute
+ * @param accountName Optional account name for personalized samples
+ */
+export function getSampleDisputeText(disputeType: string, accountName?: string): string {
+  return getSampleDisputeLanguage(disputeType, accountName);
+}
+
+/**
+ * Get a sample dispute letter template for a specific issue
+ * @param issueType The type of issue
+ */
+export function getSampleDisputeLetterText(issueType: string): string {
+  const samples = {
+    'late_payment': 'I am disputing the late payment reported by [CREDITOR] on [DATE]. I have always made my payments on time and have documentation to prove it.',
+    'collection_account': 'I am disputing the collection account reported by [COLLECTION AGENCY]. This debt is [not mine/paid/settled/too old to report].',
+    'inquiry': 'I am disputing the inquiry made by [COMPANY] on [DATE]. I did not authorize this inquiry and have no record of applying for credit with this company.',
+    'account_ownership': 'I am disputing the account with [CREDITOR]. This account does not belong to me and may be the result of identity theft or a mixed file.',
+    'default': 'I am writing to dispute information that appears on my credit report. The item(s) I am disputing appear to be inaccurate and I request that they be investigated and corrected according to the Fair Credit Reporting Act.'
   };
   
-  // Get the specific language for the field if available, otherwise use a generic template
-  const language = defaultLanguage[disputeType] || defaultLanguage['general'];
-  
-  return language;
-};
+  return samples[issueType as keyof typeof samples] || samples.default;
+}

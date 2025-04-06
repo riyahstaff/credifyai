@@ -8,7 +8,7 @@
 export * from './letterGenerator';
 
 // Export any additional dispute letter utilities
-export * from './sampleLanguage';
+export { getSampleDisputeLanguage } from './sampleLanguage';
 export * from './samples';
 export * from './fallbackTemplates/accountLetter';
 export * from './fallbackTemplates/inquiryLetter';

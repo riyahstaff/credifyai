@@ -1,8 +1,9 @@
 
-// This is now just a barrel file that re-exports from the new modular structure
+// This is just a barrel file that re-exports from the new modular structure
 import { 
   generateDisputeLetterForDiscrepancy,
-  getSampleDisputeLanguage 
+  getSampleDisputeLanguage,
+  generateEnhancedDisputeLetter
 } from '@/utils/creditReport/disputeLetters';
 
 // Export adjusted manual generator that returns a Promise
@@ -19,3 +20,6 @@ export const generateManualDisputeLetter = originalGenerateManualDisputeLetter;
 
 // Re-export utilities for sample language
 export const getSampleDisputeLanguage_export = getSampleDisputeLanguage;
+
+// Re-export the enhanced dispute letter generator with the correct name
+export { generateEnhancedDisputeLetter };

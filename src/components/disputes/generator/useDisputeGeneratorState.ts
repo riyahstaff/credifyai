@@ -1,223 +1,179 @@
+import { useState, useCallback } from 'react';
+import { useToast } from "@/components/ui/use-toast"
+import { CreditReportAccount } from '@/utils/creditReport/types';
+import { generateEnhancedDisputeLetter } from '@/utils/creditReport/disputeLetters';
+import { generateAutomaticDisputeLetter } from '@/components/ai/services/disputes/automaticLetterGenerator';
 
-import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
-import { LetterTemplate, DisputeData } from './types';
-import { determineBureau } from './utils/bureauUtils';
-import { loadStoredData, saveAccountToStorage, saveReportToStorage } from './utils/storageUtils';
-import { processDisputeData } from './utils/letterUtils';
+interface DisputeGeneratorState {
+  selectedBureau: string;
+  setSelectedBureau: (bureau: string) => void;
+  accountName: string;
+  setAccountName: (name: string) => void;
+  selectedAccount: CreditReportAccount | null;
+  setSelectedAccount: (account: CreditReportAccount | null) => void;
+  useSelectedAccount: boolean;
+  setUseSelectedAccount: (use: boolean) => void;
+  disputeType: string;
+  setDisputeType: (type: string) => void;
+  issueDescription: string;
+  setIssueDescription: (description: string) => void;
+  generating: boolean;
+  setGenerating: (generating: boolean) => void;
+  letterContent: string;
+  setLetterContent: (content: string) => void;
+  statusMessage: string;
+  setStatusMessage: (message: string) => void;
+  customerName: string;
+  setCustomerName: (name: string) => void;
+  streetAddress: string;
+  setStreetAddress: (address: string) => void;
+  city: string;
+  setCity: (city: string) => void;
+  state: string;
+  setState: (state: string) => void;
+  zipCode: string;
+  setZipCode: (zip: string) => void;
+  generator: 'manual' | 'ai';
+  setGenerator: (generatorType: 'manual' | 'ai') => void;
+  aiPromptOpen: boolean;
+  setAiPromptOpen: (open: boolean) => void;
+  generateLetter: () => Promise<void>;
+}
 
-export function useDisputeGeneratorState(testMode: boolean = false) {
-  const { toast } = useToast();
-  const [reportData, setReportData] = useState<CreditReportData | null>(null);
+export const useDisputeGeneratorState = (): DisputeGeneratorState => {
+  const [selectedBureau, setSelectedBureau] = useState<string>('experian');
+  const [accountName, setAccountName] = useState<string>('');
   const [selectedAccount, setSelectedAccount] = useState<CreditReportAccount | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<LetterTemplate | null>(null);
-  const [selectedBureau, setSelectedBureau] = useState<string | null>(null);
-  const [generatedLetter, setGeneratedLetter] = useState('');
-  
-  useEffect(() => {
-    if (testMode) {
-      console.log("DisputeGenerator: Test mode is active");
-    }
+  const [useSelectedAccount, setUseSelectedAccount] = useState<boolean>(false);
+  const [disputeType, setDisputeType] = useState<string>('incorrect_information');
+  const [issueDescription, setIssueDescription] = useState<string>('');
+  const [generating, setGenerating] = useState<boolean>(false);
+  const [letterContent, setLetterContent] = useState<string>('');
+  const [statusMessage, setStatusMessage] = useState<string>('');
+  const [customerName, setCustomerName] = useState<string>('');
+  const [streetAddress, setStreetAddress] = useState<string>('');
+  const [city, setCity] = useState<string>('');
+  const [state, setState] = useState<string>('');
+  const [zipCode, setZipCode] = useState<string>('');
+  const [generator, setGenerator] = useState<'manual' | 'ai'>('manual');
+  const [aiPromptOpen, setAiPromptOpen] = useState<boolean>(false);
+  const { toast } = useToast();
+
+  // Fix the generateLetter function to use the correct parameter signature
+  const generateLetter = async () => {
+    if (generating) return;
     
-    const { reportData, selectedAccount, selectedBureau } = loadStoredData();
-    
-    if (reportData) {
-      setReportData(reportData);
-      
-      // Use primaryBureau if available
-      if (reportData.primaryBureau) {
-        console.log("Using primary bureau from loaded report data:", reportData.primaryBureau);
-      }
-      
-      toast({
-        title: "Credit report loaded",
-        description: `Loaded credit report with ${reportData.accounts?.length || 0} accounts.`,
-      });
-    }
-    
-    if (selectedAccount) {
-      setSelectedAccount(selectedAccount);
-      
-      // Determine bureau from account or report
-      let bureau = selectedBureau;
-      if (!bureau && selectedAccount.bureau) {
-        bureau = determineBureau(selectedAccount.bureau);
-      } else if (!bureau && reportData?.primaryBureau) {
-        bureau = reportData.primaryBureau;
-      } else if (!bureau) {
-        bureau = 'Experian';
-      }
-      
-      setSelectedBureau(bureau);
-      console.log("Using bureau for dispute:", bureau);
-    }
-  }, [toast, testMode]);
-  
-  const handleReportProcessed = (data: CreditReportData) => {
-    setReportData(data);
-    saveReportToStorage(data);
-    
-    // Set bureau from report data if available
-    if (data.primaryBureau) {
-      setSelectedBureau(data.primaryBureau);
-      console.log("Using primary bureau from report:", data.primaryBureau);
-    }
-    
-    if (data.accounts && data.accounts.length > 0) {
-      const firstAccount = data.accounts[0];
-      setSelectedAccount(firstAccount);
-      saveAccountToStorage(firstAccount);
-      
-      // Determine bureau priority: account bureau -> primary bureau -> default
-      if (firstAccount.bureau) {
-        setSelectedBureau(determineBureau(firstAccount.bureau));
-      } else if (data.primaryBureau) {
-        setSelectedBureau(data.primaryBureau);
-      } else {
-        setSelectedBureau('Experian');
-      }
-    }
-  };
-  
-  const handleAccountSelected = (account: CreditReportAccount) => {
-    setSelectedAccount(account);
-    saveAccountToStorage(account);
-    
-    console.log("Account selected:", account);
-    
-    // Determine bureau priority: account bureau -> report primary bureau -> current selected -> default
-    if (account.bureau) {
-      setSelectedBureau(determineBureau(account.bureau));
-    } else if (reportData?.primaryBureau) {
-      setSelectedBureau(reportData.primaryBureau);
-    } else if (!selectedBureau) {
-      setSelectedBureau('Experian');
-    }
-    
-    // Handle auto-generation of letter
-    if (!generatedLetter) {
-      const errorType = "Inaccurate Information";
-      const explanation = `I am disputing this ${account.accountName} account as it contains inaccurate information that requires investigation and correction.`;
-      
-      // Use the bureau we just determined
-      const bureau = account.bureau ? determineBureau(account.bureau) : 
-                     reportData?.primaryBureau ? reportData.primaryBureau : 
-                     selectedBureau || 'Experian';
-      
-      console.log("Using bureau for auto-generation:", bureau);
-      
-      const disputeData = {
-        bureau: bureau,
-        accountName: account.accountName,
-        accountNumber: account.accountNumber || "Unknown",
-        errorType: errorType,
-        explanation: explanation,
-        actualAccountInfo: {
-          name: account.accountName,
-          number: account.accountNumber || "Unknown",
-          balance: account.currentBalance || account.balance,
-          openDate: account.dateOpened || account.openDate,
-          reportedDate: account.dateReported || account.lastReportedDate,
-          status: account.paymentStatus
-        }
-      };
-      
-      setTimeout(() => {
-        const disputeFormButton = document.querySelector('button[type="submit"]');
-        if (disputeFormButton instanceof HTMLButtonElement) {
-          disputeFormButton.click();
-        }
-      }, 500);
-    }
-  };
-  
-  const handleTemplateSelected = (template: LetterTemplate) => {
-    setSelectedTemplate(template);
-  };
-  
-  const handleDisputeGenerated = async (disputeData: DisputeData) => {
-    console.log("Handling dispute generation with data:", {
-      accountName: disputeData.accountName,
-      bureau: disputeData.bureau,
-      errorType: disputeData.errorType
-    });
+    setGenerating(true);
     
     try {
-      // Override default Experian bureau with the report's primary bureau if available
-      if (reportData?.primaryBureau && disputeData.bureau === "Experian") {
-        disputeData.bureau = reportData.primaryBureau;
-        console.log("Overriding bureau with primary bureau from report:", disputeData.bureau);
-      }
+      let content = "";
       
-      const processedData = await processDisputeData(disputeData, testMode);
+      // Get stored report data if available
+      const storedReportData = sessionStorage.getItem('creditReportData');
+      const creditReportData = storedReportData ? JSON.parse(storedReportData) : null;
       
-      const isInquiryDispute = disputeData.errorType.toLowerCase().includes('inquiry') || 
-        (selectedAccount && selectedAccount.accountType === 'Inquiry');
+      // Get user info from form
+      const userInfo = {
+        name: customerName,
+        address: streetAddress,
+        city,
+        state,
+        zip: zipCode
+      };
       
-      let letterContent = processedData.letterContent || "";
-      
-      if (!letterContent || letterContent.length < 100) {
-        console.warn("No valid letter content was generated, using fallback template");
-        
-        if (isInquiryDispute) {
-          const { generateFallbackInquiryDisputeLetter } = await import('@/utils/creditReport/disputeLetters/fallbackTemplates/inquiryLetter');
-          letterContent = generateFallbackInquiryDisputeLetter();
+      if (generator === 'ai' && aiPromptOpen) {
+        // Generate letter using AI assistant
+        setStatusMessage("Generating letter with AI assistant...");
+        content = await generateAutomaticDisputeLetter(
+          creditReportData,
+          accountName,
+          userInfo
+        );
+      } else {
+        // Standard letter generation
+        if (useSelectedAccount && selectedAccount) {
+          // Account-specific dispute
+          setStatusMessage("Generating account-specific dispute letter...");
+          content = await generateEnhancedDisputeLetter(
+            disputeType,
+            {
+              accountName: selectedAccount.accountName || accountName,
+              accountNumber: selectedAccount.accountNumber,
+              errorDescription: issueDescription,
+              bureau: selectedBureau
+            },
+            userInfo,
+            creditReportData
+          );
         } else {
-          const { generateFallbackAccountDisputeLetter } = await import('@/utils/creditReport/disputeLetters/fallbackTemplates/accountLetter');
-          letterContent = generateFallbackAccountDisputeLetter({
-            accountName: disputeData.accountName,
-            accountNumber: disputeData.accountNumber,
-            errorType: disputeData.errorType,
-            bureau: disputeData.bureau
-          });
-        }
-        
-        processedData.letterContent = letterContent;
-        
-        try {
-          const existingLetterData = sessionStorage.getItem('pendingDisputeLetter');
-          if (existingLetterData) {
-            const parsedLetter = JSON.parse(existingLetterData);
-            parsedLetter.letterContent = letterContent;
-            parsedLetter.content = letterContent;
-            sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(parsedLetter));
-          }
-        } catch (error) {
-          console.error("Error updating letter with fallback content:", error);
+          // General dispute
+          setStatusMessage("Generating general dispute letter...");
+          content = await generateEnhancedDisputeLetter(
+            disputeType,
+            {
+              accountName: accountName || 'Multiple Accounts',
+              accountNumber: undefined,
+              errorDescription: issueDescription,
+              bureau: selectedBureau
+            },
+            userInfo,
+            creditReportData
+          );
         }
       }
       
-      setGeneratedLetter(letterContent);
-      sessionStorage.setItem('autoGeneratedLetter', 'true');
-      console.log("Setting autoGeneratedLetter flag to true");
-      
-      sessionStorage.setItem('forceLettersReload', 'true');
-      console.log("Setting forceLettersReload flag to true");
-    } catch (error) {
-      console.error("Error in handleDisputeGenerated:", error);
+      setLetterContent(content);
+      setStatusMessage("Letter generated successfully!");
       toast({
-        title: "Letter Generation Error",
-        description: "There was a problem generating your dispute letter. Please try again.",
-        variant: "destructive",
+        title: "Letter Generated",
+        description: "Your dispute letter has been generated and is ready for review."
       });
+    } catch (error) {
+      console.error("Error generating letter:", error);
+      setStatusMessage(`Error generating letter: ${error instanceof Error ? error.message : String(error)}`);
+      toast({
+        variant: "destructive",
+        title: "Letter Generation Failed",
+        description: "There was an error generating your dispute letter. Please try again."
+      });
+    } finally {
+      setGenerating(false);
     }
   };
-  
-  const handleLetterReset = () => {
-    setGeneratedLetter('');
-  };
-  
+
   return {
-    reportData,
-    selectedAccount,
-    selectedTemplate,
     selectedBureau,
-    generatedLetter,
-    handleReportProcessed,
-    handleAccountSelected,
-    handleTemplateSelected,
-    handleDisputeGenerated,
-    handleLetterReset
+    setSelectedBureau,
+    accountName,
+    setAccountName,
+    selectedAccount,
+    setSelectedAccount,
+    useSelectedAccount,
+    setUseSelectedAccount,
+    disputeType,
+    setDisputeType,
+    issueDescription,
+    setIssueDescription,
+    generating,
+    setGenerating,
+    letterContent,
+    setLetterContent,
+    statusMessage,
+    setStatusMessage,
+    customerName,
+    setCustomerName,
+    streetAddress,
+    setStreetAddress,
+    city,
+    setCity,
+    state,
+    setState,
+    zipCode,
+    setZipCode,
+    generator,
+    setGenerator,
+    aiPromptOpen,
+    setAiPromptOpen,
+    generateLetter,
   };
-}
+};
