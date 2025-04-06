@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { CreditReportAccount } from '@/utils/creditReport/types';
@@ -30,7 +29,7 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
     handleTemplateSelected,
     handleDisputeGenerated,
     handleLetterReset
-  } = useDisputeGeneratorState(testMode);
+  } = useDisputeGeneratorState();
   
   const { downloadLetter } = useLetterDownload();
   
@@ -91,7 +90,6 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
     onGenerateDispute(disputeData);
   };
   
-  // Render form or result based on whether a letter has been generated
   const mainContent = !generatedLetter ? (
     <DisputeForm 
       reportData={reportData}
@@ -111,7 +109,6 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
     />
   );
   
-  // Sidebar components
   const sidebarContent = (
     <>
       <CreditReportUploader 

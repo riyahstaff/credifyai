@@ -17,7 +17,7 @@ export function getSampleDisputeText(disputeType: string, accountName?: string):
  * @param issueType The type of issue
  */
 export function getSampleDisputeLetterText(issueType: string): string {
-  const samples = {
+  const samples: Record<string, string> = {
     'late_payment': 'I am disputing the late payment reported by [CREDITOR] on [DATE]. I have always made my payments on time and have documentation to prove it.',
     'collection_account': 'I am disputing the collection account reported by [COLLECTION AGENCY]. This debt is [not mine/paid/settled/too old to report].',
     'inquiry': 'I am disputing the inquiry made by [COMPANY] on [DATE]. I did not authorize this inquiry and have no record of applying for credit with this company.',
@@ -25,5 +25,5 @@ export function getSampleDisputeLetterText(issueType: string): string {
     'default': 'I am writing to dispute information that appears on my credit report. The item(s) I am disputing appear to be inaccurate and I request that they be investigated and corrected according to the Fair Credit Reporting Act.'
   };
   
-  return samples[issueType as keyof typeof samples] || samples.default;
+  return samples[issueType] || samples.default;
 }

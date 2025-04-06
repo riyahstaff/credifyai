@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase/client';
 import { CreditReportData } from './types';
 
@@ -93,14 +94,14 @@ export class CreditReportStorage {
         account_name: account.accountName,
         account_number: account.accountNumber,
         account_type: account.accountType,
-        balance: account.balance,
+        balance: account.balance || account.currentBalance,
         credit_limit: account.creditLimit,
         high_balance: account.highBalance,
-        open_date: account.openDate,
+        open_date: account.openDate || account.dateOpened,
         status: account.status,
         payment_status: account.paymentStatus,
-        last_payment_date: account.lastPaymentDate,
-        past_due_amount: account.pastDueAmount,
+        last_payment_date: account.lastActivity,  // Changed from lastPaymentDate
+        past_due_amount: account.isNegative ? 1 : 0,  // Changed from pastDueAmount
         payment_history: account.paymentHistory,
         remarks: account.remarks,
         bureau: account.bureau,
@@ -142,9 +143,9 @@ export class CreditReportStorage {
       // Format inquiries for Supabase
       const formattedInquiries = inquiries.map(inquiry => ({
         credit_report_id: reportId,
-        inquiry_name: inquiry.inquiryName,
+        inquiry_name: inquiry.creditor || inquiry.inquiryBy || "Unknown Company",  // Changed from inquiryName
         inquiry_date: inquiry.inquiryDate,
-        inquiry_type: inquiry.inquiryType,
+        inquiry_type: inquiry.type || "Hard Inquiry",  // Changed from inquiryType
         bureau: inquiry.bureau,
         created_at: new Date().toISOString()
       }));
