@@ -1,506 +1,475 @@
 
-/**
- * Dispute letter generator functions
- */
-import { RecommendedDispute, UserInfo, LegalReference } from '../types';
-import { getLegalReferencesForDispute } from '../legalReferences';
-import { getSampleDisputeLanguage } from './sampleLanguage';
-import { findSampleDispute } from './samples';
+import { supabase } from '@/lib/supabase/client';
+import { CreditReportData, DisputeLetter, LetterTemplate, Issue } from '../types';
 
 /**
- * Generate a dispute letter for a specific discrepancy
+ * Generates an enhanced dispute letter based on credit report data and identified issues
+ * @param creditReportData The parsed credit report data
+ * @param issues Array of identified issues in the credit report
+ * @param userId The user ID for storing the letter
+ * @returns The generated dispute letter object
  */
-export const generateDisputeLetterForDiscrepancy = async (
-  discrepancy: RecommendedDispute, 
-  userInfo: UserInfo,
-  creditReportData?: any
-): Promise<string> => {
-  console.log("Generating dispute letter for:", discrepancy);
+export async function generateEnhancedDisputeLetter(
+  creditReportData: CreditReportData,
+  issues: Issue[],
+  userId: string
+): Promise<DisputeLetter> {
+  try {
+    // Group issues by bureau and account
+    const groupedIssues = groupIssuesByBureauAndAccount(issues);
+    
+    // For each group, select the appropriate template and generate a letter
+    const letters: DisputeLetter[] = [];
+    
+    for (const group of groupedIssues) {
+      const { bureau, accountName, accountNumber, issues: groupIssues } = group;
+      
+      // Determine the primary issue type for template selection
+      const primaryIssueType = determinePrimaryIssueType(groupIssues);
+      
+      // Fetch the appropriate template from Supabase
+      const template = await fetchLetterTemplate(primaryIssueType);
+      
+      if (!template) {
+        console.error(`No template found for issue type: ${primaryIssueType}`);
+        continue;
+      }
+      
+      // Generate the letter content
+      const letterContent = generateLetterContent(
+        template,
+        creditReportData,
+        bureau,
+        accountName,
+        accountNumber,
+        groupIssues
+      );
+      
+      // Create the dispute letter object
+      const letter: DisputeLetter = {
+        id: generateUniqueId(),
+        title: `${bureau} Dispute - ${accountName || 'Multiple Accounts'}`,
+        content: letterContent,
+        letterContent: letterContent, // Duplicate for compatibility
+        bureau,
+        accountName: accountName || 'Multiple Accounts',
+        accountNumber: accountNumber || 'Multiple',
+        errorType: primaryIssueType,
+        status: 'ready',
+        createdAt: new Date().toISOString(),
+        userId
+      };
+      
+      letters.push(letter);
+      
+      // Store the letter in Supabase
+      await storeDisputeLetter(letter);
+    }
+    
+    // Return the first letter or a default letter if none were generated
+    return letters[0] || createDefaultLetter(creditReportData, userId);
+  } catch (error) {
+    console.error('Error generating dispute letter:', error);
+    return createDefaultLetter(creditReportData, userId);
+  }
+}
 
-  // Get the bureau address
-  const bureauAddresses = {
-    'experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
-    'equifax': 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374',
-    'transunion': 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016'
+/**
+ * Groups issues by bureau and account for more targeted letter generation
+ */
+function groupIssuesByBureauAndAccount(issues: Issue[]): {
+  bureau: string;
+  accountName?: string;
+  accountNumber?: string;
+  issues: Issue[];
+}[] {
+  const groups: Map<string, {
+    bureau: string;
+    accountName?: string;
+    accountNumber?: string;
+    issues: Issue[];
+  }> = new Map();
+  
+  for (const issue of issues) {
+    const { bureau, accountName, accountNumber } = issue;
+    
+    // Create a key for grouping
+    const key = `${bureau}|${accountName || ''}|${accountNumber || ''}`;
+    
+    if (!groups.has(key)) {
+      groups.set(key, {
+        bureau,
+        accountName,
+        accountNumber,
+        issues: []
+      });
+    }
+    
+    groups.get(key)?.issues.push(issue);
+  }
+  
+  return Array.from(groups.values());
+}
+
+/**
+ * Determines the primary issue type for template selection
+ */
+function determinePrimaryIssueType(issues: Issue[]): string {
+  // Count occurrences of each issue type
+  const typeCounts: Record<string, number> = {};
+  
+  for (const issue of issues) {
+    const { type } = issue;
+    typeCounts[type] = (typeCounts[type] || 0) + 1;
+  }
+  
+  // Find the most common issue type
+  let maxCount = 0;
+  let primaryType = 'general';
+  
+  for (const [type, count] of Object.entries(typeCounts)) {
+    if (count > maxCount) {
+      maxCount = count;
+      primaryType = type;
+    }
+  }
+  
+  // Map the primary type to one of our template types
+  const templateTypeMap: Record<string, string> = {
+    'inconsistent_information': 'inconsistent_information',
+    'multiple_addresses': 'multiple_addresses',
+    'late_payment': 'late_payment_disputes',
+    'collection_account': 'collection_account_disputes',
+    'student_loan': 'student_loan_disputes',
+    'inquiry': 'inquiry_disputes',
+    'personal_information': 'personal_information_disputes',
+    'account_ownership': 'account_ownership_disputes',
+    'general': 'inconsistent_information' // Default to inconsistent information
   };
   
-  // Normalize bureau name to match our address keys
-  const bureauKey = discrepancy.bureau.toLowerCase().replace(/\s+/g, '');
-  
-  // Choose the correct address or use a placeholder
-  const bureauAddress = bureauAddresses[bureauKey as keyof typeof bureauAddresses] || 
-                       `${discrepancy.bureau}\n[BUREAU ADDRESS]`;
-  
-  // Get the current date in a formatted string
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  
-  // Get legal references if available or fetch them
-  const legalReferences = discrepancy.legalBasis || 
-    getLegalReferencesForDispute(discrepancy.reason, discrepancy.description);
-  
-  // Generate the account number display - use last 4 digits if available
-  const accountNumber = discrepancy.accountNumber || "Unknown";
-  const maskedNumber = accountNumber && accountNumber.length > 4 ? 
-    'xxxxxxxx' + accountNumber.substring(accountNumber.length - 4) : 
-    accountNumber;
-
-  // Extract accounts from the credit report data if available
-  let accountsSectionContent = "";
-  if (creditReportData && creditReportData.accounts && creditReportData.accounts.length > 0) {
-    const validAccounts = creditReportData.accounts.filter((acc: any) => 
-      acc.accountName && 
-      !acc.accountName.toLowerCase().includes('multiple accounts')
-    );
-    
-    accountsSectionContent = validAccounts.map((account: any, index: number) => {
-      const accName = account.accountName || 'UNKNOWN CREDITOR';
-      const accNumber = account.accountNumber || 'Unknown';
-      const maskedNum = accNumber && accNumber.length > 4 ? 
-        'xxxxxxxx' + accNumber.substring(accNumber.length - 4) : 
-        'xxxxxxxx####';
-      
-      return `
-Alleging Creditor#${index + 1} and Account #${index + 1} as is reported on my credit report:
-${accName.toUpperCase()}
-ACCOUNT- ${maskedNum}
-Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant`;
-    }).join('\n');
-  } else if (discrepancy.accountName) {
-    // If no accounts from report, at least include the disputed account
-    // Skip if it contains "Multiple Accounts"
-    if (!discrepancy.accountName.toLowerCase().includes('multiple accounts')) {
-      accountsSectionContent = `
-Alleging Creditor and Account as is reported on my credit report:
-${discrepancy.accountName.toUpperCase()}
-ACCOUNT- ${maskedNumber}
-Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant
-`;
-    }
-  }
-
-  // Try to use a credit report number from the report data, or generate a placeholder
-  const creditReportNumber = creditReportData?.reportNumber || 
-                            ('CR' + Math.floor(Math.random() * 10000000));
-
-  // Try to find a relevant sample dispute letter to use as a template
-  try {
-    const sampleLetter = await findSampleDispute(discrepancy.reason, discrepancy.bureau);
-    
-    if (sampleLetter) {
-      console.log("Found sample dispute letter for this type of dispute from Supabase");
-      
-      // Get actual user information from localStorage or input
-      const userName = userInfo.name || localStorage.getItem('userName') || localStorage.getItem('name');
-      const userAddress = userInfo.address || localStorage.getItem('userAddress');
-      const userCity = userInfo.city || localStorage.getItem('userCity');
-      const userState = userInfo.state || localStorage.getItem('userState');
-      const userZip = userInfo.zip || localStorage.getItem('userZip');
-      
-      // Only replace placeholders if we have actual values
-      let enhancedLetter = sampleLetter.content;
-      
-      if (userName) enhancedLetter = enhancedLetter.replace(/\[FULL_NAME\]|\[YOUR_NAME\]|\[NAME\]/g, userName);
-      if (userAddress) enhancedLetter = enhancedLetter.replace(/\[ADDRESS\]|\[YOUR_ADDRESS\]/g, userAddress);
-      if (userCity) enhancedLetter = enhancedLetter.replace(/\[CITY\]/g, userCity);
-      if (userState) enhancedLetter = enhancedLetter.replace(/\[STATE\]/g, userState);
-      if (userZip) enhancedLetter = enhancedLetter.replace(/\[ZIP\]/g, userZip);
-      
-      enhancedLetter = enhancedLetter
-        .replace(/\[DATE\]|\[CURRENT_DATE\]/g, currentDate)
-        .replace(/\[BUREAU\]/g, discrepancy.bureau)
-        .replace(/\[BUREAU_ADDRESS\]/g, bureauAddress)
-        .replace(/\[ACCOUNT_NAME\]/g, discrepancy.accountName)
-        .replace(/\[ACCOUNT_NUMBER\]/g, accountNumber)
-        .replace(/\[DISPUTE_REASON\]|\[ERROR_TYPE\]/g, discrepancy.reason)
-        .replace(/\[ERROR_DESCRIPTION\]|\[EXPLANATION\]/g, discrepancy.description)
-        .replace(/your credit report/gi, "my credit report")
-        .replace(/Your credit report/gi, "My credit report");
-      
-      // Add the accounts section
-      if (accountsSectionContent && !enhancedLetter.includes("Alleging Creditor")) {
-        enhancedLetter = enhancedLetter.replace(
-          /To Whom It May Concern:/,
-          `To Whom It May Concern:
-
-I received a copy of my credit report and found the following item(s) to be errors, or are deficient of proof of not being untrue, incorrect, incomplete, untimely, not mine, not my responsibility, or else wise not compliant, to include to metro 2 reporting standards.
-
-Here as follows are items in potential error requiring immediate annulment of the retainment and or reporting:${accountsSectionContent}`
-        );
-      }
-      
-      // Move the Re: section to correct position
-      if (enhancedLetter.includes("Re: My certified letter")) {
-        // Remove existing Re: section
-        enhancedLetter = enhancedLetter.replace(/Re: My certified letter.*?(?=\n\n)/s, '');
-        
-        // Add it back in the correct location, right after date and before bureau address
-        enhancedLetter = enhancedLetter.replace(
-          new RegExp(`${currentDate}\\s*\\n\\n${discrepancy.bureau}`),
-          `${currentDate}
-
-Re: Dispute of Inaccurate Credit Information - Account: ${discrepancy.accountName}
-
-${discrepancy.bureau}`
-        );
-      }
-      
-      // Update enclosures section to only include ID and SSN card
-      enhancedLetter = enhancedLetter.replace(
-        /Enclosures:(\s|.)*$/m, 
-        `Enclosures:
-- Copy of Driver's License
-- Copy of Social Security Card
-`
-      );
-      
-      // Remove the technical KEY explanation section if present
-      enhancedLetter = enhancedLetter.replace(
-        /Please utilize the following KEY to explain markings on the images of below-shown items being contested:.*?(?=\*{5,}|\n\n)/gs,
-        ''
-      );
-      
-      // Remove any "KEY" section explaining acronyms
-      enhancedLetter = enhancedLetter.replace(
-        /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
-        ''
-      );
-      
-      // Remove metro 2 technical references
-      enhancedLetter = enhancedLetter.replace(
-        /BSCF Base Segment Character Format[\s\S]*?Do Not Attack/g,
-        ''
-      );
-      
-      return enhancedLetter;
-    }
-  } catch (error) {
-    console.error("Error finding sample dispute letter from Supabase:", error);
-    // Continue with regular template if there's an error
-  }
-  
-  // If no sample dispute language is available, try to get one
-  let disputeExplanation = discrepancy.sampleDisputeLanguage || discrepancy.description;
-  
-  if (!discrepancy.sampleDisputeLanguage) {
-    try {
-      const sampleLanguage = await getSampleDisputeLanguage(discrepancy.reason, discrepancy.bureau);
-      if (sampleLanguage && sampleLanguage.length > 10) {
-        disputeExplanation = `${discrepancy.description}\n\n${sampleLanguage}`;
-      }
-    } catch (error) {
-      console.error("Error getting sample dispute language:", error);
-      // Continue with original explanation if there's an error
-    }
-  }
-  
-  // Get user information, try localStorage with multiple possible keys if not provided
-  const userName = userInfo.name || localStorage.getItem('userName') || localStorage.getItem('name');
-  const userAddress = userInfo.address || localStorage.getItem('userAddress');
-  const userCity = userInfo.city || localStorage.getItem('userCity');
-  const userState = userInfo.state || localStorage.getItem('userState');
-  const userZip = userInfo.zip || localStorage.getItem('userZip');
-  
-  // Generate citations text from legal references
-  const citationsText = legalReferences && legalReferences.length > 0 
-    ? legalReferences.map(ref => `${ref.law} ${ref.section} - ${ref.title}: ${ref.text}`).join('\n\n') + '\n\n'
-    : 'Under the Fair Credit Reporting Act § 611 (FCRA), ';
-  
-  // Generate an enhanced letter with more detailed legal language
-  let letterContent = `
-${userName || '[YOUR NAME]'}
-${userAddress || '[YOUR ADDRESS]'}
-${userCity || '[CITY]'}, ${userState || '[STATE]'} ${userZip || '[ZIP]'}
-${currentDate}
-
-Re: Dispute of Inaccurate Credit Information - Account: ${discrepancy.accountName}
-
-${discrepancy.bureau}
-${bureauAddress}
-
-To Whom It May Concern:
-
-I received a copy of my credit report (Credit Report #: ${creditReportNumber}) and found the following item(s) to be errors, or are deficient of proof of being accurate, correct, complete, and timely.
-
-Here as follows are items in potential error requiring immediate correction or removal:${accountsSectionContent}
-
-EXPLANATION OF INACCURACY:
-${disputeExplanation}
-
-LEGAL BASIS FOR DISPUTE:
-${citationsText}you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified. Additionally, Section 623 of the FCRA places responsibilities on furnishers of information to provide accurate data to consumer reporting agencies.
-
-Under Section 611 of the FCRA, you must:
-1. Conduct a thorough investigation of this disputed information within 30 days (45 days if I submit additional information)
-2. Forward all relevant information to the furnisher of this information
-3. Consider all information I have submitted
-4. Provide me with the results of your investigation and a free copy of my credit report if changes are made
-5. Remove the disputed item if it cannot be properly verified
-
-According to the Fair Credit Reporting Act, Section 609 (a)(1)(A), you are required by federal law to verify - through the physical verification of the original signed consumer contract - any and all accounts you post on a credit report.
-
-Please notify me that the above items have been deleted pursuant to § 611 (a)(6) [15 USC § 1681j (a) (6)]. I am also requesting an updated copy of my credit report, which should be sent to the address listed below. According to the provisions of § 612 [15 USC § 1681j], there should be no charge for this report.
-
-Sincerely,
-
-${userName || '[YOUR NAME]'}
-
-Enclosures:
-- Copy of Driver's License
-- Copy of Social Security Card
-`;
-
-  return letterContent;
-};
+  return templateTypeMap[primaryType] || 'inconsistent_information';
+}
 
 /**
- * Generate a dispute letter for a specific discrepancy with advanced features
+ * Fetches the appropriate letter template from Supabase
  */
-export const generateAdvancedDisputeLetter = async (
-  discrepancy: RecommendedDispute, 
-  userInfo: UserInfo,
-  creditReportData?: any
-): Promise<string> => {
-  console.log("Generating advanced dispute letter for:", discrepancy);
+async function fetchLetterTemplate(templateType: string): Promise<LetterTemplate | null> {
+  try {
+    const { data, error } = await supabase
+      .from('letter_templates')
+      .select('*')
+      .eq('type', templateType)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching letter template:', error);
+      return null;
+    }
+    
+    return data as LetterTemplate;
+  } catch (error) {
+    console.error('Error fetching letter template:', error);
+    return null;
+  }
+}
 
-  // Get the bureau address
-  const bureauAddresses = {
-    'experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
-    'equifax': 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374',
-    'transunion': 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016'
+/**
+ * Generates the letter content by replacing placeholders in the template
+ */
+function generateLetterContent(
+  template: LetterTemplate,
+  creditReportData: CreditReportData,
+  bureau: string,
+  accountName?: string,
+  accountNumber?: string,
+  issues?: Issue[]
+): string {
+  let content = template.content;
+  
+  // Replace personal information placeholders
+  const { personalInfo } = creditReportData;
+  
+  content = content.replace(/{CONSUMER_FULL_NAME}/g, personalInfo?.name || '');
+  content = content.replace(/{CONSUMER_STREET_ADDRESS}/g, personalInfo?.address || '');
+  content = content.replace(/{CONSUMER_CITY}/g, personalInfo?.city || '');
+  content = content.replace(/{CONSUMER_STATE}/g, personalInfo?.state || '');
+  content = content.replace(/{CONSUMER_ZIP}/g, personalInfo?.zip || '');
+  content = content.replace(/{CONSUMER_SSN_LAST4}/g, personalInfo?.ssn?.slice(-4) || '');
+  content = content.replace(/{CONSUMER_DOB}/g, personalInfo?.dob || '');
+  content = content.replace(/{CURRENT_DATE}/g, new Date().toLocaleDateString());
+  content = content.replace(/{CONSUMER_EMPLOYER}/g, personalInfo?.employer || '');
+  content = content.replace(/{CONSUMER_PHONE}/g, personalInfo?.phone || '');
+  
+  // Replace credit bureau specific placeholders
+  const bureauInfo = getBureauInfo(bureau);
+  
+  content = content.replace(/{CREDIT_BUREAU_NAME}/g, bureauInfo.name);
+  content = content.replace(/{CREDIT_BUREAU_ADDRESS}/g, bureauInfo.address);
+  content = content.replace(/{CREDIT_BUREAU_CITY}/g, bureauInfo.city);
+  content = content.replace(/{CREDIT_BUREAU_STATE}/g, bureauInfo.state);
+  content = content.replace(/{CREDIT_BUREAU_ZIP}/g, bureauInfo.zip);
+  content = content.replace(/{CREDIT_REPORT_NUMBER}/g, creditReportData.reportNumber || '');
+  
+  // Replace account information placeholders if applicable
+  if (accountName) {
+    content = content.replace(/{ACCOUNT_NAME}/g, accountName);
+  }
+  
+  if (accountNumber) {
+    content = content.replace(/{ACCOUNT_NUMBER_MASKED}/g, maskAccountNumber(accountNumber));
+  }
+  
+  // Generate and replace dynamic content based on issues
+  if (issues && issues.length > 0) {
+    const disputeSummaryList = generateDisputeSummaryList(issues);
+    const specificDisputeDetails = generateSpecificDisputeDetails(issues);
+    
+    content = content.replace(/{DISPUTE_SUMMARY_LIST}/g, disputeSummaryList);
+    content = content.replace(/{SPECIFIC_DISPUTE_DETAILS}/g, specificDisputeDetails);
+    
+    // Replace specific issue type placeholders
+    const issueTypes = issues.map(issue => issue.type);
+    
+    if (issueTypes.includes('inconsistent_information')) {
+      const inconsistentList = generateInconsistentBureausList(issues.filter(i => i.type === 'inconsistent_information'));
+      content = content.replace(/{INCONSISTENT_BUREAUS_LIST}/g, inconsistentList);
+    }
+    
+    if (issueTypes.includes('multiple_addresses')) {
+      const addressesList = generateIncorrectAddressesList(issues.filter(i => i.type === 'multiple_addresses'));
+      content = content.replace(/{INCORRECT_ADDRESSES_LIST}/g, addressesList);
+    }
+    
+    if (issueTypes.includes('late_payment')) {
+      const latePaymentsList = generateLatePaymentAccountsList(issues.filter(i => i.type === 'late_payment'));
+      content = content.replace(/{LATE_PAYMENT_ACCOUNTS_LIST}/g, latePaymentsList);
+    }
+    
+    if (issueTypes.includes('collection_account')) {
+      const collectionsList = generateCollectionAccountsList(issues.filter(i => i.type === 'collection_account'));
+      content = content.replace(/{COLLECTION_ACCOUNTS_LIST}/g, collectionsList);
+    }
+    
+    if (issueTypes.includes('student_loan')) {
+      const studentLoansList = generateStudentLoanAccountsList(issues.filter(i => i.type === 'student_loan'));
+      content = content.replace(/{STUDENT_LOAN_ACCOUNTS_LIST}/g, studentLoansList);
+    }
+    
+    if (issueTypes.includes('inquiry')) {
+      const inquiriesList = generateUnauthorizedInquiriesList(issues.filter(i => i.type === 'inquiry'));
+      content = content.replace(/{UNAUTHORIZED_INQUIRIES_LIST}/g, inquiriesList);
+    }
+    
+    if (issueTypes.includes('personal_information')) {
+      const personalInfoList = generateIncorrectPersonalInfoList(issues.filter(i => i.type === 'personal_information'));
+      content = content.replace(/{INCORRECT_PERSONAL_INFO_LIST}/g, personalInfoList);
+    }
+    
+    if (issueTypes.includes('account_ownership')) {
+      const notMyAccountsList = generateNotMyAccountsList(issues.filter(i => i.type === 'account_ownership'));
+      content = content.replace(/{NOT_MY_ACCOUNTS_LIST}/g, notMyAccountsList);
+    }
+  }
+  
+  // Replace any remaining placeholders with empty strings
+  content = content.replace(/{[A-Z_]+}/g, '');
+  
+  return content;
+}
+
+/**
+ * Gets information for a specific credit bureau
+ */
+function getBureauInfo(bureau: string): {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+} {
+  const bureauMap: Record<string, {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+  }> = {
+    'experian': {
+      name: 'Experian',
+      address: 'PO Box 4500',
+      city: 'Allen',
+      state: 'TX',
+      zip: '75013'
+    },
+    'equifax': {
+      name: 'Equifax',
+      address: 'PO Box 740256',
+      city: 'Atlanta',
+      state: 'GA',
+      zip: '30374'
+    },
+    'transunion': {
+      name: 'TransUnion',
+      address: 'PO Box 2000',
+      city: 'Chester',
+      state: 'PA',
+      zip: '19016'
+    }
   };
   
-  // Normalize bureau name to match our address keys
-  const bureauKey = discrepancy.bureau.toLowerCase().replace(/\s+/g, '');
-  
-  // Choose the correct address or use a placeholder
-  const bureauAddress = bureauAddresses[bureauKey as keyof typeof bureauAddresses] || 
-                       `${discrepancy.bureau}\n[BUREAU ADDRESS]`;
-  
-  // Get the current date in a formatted string
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  
-  // Get legal references if available or fetch them
-  const legalReferences = discrepancy.legalBasis || 
-    getLegalReferencesForDispute(discrepancy.reason, discrepancy.description);
-  
-  // Generate the account number display - use last 4 digits if available
-  const accountNumber = discrepancy.accountNumber || "Unknown";
-  const maskedNumber = accountNumber && accountNumber.length > 4 ? 
-    'xxxxxxxx' + accountNumber.substring(accountNumber.length - 4) : 
-    accountNumber;
+  return bureauMap[bureau.toLowerCase()] || bureauMap['experian'];
+}
 
-  // Extract accounts from the credit report data if available
-  let accountsSectionContent = "";
-  if (creditReportData && creditReportData.accounts && creditReportData.accounts.length > 0) {
-    const validAccounts = creditReportData.accounts.filter((acc: any) => 
-      acc.accountName && 
-      !acc.accountName.toLowerCase().includes('multiple accounts')
-    );
-    
-    accountsSectionContent = validAccounts.map((account: any, index: number) => {
-      const accName = account.accountName || 'UNKNOWN CREDITOR';
-      const accNumber = account.accountNumber || 'Unknown';
-      const maskedNum = accNumber && accNumber.length > 4 ? 
-        'xxxxxxxx' + accNumber.substring(accNumber.length - 4) : 
-        'xxxxxxxx####';
-      
-      return `
-Alleging Creditor#${index + 1} and Account #${index + 1} as is reported on my credit report:
-${accName.toUpperCase()}
-ACCOUNT- ${maskedNum}
-Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant`;
-    }).join('\n');
-  } else if (discrepancy.accountName) {
-    // If no accounts from report, at least include the disputed account
-    // Skip if it contains "Multiple Accounts"
-    if (!discrepancy.accountName.toLowerCase().includes('multiple accounts')) {
-      accountsSectionContent = `
-Alleging Creditor and Account as is reported on my credit report:
-${discrepancy.accountName.toUpperCase()}
-ACCOUNT- ${maskedNumber}
-Notation: Per CRSA enacted, CDIA implemented laws, any and all reporting must be deleted if not Proven CERTIFIABLY fully true, correct, complete, timely, of known ownership and responsibility but also fully Metro 2 compliant
-`;
-    }
+/**
+ * Masks an account number for security
+ */
+function maskAccountNumber(accountNumber: string): string {
+  if (accountNumber.length <= 4) {
+    return accountNumber;
   }
+  
+  const lastFour = accountNumber.slice(-4);
+  const maskedPart = '*'.repeat(accountNumber.length - 4);
+  
+  return maskedPart + lastFour;
+}
 
-  // Try to use a credit report number from the report data, or generate a placeholder
-  const creditReportNumber = creditReportData?.reportNumber || 
-                            ('CR' + Math.floor(Math.random() * 10000000));
+/**
+ * Generates a bulleted list of dispute items
+ */
+function generateDisputeSummaryList(issues: Issue[]): string {
+  return issues.map(issue => `• ${issue.description}`).join('\n');
+}
 
-  // Try to find a relevant sample dispute letter to use as a template
+/**
+ * Generates detailed explanations for each dispute item
+ */
+function generateSpecificDisputeDetails(issues: Issue[]): string {
+  return issues.map(issue => {
+    return `${issue.accountName ? `Account: ${issue.accountName}` : 'Issue'} ${issue.accountNumber ? `(Account ending in ${issue.accountNumber.slice(-4)})` : ''}\n` +
+           `Description: ${issue.description}\n` +
+           `Reason: ${issue.reason || 'Information is inaccurate or incomplete'}\n` +
+           `Legal Basis: ${issue.legalBasis || 'FCRA Section 1681e requiring maximum possible accuracy'}\n`;
+  }).join('\n\n');
+}
+
+/**
+ * Generates a list of inconsistencies between bureaus
+ */
+function generateInconsistentBureausList(issues: Issue[]): string {
+  return issues.map(issue => {
+    return `• ${issue.accountName || 'Account'} ${issue.accountNumber ? `(ending in ${issue.accountNumber.slice(-4)})` : ''}: ` +
+           `${issue.description}`;
+  }).join('\n');
+}
+
+/**
+ * Generates a list of incorrect addresses
+ */
+function generateIncorrectAddressesList(issues: Issue[]): string {
+  return issues.map(issue => {
+    return `• ${issue.description}`;
+  }).join('\n');
+}
+
+/**
+ * Generates a list of accounts with disputed late payments
+ */
+function generateLatePaymentAccountsList(issues: Issue[]): string {
+  return issues.map(issue => {
+    return `• ${issue.accountName || 'Account'} ${issue.accountNumber ? `(ending in ${issue.accountNumber.slice(-4)})` : ''}: ` +
+           `${issue.description}`;
+  }).join('\n');
+}
+
+/**
+ * Generates a list of disputed collection accounts
+ */
+function generateCollectionAccountsList(issues: Issue[]): string {
+  return issues.map(issue => {
+    return `• ${issue.accountName || 'Collection Account'} ${issue.accountNumber ? `(ending in ${issue.accountNumber.slice(-4)})` : ''}: ` +
+           `${issue.description}`;
+  }).join('\n');
+}
+
+/**
+ * Generates a list of disputed student loan accounts
+ */
+function generateStudentLoanAccountsList(issues: Issue[]): string {
+  return issues.map(issue => {
+    return `• ${issue.accountName || 'Student Loan'} ${issue.accountNumber ? `(ending in ${issue.accountNumber.slice(-4)})` : ''}: ` +
+           `${issue.description}`;
+  }).join('\n');
+}
+
+/**
+ * Generates a list of unauthorized inquiries
+ */
+function generateUnauthorizedInquiriesList(issues: Issue[]): string {
+  return issues.map(issue => {
+    return `• ${issue.accountName || 'Company'} (${issue.date || 'Unknown Date'}): ` +
+           `${issue.description}`;
+  }).join('\n');
+}
+
+/**
+ * Generates a list of incorrect personal information
+ */
+function generateIncorrectPersonalInfoList(issues: Issue[]): string {
+  return issues.map(issue => {
+    return `• ${issue.description}`;
+  }).join('\n');
+}
+
+/**
+ * Generates a list of accounts that don't belong to the consumer
+ */
+function generateNotMyAccountsList(issues: Issue[]): string {
+  return issues.map(issue => {
+    return `• ${issue.accountName || 'Account'} ${issue.accountNumber ? `(ending in ${issue.accountNumber.slice(-4)})` : ''}: ` +
+           `${issue.description}`;
+  }).join('\n');
+}
+
+/**
+ * Stores a dispute letter in Supabase
+ */
+async function storeDisputeLetter(letter: DisputeLetter): Promise<void> {
   try {
-    const sampleLetter = await findSampleDispute(discrepancy.reason, discrepancy.bureau);
+    const { error } = await supabase
+      .from('dispute_letters')
+      .insert(letter);
     
-    if (sampleLetter) {
-      console.log("Found sample dispute letter for this type of dispute from Supabase");
-      
-      // Get actual user information from localStorage or input
-      const userName = userInfo.name || localStorage.getItem('userName') || localStorage.getItem('name');
-      const userAddress = userInfo.address || localStorage.getItem('userAddress');
-      const userCity = userInfo.city || localStorage.getItem('userCity');
-      const userState = userInfo.state || localStorage.getItem('userState');
-      const userZip = userInfo.zip || localStorage.getItem('userZip');
-      
-      // Only replace placeholders if we have actual values
-      let enhancedLetter = sampleLetter.content;
-      
-      if (userName) enhancedLetter = enhancedLetter.replace(/\[FULL_NAME\]|\[YOUR_NAME\]|\[NAME\]/g, userName);
-      if (userAddress) enhancedLetter = enhancedLetter.replace(/\[ADDRESS\]|\[YOUR_ADDRESS\]/g, userAddress);
-      if (userCity) enhancedLetter = enhancedLetter.replace(/\[CITY\]/g, userCity);
-      if (userState) enhancedLetter = enhancedLetter.replace(/\[STATE\]/g, userState);
-      if (userZip) enhancedLetter = enhancedLetter.replace(/\[ZIP\]/g, userZip);
-      
-      enhancedLetter = enhancedLetter
-        .replace(/\[DATE\]|\[CURRENT_DATE\]/g, currentDate)
-        .replace(/\[BUREAU\]/g, discrepancy.bureau)
-        .replace(/\[BUREAU_ADDRESS\]/g, bureauAddress)
-        .replace(/\[ACCOUNT_NAME\]/g, discrepancy.accountName)
-        .replace(/\[ACCOUNT_NUMBER\]/g, accountNumber)
-        .replace(/\[DISPUTE_REASON\]|\[ERROR_TYPE\]/g, discrepancy.reason)
-        .replace(/\[ERROR_DESCRIPTION\]|\[EXPLANATION\]/g, discrepancy.description)
-        .replace(/your credit report/gi, "my credit report")
-        .replace(/Your credit report/gi, "My credit report");
-      
-      // Add the accounts section
-      if (accountsSectionContent && !enhancedLetter.includes("Alleging Creditor")) {
-        enhancedLetter = enhancedLetter.replace(
-          /To Whom It May Concern:/,
-          `To Whom It May Concern:
-
-I received a copy of my credit report and found the following item(s) to be errors, or are deficient of proof of not being untrue, incorrect, incomplete, untimely, not mine, not my responsibility, or else wise not compliant, to include to metro 2 reporting standards.
-
-Here as follows are items in potential error requiring immediate annulment of the retainment and or reporting:${accountsSectionContent}`
-        );
-      }
-      
-      // Move the Re: section to correct position
-      if (enhancedLetter.includes("Re: My certified letter")) {
-        // Remove existing Re: section
-        enhancedLetter = enhancedLetter.replace(/Re: My certified letter.*?(?=\n\n)/s, '');
-        
-        // Add it back in the correct location, right after date and before bureau address
-        enhancedLetter = enhancedLetter.replace(
-          new RegExp(`${currentDate}\\s*\\n\\n${discrepancy.bureau}`),
-          `${currentDate}
-
-Re: Dispute of Inaccurate Credit Information - Account: ${discrepancy.accountName}
-
-${discrepancy.bureau}`
-        );
-      }
-      
-      // Update enclosures section to only include ID and SSN card
-      enhancedLetter = enhancedLetter.replace(
-        /Enclosures:(\s|.)*$/m, 
-        `Enclosures:
-- Copy of Driver's License
-- Copy of Social Security Card
-`
-      );
-      
-      // Remove the technical KEY explanation section if present
-      enhancedLetter = enhancedLetter.replace(
-        /Please utilize the following KEY to explain markings on the images of below-shown items being contested:.*?(?=\*{5,}|\n\n)/gs,
-        ''
-      );
-      
-      // Remove any "KEY" section explaining acronyms
-      enhancedLetter = enhancedLetter.replace(
-        /\*\s*means\s*REQUIRED\s*ALWAYS[\s\S]*?(?=\n\n)/g,
-        ''
-      );
-      
-      // Remove metro 2 technical references
-      enhancedLetter = enhancedLetter.replace(
-        /BSCF Base Segment Character Format[\s\S]*?Do Not Attack/g,
-        ''
-      );
-      
-      return enhancedLetter;
+    if (error) {
+      console.error('Error storing dispute letter:', error);
     }
   } catch (error) {
-    console.error("Error finding sample dispute letter from Supabase:", error);
-    // Continue with regular template if there's an error
+    console.error('Error storing dispute letter:', error);
   }
-  
-  // If no sample dispute language is available, try to get one
-  let disputeExplanation = discrepancy.sampleDisputeLanguage || discrepancy.description;
-  
-  if (!discrepancy.sampleDisputeLanguage) {
-    try {
-      const sampleLanguage = await getSampleDisputeLanguage(discrepancy.reason, discrepancy.bureau);
-      if (sampleLanguage && sampleLanguage.length > 10) {
-        disputeExplanation = `${discrepancy.description}\n\n${sampleLanguage}`;
-      }
-    } catch (error) {
-      console.error("Error getting sample dispute language:", error);
-      // Continue with original explanation if there's an error
-    }
-  }
-  
-  // Get user information, try localStorage with multiple possible keys if not provided
-  const userName = userInfo.name || localStorage.getItem('userName') || localStorage.getItem('name');
-  const userAddress = userInfo.address || localStorage.getItem('userAddress');
-  const userCity = userInfo.city || localStorage.getItem('userCity');
-  const userState = userInfo.state || localStorage.getItem('userState');
-  const userZip = userInfo.zip || localStorage.getItem('userZip');
-  
-  // Generate citations text from legal references
-  const citationsText = legalReferences && legalReferences.length > 0 
-    ? legalReferences.map(ref => `${ref.law} ${ref.section} - ${ref.title}: ${ref.text}`).join('\n\n') + '\n\n'
-    : 'Under the Fair Credit Reporting Act § 611 (FCRA), ';
-  
-  // Generate an enhanced letter with more detailed legal language
-  let letterContent = `
-${userName || '[YOUR NAME]'}
-${userAddress || '[YOUR ADDRESS]'}
-${userCity || '[CITY]'}, ${userState || '[STATE]'} ${userZip || '[ZIP]'}
-${currentDate}
+}
 
-Re: Dispute of Inaccurate Credit Information - Account: ${discrepancy.accountName}
+/**
+ * Generates a unique ID for a dispute letter
+ */
+function generateUniqueId(): string {
+  return `letter_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
 
-${discrepancy.bureau}
-${bureauAddress}
-
-To Whom It May Concern:
-
-I received a copy of my credit report (Credit Report #: ${creditReportNumber}) and found the following item(s) to be errors, or are deficient of proof of being accurate, correct, complete, and timely.
-
-Here as follows are items in potential error requiring immediate correction or removal:${accountsSectionContent}
-
-EXPLANATION OF INACCURACY:
-${disputeExplanation}
-
-LEGAL BASIS FOR DISPUTE:
-${citationsText}you are required to conduct a reasonable investigation into this matter and remove or correct any information that cannot be verified. Additionally, Section 623 of the FCRA places responsibilities on furnishers of information to provide accurate data to consumer reporting agencies.
-
-Under Section 611 of the FCRA, you must:
-1. Conduct a thorough investigation of this disputed information within 30 days (45 days if I submit additional information)
-2. Forward all relevant information to the furnisher of this information
-3. Consider all information I have submitted
-4. Provide me with the results of your investigation and a free copy of my credit report if changes are made
-5. Remove the disputed item if it cannot be properly verified
-
-According to the Fair Credit Reporting Act, Section 609 (a)(1)(A), you are required by federal law to verify - through the physical verification of the original signed consumer contract - any and all accounts you post on a credit report.
-
-Please notify me that the above items have been deleted pursuant to § 611 (a)(6) [15 USC § 1681j (a) (6)]. I am also requesting an updated copy of my credit report, which should be sent to the address listed below. According to the provisions of § 612 [15 USC § 1681j], there should be no charge for this report.
-
-Sincerely,
-
-${userName || '[YOUR NAME]'}
-
-Enclosures:
-- Copy of Driver's License
-- Copy of Social Security Card
-`;
-
-  return letterContent;
-};
+/**
+ * Creates a default letter if no specific issues were identified
+ */
+function createDefaultLetter(creditReportData: CreditReportData, userId: string): DisputeLetter {
+  return {
+    id: generateUniqueId(),
+    title: 'General Credit Report Dispute',
+    content: 'Please review the attached credit report for accuracy.',
+    letterContent: 'Please review the attached credit report for accuracy.',
+    bureau: creditReportData.primaryBureau || 'all',
+    accountName: 'Multiple Accounts',
+    accountNumber: 'Multiple',
+    errorType: 'general',
+    status: 'draft',
+    createdAt: new Date().toISOString(),
+    userId
+  };
+}

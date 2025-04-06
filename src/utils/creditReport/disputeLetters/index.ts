@@ -1,22 +1,13 @@
-
 /**
  * Dispute Letters Module
- * Exports all dispute letter functionality
+ * Main entry point for dispute letter generation functionality
  */
 
-// Re-export the letter generators
-export * from './generator';
+// Export letter generation functionality
+export * from './letterGenerator';
 
-// Export sample letter functions with explicit naming
-import { getSampleDisputeLanguage as getSampleDisputeLanguageOrig, findSampleDispute } from './samples';
-export { findSampleDispute };
-export { getSampleDisputeLanguage as getSampleDisputeLetterTemplate } from './samples';
-
-// Export fallback templates
-export * from './fallbackTemplates';
-
-// Export sample language and phrases
+// Export any additional dispute letter utilities
 export * from './sampleLanguage';
-
-// Export utility types
-export * from './types';
+export * from './samples';
+export * from './fallbackTemplates/accountLetter';
+export * from './fallbackTemplates/inquiryLetter';
