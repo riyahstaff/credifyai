@@ -242,6 +242,10 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
         <ToastAction altText="View Issues">View Issues</ToastAction> : undefined
     });
     
+    // Call the storeCreditReport and generateDisputeLetters functions
+    storeCreditReport(reportData, 'user-id', generatedIssues);
+    generateDisputeLetters(reportData, generatedIssues, 'user-id');
+    
   } catch (error) {
     console.error("Error in handleAnalysisComplete:", error);
     
@@ -395,10 +399,6 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
       return [];
     }
   }
-
-  // Call the storeCreditReport and generateDisputeLetters functions
-  storeCreditReport(reportData, 'user-id', generatedIssues);
-  generateDisputeLetters(reportData, generatedIssues, 'user-id');
 };
 
 // Generate sample credit report text for testing
