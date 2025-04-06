@@ -12,3 +12,7 @@ export * from './sampleLanguage';
 export * from './samples';
 export * from './fallbackTemplates/accountLetter';
 export * from './fallbackTemplates/inquiryLetter';
+
+// Add missing exports needed by other parts of the application
+export { generateEnhancedDisputeLetter } from './generator';
+export { generateDisputeLetterForDiscrepancy } from './generator';

@@ -1,54 +1,53 @@
 
 /**
- * Types for letter generation functionality
+ * Types related to dispute letters and templates
  */
 
-export interface Issue {
-  id?: string;
-  type: string;
-  description: string;
-  accountName?: string;
-  accountNumber?: string;
-  bureau: string;
-  reason?: string;
-  legalBasis?: string;
-  date?: string;  // For inquiries
-  impact?: 'High' | 'Medium' | 'Low';
-}
-
-export interface LetterTemplate {
-  id: string;
-  name: string;
-  content: string;
-  type: string;
-  created_at?: string;
-  updated_at?: string;
-}
+import { LegalReference, CreditReportAccount } from '../types';
 
 export interface DisputeLetter {
   id: string;
   title: string;
   content: string;
-  letterContent: string;
+  letterContent: string; // Duplicate for compatibility with older code
   bureau: string;
   accountName: string;
-  accountNumber?: string;
+  accountNumber: string;
   errorType: string;
-  status: 'draft' | 'ready' | 'sent' | 'completed';
+  status: 'ready' | 'draft' | 'sent' | 'rejected';
   createdAt: string;
   userId: string;
-  sentAt?: string;
-  responseAt?: string;
-  responseContent?: string;
+  customizations?: Record<string, any>;
 }
 
-// Additional types for dispute letter functionality
-export interface DisputePhrasesCache {
-  balanceDisputes: string[];
-  latePaymentDisputes: string[];
-  accountOwnershipDisputes: string[];
-  closedAccountDisputes: string[];
-  personalInfoDisputes: string[];
-  inquiryDisputes: string[];
-  general: string[];
+export interface LetterTemplate {
+  id: string;
+  type: string;
+  name: string;
+  description: string;
+  content: string;
+  version: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Issue {
+  id: string;
+  type: string;
+  description: string;
+  bureau: string;
+  accountName?: string;
+  accountNumber?: string;
+  date?: string;
+  reason?: string;
+  legalBasis?: string;
+  severity: 'high' | 'medium' | 'low';
+  details?: Record<string, any>;
+}
+
+export interface DisputeLetterGenerationResult {
+  success: boolean;
+  letter?: DisputeLetter;
+  message?: string;
+  errorCode?: string;
 }

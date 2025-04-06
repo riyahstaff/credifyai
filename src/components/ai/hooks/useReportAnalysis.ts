@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from 'react';
-import { CreditReportData, RecommendedDispute } from '@/utils/creditReport/types';
+import { CreditReportData, RecommendedDispute, IdentifiedIssue, LegalReference } from '@/utils/creditReport/types';
 import { identifyIssues } from '@/utils/reportAnalysis/issueIdentification';
 import { getSuccessfulDisputePhrases } from '@/utils/creditReport/disputeLetters/sampleLanguage';
 import { getLegalReferencesForDispute } from '@/utils/creditReport/legalReferences';
@@ -36,18 +37,31 @@ export function useReportAnalysis(reportData: CreditReportData | null) {
       const issues = await identifyIssues(data);
       
       // Enhance issues with sample dispute language and legal references
-      const enhancedIssues = issues.map(issue => {
+      const enhancedIssues = issues.map((issue, index) => {
         // Get sample dispute language for this type of issue
         const sampleLanguage = getSuccessfulDisputePhrases(issue.type);
         
         // Get legal references for this type of issue
         const legalRefs = getLegalReferencesForDispute(issue.type, issue.description);
         
-        return {
-          ...issue,
+        // Create a properly typed RecommendedDispute object
+        const recommendedDispute: RecommendedDispute = {
+          id: `dispute-${index}`,
+          type: issue.type,
+          title: issue.title,
+          bureau: issue.bureau || data.primaryBureau || "Unknown",
+          accountName: issue.account?.accountName || "Unknown Account",
+          accountNumber: issue.account?.accountNumber || "",
+          reason: issue.description,
+          description: issue.description,
+          impact: mapImpactLevel(issue.impact),
+          severity: issue.impact.toLowerCase().includes('high') ? "high" : 
+                   issue.impact.toLowerCase().includes('medium') ? "medium" : "low",
           sampleDisputeLanguage: sampleLanguage.length > 0 ? sampleLanguage[0] : undefined,
           legalBasis: legalRefs
         };
+        
+        return recommendedDispute;
       });
       
       console.log(`Analysis complete. Found ${enhancedIssues.length} potential issues.`);
@@ -55,17 +69,28 @@ export function useReportAnalysis(reportData: CreditReportData | null) {
       // Sort issues by impact/severity
       const sortedIssues = enhancedIssues.sort((a, b) => {
         const impactOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
-        return impactOrder[a.impact] - impactOrder[b.impact];
+        return impactOrder[a.impact] - impactOrder[a.impact];
       });
       
       setIdentifiedIssues(sortedIssues);
-      setSelectedIssues(sortedIssues.filter(issue => issue.impact === 'High'));
+      setSelectedIssues(sortedIssues.filter(issue => issue.impact === "High"));
       setAnalysisComplete(true);
     } catch (error) {
       console.error("Error analyzing credit report:", error);
       setAnalysisError("Failed to analyze credit report. Please try again.");
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  // Helper function to map UI impact levels to RecommendedDispute impact levels
+  const mapImpactLevel = (impactLevel: string): "High" | "Medium" | "Low" => {
+    if (impactLevel.toLowerCase().includes('high') || impactLevel.toLowerCase().includes('critical')) {
+      return "High";
+    } else if (impactLevel.toLowerCase().includes('medium')) {
+      return "Medium";
+    } else {
+      return "Low";
     }
   };
 
