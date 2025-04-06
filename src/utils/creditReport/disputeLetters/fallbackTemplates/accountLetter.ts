@@ -1,118 +1,109 @@
 
-import { PersonalInfo, CreditReportAccount } from '../../types';
-
 /**
  * Generate a fallback dispute letter for account issues
- * @param personalInfo Consumer's personal information
- * @param account Account to dispute
- * @param bureau Credit bureau to send the letter to
- * @param customLanguage Optional custom language to include in the letter
- * @returns Generated dispute letter content
+ * @param accountName The name of the account
+ * @param accountNumber The account number
+ * @param issueType The type of issue
+ * @param bureau The credit bureau
+ * @returns Dispute letter content
  */
-export function generateFallbackAccountDisputeLetter(
-  personalInfo: PersonalInfo,
-  account: CreditReportAccount,
-  bureau: string,
-  customLanguage?: string
+export function generateAccountDisputeLetter(
+  accountName: string,
+  accountNumber: string | undefined,
+  issueType: string,
+  bureau: string
 ): string {
-  // Format date
-  const currentDate = new Date().toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  const date = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
+  
+  const bureauAddresses: Record<string, string> = {
+    'experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
+    'equifax': 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374',
+    'transunion': 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016'
+  };
+  
+  const bureauAddress = bureauAddresses[bureau.toLowerCase()] || `${bureau} Credit Bureau`;
+  
+  // Generate issue description based on type
+  let issueDescription = 'This account contains inaccurate information.';
+  
+  switch (issueType) {
+    case 'late_payment':
+      issueDescription = 'This account incorrectly shows late payments. I have always paid on time.';
+      break;
+    case 'incorrect_balance':
+      issueDescription = 'The balance reported for this account is incorrect.';
+      break;
+    case 'account_ownership':
+      issueDescription = 'This account does not belong to me. It may be the result of identity theft or a mixed file.';
+      break;
+    case 'collection_account':
+      issueDescription = 'This collection account is disputed as it is [not mine/paid/settled/too old to report].';
+      break;
+  }
+  
+  // Format account number if available
+  const formattedAccountNumber = accountNumber 
+    ? `\nAccount Number: ${accountNumber.length > 4 ? 'xxxx-xxxx-' + accountNumber.slice(-4) : accountNumber}`
+    : '';
+  
+  return `
+[YOUR NAME]
+[YOUR ADDRESS]
+[CITY, STATE ZIP]
+${date}
 
-  // Determine bureau address
-  const bureauAddress = getBureauAddress(bureau);
+${bureauAddress}
 
-  // Create the letter
-  let letter = '';
+Re: Dispute of Inaccurate Account Information
 
-  // Add consumer info header
-  if (personalInfo.name) {
-    letter += `${personalInfo.name}\n`;
-  }
-  
-  if (personalInfo.address) {
-    letter += `${personalInfo.address}\n`;
-  }
-  
-  if (personalInfo.city && personalInfo.state && personalInfo.zip) {
-    letter += `${personalInfo.city}, ${personalInfo.state} ${personalInfo.zip}\n`;
-  }
-  
-  letter += `${currentDate}\n\n`;
-  
-  // Add bureau address
-  letter += `${bureauAddress}\n\n`;
-  
-  // Add subject line
-  letter += `Re: Dispute of Inaccurate Information\n\n`;
-  
-  // Add greeting
-  letter += `To Whom It May Concern:\n\n`;
-  
-  // Add introduction
-  letter += `I am writing to dispute the following information in my credit report. I have identified the following item that is inaccurate or incomplete:\n\n`;
-  
-  // Add account details
-  letter += `Account Name: ${account.accountName || "Unknown"}\n`;
-  
-  if (account.accountNumber) {
-    letter += `Account Number: ${account.accountNumber}\n`;
-  }
-  
-  if (account.currentBalance || account.balance) {
-    letter += `Reported Balance: $${account.currentBalance || account.balance}\n`;
-  }
-  
-  if (account.openDate || account.dateOpened) {
-    letter += `Date Opened: ${account.openDate || account.dateOpened}\n`;
-  }
-  
-  letter += `\n`;
-  
-  // Add dispute reason
-  if (customLanguage) {
-    letter += `${customLanguage}\n\n`;
-  } else {
-    letter += `This information is inaccurate because the account details reported do not correctly reflect my credit history. As required under the Fair Credit Reporting Act (FCRA), please investigate this matter and correct the disputed information.\n\n`;
-  }
-  
-  // Add legal basis
-  letter += `Under the Fair Credit Reporting Act (FCRA), consumer reporting agencies are required to follow reasonable procedures to assure maximum possible accuracy of the information they report. Additionally, when a consumer disputes information, both the credit bureau and the furnisher of the information are required to conduct a reasonable investigation.\n\n`;
-  
-  // Add conclusion and request
-  letter += `Please investigate this matter and update my credit report to reflect accurate information. Please send me written confirmation of your findings and the actions taken.\n\n`;
-  
-  // Add closing
-  letter += `Sincerely,\n\n\n`;
-  
-  if (personalInfo.name) {
-    letter += `${personalInfo.name}\n`;
-  } else {
-    letter += `_______________________\n`;
-  }
-  
-  return letter;
+To Whom It May Concern:
+
+I am writing to dispute the following information in my credit report. I have identified the following item that is inaccurate:
+
+Account Name: ${accountName.toUpperCase()}${formattedAccountNumber}
+
+${issueDescription}
+
+Under the Fair Credit Reporting Act (FCRA), you are required to:
+1. Conduct a reasonable investigation into the information I am disputing
+2. Forward all relevant information that I provide to the furnisher
+3. Review and consider all relevant information
+4. Provide me the results of your investigation
+5. Delete the disputed information if it cannot be verified
+
+Please investigate this matter and provide me with the results within 30 days as required by the FCRA.
+
+Sincerely,
+
+[YOUR NAME]
+
+Enclosures:
+- Copy of ID
+- Copy of social security card
+- Copy of utility bill
+  `.trim();
 }
 
 /**
- * Get the mailing address for a credit bureau
+ * Generate a dispute letter for incorrect account information
+ * @param accountName The name of the account
+ * @param errorDescription Description of the error
+ * @param bureau The credit bureau
+ * @returns Dispute letter content
  */
-function getBureauAddress(bureau: string): string {
-  const lowerBureau = bureau.toLowerCase();
-  
-  if (lowerBureau.includes('experian')) {
-    return 'Experian\nP.O. Box 4500\nAllen, TX 75013';
-  } else if (lowerBureau.includes('equifax')) {
-    return 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374';
-  } else if (lowerBureau.includes('transunion')) {
-    return 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016';
-  } else {
-    return `${bureau}\n[Bureau Address]`;
-  }
+export function generateDisputeLetterForAccount(
+  accountName: string,
+  errorDescription: string,
+  bureau: string
+): string {
+  return generateAccountDisputeLetter(
+    accountName,
+    undefined,
+    'incorrect_information',
+    bureau
+  );
 }
-
-// Add an alias for the function to maintain backward compatibility
-export const generateFallbackAccountLetter = generateFallbackAccountDisputeLetter;

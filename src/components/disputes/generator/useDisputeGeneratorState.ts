@@ -110,8 +110,8 @@ export const useDisputeGeneratorState = () => {
   }, [selectedAccount, selectedDisputeType, disputeContent, selectedBureau, toast]);
   
   // Handle dispute generated
-  const handleDisputeGenerated = useCallback((letterContent: string) => {
-    setGeneratedLetter(letterContent);
+  const handleDisputeGenerated = useCallback((disputeData: any) => {
+    setGeneratedLetter(disputeData);
   }, []);
   
   // Reset letter

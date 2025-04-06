@@ -1,142 +1,148 @@
 
 /**
- * Sample Dispute Letters Module
- * Handles loading and processing sample dispute letters
+ * Sample dispute letter templates
  */
-import { supabase } from '@/lib/supabase';
 
 /**
- * Retrieve a sample dispute letter from storage
+ * Get a sample letter for disputing inaccurate information
+ * @returns Sample letter text
  */
-export const getSampleDisputeLanguage = async (
-  disputeType: string,
-  bureau: string = 'TransUnion'
-): Promise<string | null> => {
-  try {
-    console.log(`Looking for sample dispute letter for ${disputeType} with ${bureau}`);
-    
-    // Normalize the dispute type and bureau for better matching
-    const normalizedType = disputeType.toLowerCase();
-    const normalizedBureau = bureau.toLowerCase();
-    
-    // Get sample letters from storage
-    const { data: sampleLetters, error } = await supabase
-      .storage
-      .from('sample-letters')
-      .list();
-      
-    if (error) {
-      console.error("Error loading sample letters:", error);
-      return null;
-    }
-    
-    if (!sampleLetters || sampleLetters.length === 0) {
-      console.log("No sample letters found in storage");
-      return null;
-    }
-    
-    console.log(`Found ${sampleLetters.length} sample letters in storage`);
-    
-    // Find the best matching letter based on dispute type and bureau
-    const matchingLetterName = sampleLetters.find(letter => {
-      const fileName = letter.name.toLowerCase();
-      return fileName.includes(normalizedType) && fileName.includes(normalizedBureau);
-    })?.name;
-    
-    if (!matchingLetterName) {
-      console.log("No matching sample letter found for this dispute type and bureau");
-      return null;
-    }
-    
-    // Download the matching letter content
-    const { data: letterData, error: downloadError } = await supabase
-      .storage
-      .from('sample-letters')
-      .download(matchingLetterName);
-      
-    if (downloadError || !letterData) {
-      console.error("Error downloading sample letter:", downloadError);
-      return null;
-    }
-    
-    // Convert the blob to text
-    const letterText = await letterData.text();
-    console.log(`Successfully loaded sample letter: ${matchingLetterName.substring(0, 30)}...`);
-    return letterText;
-  } catch (error) {
-    console.error("Error in getSampleDisputeLanguage:", error);
-    return null;
-  }
-};
+export function getSampleInaccurateInfoLetter(): string {
+  return `
+[YOUR NAME]
+[YOUR ADDRESS]
+[CITY, STATE ZIP]
+
+[DATE]
+
+[CREDIT BUREAU NAME]
+[CREDIT BUREAU ADDRESS]
+[CITY, STATE ZIP]
+
+Re: Dispute of Inaccurate Information
+
+To Whom It May Concern:
+
+I am writing to dispute the following information in my credit report. I have reviewed my credit report and found that the following item(s) are inaccurate or incomplete:
+
+Account Name: [ACCOUNT NAME]
+Account Number: [ACCOUNT NUMBER]
+Reason for Dispute: The information reported is inaccurate
+
+Under the Fair Credit Reporting Act (FCRA), you are required to:
+1. Conduct a reasonable investigation into the information I am disputing
+2. Forward all relevant information that I provide to the furnisher
+3. Review and consider all relevant information
+4. Provide me the results of your investigation
+5. Delete the disputed information if it cannot be verified
+
+Please investigate this matter and provide me with the results within 30 days as required by the FCRA.
+
+Sincerely,
+
+[YOUR NAME]
+
+Enclosures:
+- Copy of credit report
+- [ADDITIONAL DOCUMENTATION]
+  `.trim();
+}
 
 /**
- * Find a sample dispute letter that matches the given criteria
+ * Get a sample letter for disputing an unauthorized inquiry
+ * @returns Sample letter text
  */
-export const findSampleDispute = async (
-  disputeType: string,
-  bureau: string = 'TransUnion'
-): Promise<{ content: string; filename: string } | null> => {
-  try {
-    // Normalize inputs for better matching
-    const normalizedType = disputeType.toLowerCase();
-    const normalizedBureau = bureau.toLowerCase();
-    
-    // Get available sample letters
-    const { data: sampleLetters, error } = await supabase
-      .storage
-      .from('sample-letters')
-      .list();
-      
-    if (error || !sampleLetters || sampleLetters.length === 0) {
-      return null;
-    }
-    
-    // Try to find an exact match first (both dispute type and bureau)
-    let matchingLetter = sampleLetters.find(letter => {
-      const fileName = letter.name.toLowerCase();
-      return fileName.includes(normalizedType) && fileName.includes(normalizedBureau);
-    });
-    
-    // If no exact match, try to find a match just based on dispute type
-    if (!matchingLetter) {
-      matchingLetter = sampleLetters.find(letter => {
-        const fileName = letter.name.toLowerCase();
-        return fileName.includes(normalizedType);
-      });
-    }
-    
-    // If still no match, try to find a match based on bureau
-    if (!matchingLetter) {
-      matchingLetter = sampleLetters.find(letter => {
-        const fileName = letter.name.toLowerCase();
-        return fileName.includes(normalizedBureau);
-      });
-    }
-    
-    // If still no match, just get any sample letter
-    if (!matchingLetter && sampleLetters.length > 0) {
-      matchingLetter = sampleLetters[0];
-    }
-    
-    if (!matchingLetter) {
-      return null;
-    }
-    
-    // Download the chosen letter
-    const { data: letterData, error: downloadError } = await supabase
-      .storage
-      .from('sample-letters')
-      .download(matchingLetter.name);
-      
-    if (downloadError || !letterData) {
-      return null;
-    }
-    
-    // Return the letter content and filename
-    const content = await letterData.text();
-    return { content, filename: matchingLetter.name };
-  } catch (error) {
-    console.error("Error finding sample dispute:", error);
-    return null;
-  }
-};
+export function getSampleUnauthorizedInquiryLetter(): string {
+  return `
+[YOUR NAME]
+[YOUR ADDRESS]
+[CITY, STATE ZIP]
+
+[DATE]
+
+[CREDIT BUREAU NAME]
+[CREDIT BUREAU ADDRESS]
+[CITY, STATE ZIP]
+
+Re: Dispute of Unauthorized Inquiry
+
+To Whom It May Concern:
+
+I am writing to dispute an unauthorized inquiry that appears on my credit report. I did not authorize the following company to access my credit report:
+
+Company Name: [COMPANY NAME]
+Date of Inquiry: [INQUIRY DATE]
+
+I have no record of applying for credit with this company or giving them permission to access my credit report. Under the Fair Credit Reporting Act (FCRA), credit inquiries should only be made with proper authorization.
+
+Please investigate this unauthorized access to my credit report and remove the inquiry if it cannot be verified as authorized. Please provide me with the results of your investigation within 30 days as required by the FCRA.
+
+Sincerely,
+
+[YOUR NAME]
+
+Enclosures:
+- Copy of credit report showing the unauthorized inquiry
+  `.trim();
+}
+
+/**
+ * Get a sample letter for disputing a collection account
+ * @returns Sample letter text
+ */
+export function getSampleCollectionDisputeLetter(): string {
+  return `
+[YOUR NAME]
+[YOUR ADDRESS]
+[CITY, STATE ZIP]
+
+[DATE]
+
+[CREDIT BUREAU NAME]
+[CREDIT BUREAU ADDRESS]
+[CITY, STATE ZIP]
+
+Re: Dispute of Collection Account
+
+To Whom It May Concern:
+
+I am writing to dispute a collection account that appears on my credit report. The details of the account are as follows:
+
+Collection Agency: [COLLECTION AGENCY NAME]
+Account Number: [ACCOUNT NUMBER]
+Original Creditor: [ORIGINAL CREDITOR NAME]
+Reported Balance: $[AMOUNT]
+
+I dispute this collection account because:
+[ ] This is not my account
+[ ] This account has been paid in full on [DATE]
+[ ] This account was settled for less than the full amount on [DATE]
+[ ] This debt is too old to be reported (over 7 years old)
+[ ] I have no record of this debt and request validation
+[ ] Other: [EXPLANATION]
+
+Under the Fair Credit Reporting Act (FCRA), you are required to conduct a reasonable investigation and verify this information with the original creditor. If this information cannot be verified, it must be removed from my credit report.
+
+Please investigate this matter and provide me with the results within 30 days as required by the FCRA.
+
+Sincerely,
+
+[YOUR NAME]
+
+Enclosures:
+- Copy of credit report
+- [ADDITIONAL DOCUMENTATION, IF ANY]
+  `.trim();
+}
+
+/**
+ * Get all sample dispute letters
+ * @returns Object containing all sample letters
+ */
+export function getAllSampleLetters(): Record<string, string> {
+  return {
+    'inaccurate_information': getSampleInaccurateInfoLetter(),
+    'unauthorized_inquiry': getSampleUnauthorizedInquiryLetter(),
+    'collection_account': getSampleCollectionDisputeLetter()
+  };
+}

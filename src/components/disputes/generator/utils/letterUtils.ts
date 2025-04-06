@@ -1,212 +1,97 @@
 
-import { DisputeData } from '../types';
-import { getLegalReferencesForDispute } from '@/utils/creditReport/legalReferences';
-import { generateEnhancedDisputeLetter } from '@/lib/supabase/letterGenerator';
+import { CreditReportData, Issue } from '@/utils/creditReport/types';
 
-export const processDisputeData = async (disputeData: DisputeData, testMode: boolean = false) => {
-  console.log("Processing dispute data for letter generation:", {
-    accountName: disputeData.accountName,
-    bureau: disputeData.bureau,
-    errorType: disputeData.errorType,
-    hasActualAccount: !!disputeData.actualAccountInfo
-  });
+/**
+ * Process dispute data to prepare for letter generation
+ * @param creditReportData Credit report data
+ * @param issues Issues detected in credit report
+ * @returns Processed dispute data
+ */
+export function processDisputeData(
+  creditReportData: CreditReportData,
+  issues: Issue[]
+): any {
+  // Group issues by account
+  const issuesByAccount: Record<string, Issue[]> = {};
   
-  // Get legal references relevant to this dispute
-  const legalRefs = getLegalReferencesForDispute(disputeData.errorType, disputeData.explanation);
-  disputeData.legalReferences = legalRefs;
-  
-  // Get user info from credit report data if available
-  const reportDataJSON = sessionStorage.getItem('creditReportData');
-  let reportData = null;
-  
-  if (reportDataJSON) {
-    try {
-      reportData = JSON.parse(reportDataJSON);
-      console.log("Found stored credit report data with primaryBureau:", reportData.primaryBureau);
-      
-      // Use the primary bureau from the report if available and no bureau specified
-      if (reportData.primaryBureau && (!disputeData.bureau || disputeData.bureau === "TransUnion")) {
-        disputeData.bureau = reportData.primaryBureau;
-        console.log("Using primary bureau from report:", disputeData.bureau);
-      }
-    } catch (error) {
-      console.error("Error parsing stored report data:", error);
-    }
-  }
-  
-  // Add more precise details to the dispute data
-  let userName = '';
-  let userAddress = '';
-  let userCity = '';
-  let userState = '';
-  let userZip = '';
-  
-  // Get user info from auth context first (most reliable)
-  const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-  if (userProfile?.full_name) {
-    console.log("Using name from user profile:", userProfile.full_name);
-    userName = userProfile.full_name;
-  }
-  
-  // Then try to use personal info from the credit report
-  if (reportData && reportData.personalInfo) {
-    const pi = reportData.personalInfo;
+  for (const issue of issues) {
+    const accountKey = issue.accountName || 'general';
     
-    // Only use report data if more complete than auth data
-    if (!userName || userName === '[YOUR NAME]') {
-      userName = pi.name || localStorage.getItem('userName') || "";
+    if (!issuesByAccount[accountKey]) {
+      issuesByAccount[accountKey] = [];
     }
     
-    userAddress = pi.address || localStorage.getItem('userAddress') || "";
-    userCity = pi.city || localStorage.getItem('userCity') || "";
-    userState = pi.state || localStorage.getItem('userState') || "";
-    userZip = pi.zip || localStorage.getItem('userZip') || "";
-    
-    console.log("Using personal info from credit report:", {
-      name: userName,
-      address: userAddress,
-      city: userCity,
-      state: userState,
-      zip: userZip
-    });
-  } else {
-    // Fall back to localStorage if no report data
-    if (!userName) {
-      userName = localStorage.getItem('userName') || "";
-    }
-    userAddress = localStorage.getItem('userAddress') || "";
-    userCity = localStorage.getItem('userCity') || "";
-    userState = localStorage.getItem('userState') || "";
-    userZip = localStorage.getItem('userZip') || "";
+    issuesByAccount[accountKey].push(issue);
   }
   
-  // Add user information - only if we have real data
-  disputeData.userInfo = {
-    name: userName || "[YOUR NAME]",
-    address: userAddress || "[YOUR ADDRESS]",
-    city: userCity || "[CITY]",
-    state: userState || "[STATE]",
-    zip: userZip || "[ZIP]"
+  // Extract personal info
+  const personalInfo = creditReportData.personalInfo || {};
+  
+  // Format dispute data
+  return {
+    personalInfo,
+    issuesByAccount,
+    issueCount: issues.length,
+    bureau: issues[0]?.bureau || creditReportData.primaryBureau,
+    reportNumber: creditReportData.reportNumber,
+    reportDate: creditReportData.reportDate,
+    accounts: creditReportData.accounts,
+    inquiries: creditReportData.inquiries
   };
+}
+
+/**
+ * Format account information for dispute letters
+ * @param account Account information
+ * @returns Formatted account information
+ */
+export function formatAccountInfo(account: any): string {
+  if (!account) return '';
   
-  // Add report data to dispute data for enhanced letter generation
-  disputeData.reportData = reportData;
+  const lines = [];
   
-  // Generate letter content if not already present
-  if (!disputeData.letterContent) {
-    try {
-      console.log("Generating enhanced dispute letter content for bureau:", disputeData.bureau);
-      
-      // Format the account name and number consistently
-      const accountName = disputeData.actualAccountInfo?.name || disputeData.accountName || "Unknown Account";
-      const formattedAccountName = accountName.toUpperCase();
-      
-      let accountNumber = disputeData.actualAccountInfo?.number || disputeData.accountNumber || "1000";
-      if (accountNumber.length > 4 && !accountNumber.includes('xx-xxxx-')) {
-        accountNumber = `xx-xxxx-${accountNumber.slice(-4)}`;
-      } else if (!accountNumber.includes('xx-xxxx-')) {
-        accountNumber = `xx-xxxx-${accountNumber}`;
-      }
-      
-      const letterContent = await generateEnhancedDisputeLetter(
-        disputeData.errorType,
-        {
-          accountName: formattedAccountName,
-          accountNumber: accountNumber,
-          errorDescription: disputeData.explanation,
-          bureau: disputeData.bureau,
-          relevantReportText: reportData?.rawText?.substring(0, 10000) // Add more report text
-        },
-        disputeData.userInfo,
-        reportData
-      );
-      
-      if (letterContent && letterContent.length > 100) {
-        disputeData.letterContent = letterContent;
-        console.log("Successfully generated dispute letter content, length:", letterContent.length);
-      } else {
-        console.warn("Generated letter content is too short or invalid:", letterContent);
-      }
-    } catch (error) {
-      console.error("Error generating letter content:", error);
-    }
+  if (account.accountName) {
+    lines.push(`Account Name: ${account.accountName.toUpperCase()}`);
   }
   
-  // Store the dispute data in session storage
-  try {
-    // First check if there's an existing letter
-    const existingLetterData = sessionStorage.getItem('pendingDisputeLetter');
-    if (existingLetterData) {
-      // Update existing letter
-      const parsedLetter = JSON.parse(existingLetterData);
-      const updatedLetter = {
-        ...parsedLetter,
-        ...disputeData,
-        bureaus: [disputeData.bureau],
-        title: `${disputeData.errorType} (${disputeData.accountName})`,
-        status: 'ready',
-        createdAt: new Date().toLocaleDateString('en-US', { 
-          month: 'short', day: 'numeric', year: 'numeric' 
-        }),
-      };
-      
-      // Save user name to localStorage for later reference
-      if (disputeData.userInfo?.name && disputeData.userInfo.name !== "[YOUR NAME]") {
-        localStorage.setItem('userName', disputeData.userInfo.name);
-      }
-      
-      // Store the updated letter in session storage
-      sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(updatedLetter));
-      console.log("Updated existing letter in session storage");
-    } else {
-      // Create new letter
-      const newLetter = {
-        id: Date.now(),
-        title: `${disputeData.errorType} (${disputeData.accountName})`,
-        recipient: disputeData.bureau,
-        createdAt: new Date().toLocaleDateString('en-US', { 
-          month: 'short', day: 'numeric', year: 'numeric' 
-        }),
-        status: 'ready',
-        bureaus: [disputeData.bureau],
-        content: disputeData.letterContent,
-        letterContent: disputeData.letterContent,
-        ...disputeData
-      };
-      
-      // Save user info to localStorage for future use
-      if (disputeData.userInfo?.name && disputeData.userInfo.name !== "[YOUR NAME]") {
-        localStorage.setItem('userName', disputeData.userInfo.name);
-      }
-      
-      sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(newLetter));
-      console.log("Created new letter in session storage");
-      
-      // Also add to generatedDisputeLetters array
-      const existingLetters = sessionStorage.getItem('generatedDisputeLetters');
-      let lettersArray = [];
-      
-      if (existingLetters) {
-        try {
-          lettersArray = JSON.parse(existingLetters);
-          if (!Array.isArray(lettersArray)) {
-            lettersArray = [];
-          }
-        } catch (error) {
-          console.error("Error parsing existing letters:", error);
-          lettersArray = [];
-        }
-      }
-      
-      lettersArray.unshift(newLetter); // Add to beginning of array
-      sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(lettersArray));
-      // Set timestamp to track when letters were generated
-      sessionStorage.setItem('disputeLettersTimestamp', Date.now().toString());
-      console.log("Added letter to generatedDisputeLetters array");
-    }
-  } catch (error) {
-    console.error("Error updating letter data:", error);
+  if (account.accountNumber) {
+    // Mask account number for security
+    const maskedNumber = account.accountNumber.length > 4 
+      ? `xxxx-xxxx-${account.accountNumber.slice(-4)}`
+      : account.accountNumber;
+    lines.push(`Account Number: ${maskedNumber}`);
   }
   
-  return disputeData;
-};
+  if (account.accountType) {
+    lines.push(`Account Type: ${account.accountType}`);
+  }
+  
+  if (account.balance || account.currentBalance) {
+    lines.push(`Current Balance: $${account.balance || account.currentBalance}`);
+  }
+  
+  if (account.openDate || account.dateOpened) {
+    lines.push(`Date Opened: ${account.openDate || account.dateOpened}`);
+  }
+  
+  return lines.join('\n');
+}
+
+/**
+ * Format issue description for dispute letters
+ * @param issue Issue information
+ * @returns Formatted issue description
+ */
+export function formatIssueDescription(issue: Issue): string {
+  let description = issue.description || '';
+  
+  if (issue.reason) {
+    description += `\nReason: ${issue.reason}`;
+  }
+  
+  if (issue.legalBasis) {
+    description += `\nLegal Basis: ${Array.isArray(issue.legalBasis) ? issue.legalBasis.join(', ') : issue.legalBasis}`;
+  }
+  
+  return description;
+}
