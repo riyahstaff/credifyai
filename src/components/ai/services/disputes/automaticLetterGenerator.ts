@@ -46,8 +46,7 @@ export async function generateAutomaticDisputeLetter(
         accountName: accountToDispute?.accountName || 'Multiple Accounts',
         accountNumber: accountToDispute?.accountNumber,
         errorDescription: 'This information appears to be inaccurate on my credit report.',
-        bureau,
-        relevantReportText: creditReportData.rawText?.substring(0, 500)
+        bureau
       },
       {
         name: userInfo?.name || '[YOUR NAME]',
@@ -55,8 +54,7 @@ export async function generateAutomaticDisputeLetter(
         city: userInfo?.city,
         state: userInfo?.state,
         zip: userInfo?.zip
-      },
-      creditReportData
+      }
     );
     
     console.log("Generated letter content length:", letterContent?.length || 0);

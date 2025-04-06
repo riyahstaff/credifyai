@@ -9,7 +9,7 @@ import {
  * @param accountName Optional account name for personalized samples
  */
 export function getSampleDisputeText(disputeType: string, accountName?: string): string {
-  return getSampleDisputeLanguage(disputeType, accountName);
+  return getSampleDisputeLanguage(disputeType);
 }
 
 /**
