@@ -11,12 +11,10 @@ export function useReportAnalysis(reportData: CreditReportData | null) {
   const [selectedIssues, setSelectedIssues] = useState<RecommendedDispute[]>([]);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
-  // Run analysis when report data changes
   useEffect(() => {
     if (reportData) {
       analyzeReport(reportData);
     } else {
-      // Reset state when report data is cleared
       setIdentifiedIssues([]);
       setSelectedIssues([]);
       setAnalysisComplete(false);
@@ -24,7 +22,6 @@ export function useReportAnalysis(reportData: CreditReportData | null) {
     }
   }, [reportData]);
 
-  // Analyze the credit report to identify issues
   const analyzeReport = async (data: CreditReportData) => {
     try {
       setIsAnalyzing(true);
@@ -32,23 +29,16 @@ export function useReportAnalysis(reportData: CreditReportData | null) {
       
       console.log("Starting credit report analysis...");
       
-      // Identify issues in the credit report
       const issues = await identifyIssues(data);
       
-      // Enhance issues with sample dispute language and legal references
       const enhancedIssues = issues.map((issue, index) => {
-        // Get sample dispute language for this type of issue
         const sampleLanguage = getSuccessfulDisputePhrases(issue.type);
-        
-        // Get legal references for this type of issue
         const legalRefs = getLegalReferencesForDispute(issue.type, issue.description);
         
-        // Create a properly typed RecommendedDispute object
         const recommendedDispute: RecommendedDispute = {
           id: `dispute-${index}`,
           type: issue.type,
           title: issue.title,
-          // Use primaryBureau from data if issue.bureau doesn't exist
           bureau: data.primaryBureau || data.bureau || "Unknown",
           accountName: issue.account?.accountName || "Unknown Account",
           accountNumber: issue.account?.accountNumber || "",
@@ -66,7 +56,6 @@ export function useReportAnalysis(reportData: CreditReportData | null) {
       
       console.log(`Analysis complete. Found ${enhancedIssues.length} potential issues.`);
       
-      // Sort issues by impact/severity
       const sortedIssues = enhancedIssues.sort((a, b) => {
         const impactOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
         return impactOrder[a.impact] - impactOrder[a.impact];
@@ -83,7 +72,6 @@ export function useReportAnalysis(reportData: CreditReportData | null) {
     }
   };
 
-  // Helper function to map UI impact levels to RecommendedDispute impact levels
   const mapImpactLevel = (impactLevel: string): "High" | "Medium" | "Low" => {
     if (impactLevel.toLowerCase().includes('high') || impactLevel.toLowerCase().includes('critical')) {
       return "High";
@@ -94,7 +82,6 @@ export function useReportAnalysis(reportData: CreditReportData | null) {
     }
   };
 
-  // Toggle selection of an issue
   const toggleIssueSelection = (issueId: string) => {
     setSelectedIssues(prev => {
       const isSelected = prev.some(issue => issue.id === issueId);
@@ -108,17 +95,14 @@ export function useReportAnalysis(reportData: CreditReportData | null) {
     });
   };
 
-  // Select all issues
   const selectAllIssues = () => {
     setSelectedIssues([...identifiedIssues]);
   };
 
-  // Clear all selected issues
   const clearSelectedIssues = () => {
     setSelectedIssues([]);
   };
 
-  // Select issues by impact level
   const selectIssuesByImpact = (impact: 'High' | 'Medium' | 'Low') => {
     const filteredIssues = identifiedIssues.filter(issue => issue.impact === impact);
     setSelectedIssues(filteredIssues);

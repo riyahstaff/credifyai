@@ -59,7 +59,8 @@ describe('handleAnalysisComplete', () => {
     mockSessionStorage.setItem('sampleReportsLoaded', 'false');
 
     try {
-      await handleAnalysisComplete(mockParams as any);
+      // Updated to pass the props object instead of separate parameters
+      await handleAnalysisComplete(mockParams);
       // This is a simplistic test just to make sure the function runs without errors
       // We'd expect it to throw in a real scenario without actual file processing
       expect.fail('Should have thrown an error without actual file processing');

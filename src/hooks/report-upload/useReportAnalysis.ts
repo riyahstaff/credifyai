@@ -43,6 +43,7 @@ export const useReportAnalysis = (
       }, 30000); // 30 second timeout
       
       try {
+        // Updated to pass the props object that handleAnalysisComplete expects
         handleAnalysisComplete({
           uploadedFile,
           setReportData,

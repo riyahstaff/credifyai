@@ -34,7 +34,7 @@ export function processDisputeData(
     issueCount: issues.length,
     bureau: issues[0]?.bureau || creditReportData.primaryBureau,
     reportNumber: creditReportData.reportNumber,
-    reportDate: creditReportData.reportDate,
+    reportDate: creditReportData.reportDate || new Date().toISOString().split('T')[0],
     accounts: creditReportData.accounts,
     inquiries: creditReportData.inquiries
   };

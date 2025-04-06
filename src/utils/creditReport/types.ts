@@ -94,6 +94,7 @@ export interface CreditReportData {
   primaryBureau?: string;
   reportNumber?: string;
   bureau?: string;
+  reportDate?: string;
 }
 
 export interface PersonalInfo {
@@ -142,4 +143,18 @@ export interface UserInfo {
   phone?: string;
   ssn?: string;
   dob?: string;
+}
+
+export interface Issue {
+  id?: string;
+  type: string;
+  description: string;
+  bureau: string;
+  accountName?: string;
+  accountNumber?: string;
+  date?: string;
+  reason?: string;
+  legalBasis?: LegalReference[] | string;
+  severity: 'high' | 'medium' | 'low';
+  details?: Record<string, any>;
 }
