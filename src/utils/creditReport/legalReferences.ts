@@ -1,105 +1,82 @@
 
 /**
- * Utility functions for getting appropriate legal references for disputes
+ * Legal reference types and utilities for credit report disputes
  */
 
-export interface LegalReference {
-  code: string;
+import { LegalReference as CommonLegalReference } from './types';
+
+// Add the missing properties to align with the type in types.ts
+export interface LegalReference extends CommonLegalReference {
+  law: string;
+  section: string;
   title: string;
-  description: string;
-  text?: string;
+  text: string;
+  applicability?: string;
 }
 
-// Common FCRA sections used in disputes
-const FCRA_SECTIONS: Record<string, LegalReference> = {
-  '611': {
-    code: 'FCRA § 611',
-    title: 'Procedure in case of disputed accuracy',
-    description: 'Requires credit bureaus to investigate disputed information and remove or correct inaccurate items.',
-    text: "If the completeness or accuracy of any item of information contained in a consumer's file at a consumer reporting agency is disputed by the consumer and the consumer notifies the agency directly, or indirectly through a reseller, of such dispute, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate."
-  },
-  '623': {
-    code: 'FCRA § 623',
-    title: 'Responsibilities of furnishers of information to consumer reporting agencies',
-    description: 'Outlines the duties of companies that provide information to credit bureaus.',
-    text: "A person shall not furnish information relating to a consumer to any consumer reporting agency if the person knows or has reasonable cause to believe that the information is inaccurate."
-  },
-  '605': {
-    code: 'FCRA § 605',
-    title: 'Requirements relating to information contained in consumer reports',
-    description: 'Limits how long negative information can stay on your credit report.',
-    text: "Accounts placed for collection or charged to profit and loss which antedate the report by more than seven years may not be reported."
-  },
-  '615': {
-    code: 'FCRA § 615',
-    title: 'Requirements on users of consumer reports',
-    description: 'Requires notification when information in your credit report has been used against you.',
-    text: "If any person takes any adverse action with respect to any consumer that is based in whole or in part on any information contained in a consumer report, the person shall provide notice to the consumer."
-  }
-};
-
-// Common FDCPA sections used in disputes
-const FDCPA_SECTIONS: Record<string, LegalReference> = {
-  '807': {
-    code: 'FDCPA § 807',
-    title: 'False or misleading representations',
-    description: 'Prohibits debt collectors from using false, deceptive, or misleading practices.',
-    text: "A debt collector may not use any false, deceptive, or misleading representation or means in connection with the collection of any debt."
-  },
-  '809': {
-    code: 'FDCPA § 809',
-    title: 'Validation of debts',
-    description: 'Requires debt collectors to verify a debt when disputed.',
-    text: "If the consumer notifies the debt collector in writing within the thirty-day period that the debt, or any portion thereof, is disputed, the debt collector shall cease collection of the debt until the debt collector obtains verification of the debt."
-  }
-};
-
 /**
- * Gets relevant legal references based on dispute reason and description
- * @param disputeReason The type of dispute (e.g., "Late Payment Dispute", "Identity Theft")
- * @param description Additional description of the dispute
- * @returns Array of legal references relevant to the dispute
+ * Gets legal references relevant to a specific type of dispute
+ * @param disputeType Type of credit dispute
+ * @param description Optional description to refine reference selection
+ * @returns Array of applicable legal references
  */
-export function getLegalReferencesForDispute(
-  disputeReason: string,
-  description?: string
-): LegalReference[] {
+export function getLegalReferencesForDispute(disputeType: string, description?: string): LegalReference[] {
   const references: LegalReference[] = [];
   
-  // Always include these core sections for all disputes
-  references.push(FCRA_SECTIONS['611']); // Investigation requirement
-  references.push(FCRA_SECTIONS['623']); // Furnisher responsibilities
+  // Add FCRA reference for all disputes
+  references.push({
+    law: "FCRA",
+    section: "611",
+    title: "Fair Credit Reporting Act - Investigation of Disputed Information",
+    text: "If the completeness or accuracy of any item of information contained in a consumer's file at a consumer reporting agency is disputed by the consumer, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate and record the current status of the disputed information.",
+    applicability: "All credit report disputes"
+  });
   
-  // Add specific sections based on the dispute reason
-  const reasonLower = disputeReason.toLowerCase();
-  
-  if (reasonLower.includes('collection') || reasonLower.includes('debt')) {
-    references.push(FDCPA_SECTIONS['807']); // False representations
-    references.push(FDCPA_SECTIONS['809']); // Debt validation
+  // Add type-specific references
+  switch (disputeType.toLowerCase()) {
+    case 'late_payment':
+      references.push({
+        law: "FCRA",
+        section: "605(a)(5)",
+        title: "Time limit on adverse information",
+        text: "The consumer reporting agency shall not report accounts placed for collection or charged to profit and loss which antedate the report by more than seven years.",
+        applicability: "Late payment disputes"
+      });
+      break;
+      
+    case 'collection':
+    case 'collection_account':
+      references.push({
+        law: "FDCPA",
+        section: "809",
+        title: "Validation of debts",
+        text: "If the consumer notifies the debt collector in writing within the thirty-day period that the debt is disputed, the debt collector shall cease collection of the debt until the debt collector obtains verification of the debt.",
+        applicability: "Collection account disputes"
+      });
+      break;
+      
+    case 'inquiry':
+    case 'unauthorized_inquiry':
+      references.push({
+        law: "FCRA",
+        section: "604",
+        title: "Permissible purposes of consumer reports",
+        text: "A consumer reporting agency may furnish a consumer report only under specific circumstances, including with the written permission of the consumer.",
+        applicability: "Inquiry disputes"
+      });
+      break;
+      
+    case 'account_not_mine':
+    case 'identity_theft':
+      references.push({
+        law: "FCRA",
+        section: "605B",
+        title: "Block of information resulting from identity theft",
+        text: "A consumer reporting agency shall block the reporting of any information that the consumer identifies as resulting from identity theft, not later than 4 business days after the date of receipt.",
+        applicability: "Identity theft or not-mine disputes"
+      });
+      break;
   }
   
-  if (reasonLower.includes('old') || reasonLower.includes('obsolete') || reasonLower.includes('time limit')) {
-    references.push(FCRA_SECTIONS['605']); // Time limits on reporting
-  }
-  
-  if (reasonLower.includes('inquiry') || reasonLower.includes('pull')) {
-    references.push(FCRA_SECTIONS['615']); // Requirements for users of reports
-  }
-  
-  // Check description for additional context
-  if (description) {
-    const descLower = description.toLowerCase();
-    
-    if (descLower.includes('collection') && !reasonLower.includes('collection')) {
-      references.push(FDCPA_SECTIONS['807']);
-    }
-    
-    if ((descLower.includes('7 year') || descLower.includes('seven year')) && 
-        !references.some(r => r.code === 'FCRA § 605')) {
-      references.push(FCRA_SECTIONS['605']);
-    }
-  }
-  
-  // Remove duplicates
-  return Array.from(new Map(references.map(item => [item.code, item])).values());
+  return references;
 }

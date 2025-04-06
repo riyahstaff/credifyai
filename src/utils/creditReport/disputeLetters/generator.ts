@@ -1,8 +1,9 @@
 
-import { CreditReportData, CreditReportAccount, RecommendedDispute, DisputeLetter } from '../types';
+import { CreditReportData, CreditReportAccount, RecommendedDispute } from '../types';
+import { DisputeLetter as DisputeLetterType } from '../types/letterTypes';
 import { getSampleDisputeLanguage } from './sampleLanguage';
-import { generateFallbackAccountLetter } from './fallbackTemplates/accountLetter';
-import { generateFallbackInquiryLetter } from './fallbackTemplates/inquiryLetter';
+import { generateFallbackAccountDisputeLetter } from './fallbackTemplates/accountLetter';
+import { generateFallbackInquiryDisputeLetter } from './fallbackTemplates/inquiryLetter';
 
 /**
  * Generate a dispute letter based on credit report data and a specific account
@@ -17,7 +18,7 @@ export function generateDisputeLetterForDiscrepancy(
   customLanguage?: string
 ): string {
   // Use fallback letter generation for now
-  return generateFallbackAccountLetter(
+  return generateFallbackAccountDisputeLetter(
     creditReportData.personalInfo || {},
     account,
     creditReportData.primaryBureau || account.bureau || 'Unknown',
@@ -36,7 +37,7 @@ export async function generateEnhancedDisputeLetter(
   creditReportData: CreditReportData,
   recommendedDisputes: RecommendedDispute[],
   userId: string = 'anonymous'
-): Promise<DisputeLetter> {
+): Promise<DisputeLetterType> {
   try {
     // For now, use a simplified approach with fallback templates
     const firstDispute = recommendedDisputes[0];
@@ -62,7 +63,7 @@ export async function generateEnhancedDisputeLetter(
       );
       
       if (inquiry) {
-        letterContent = generateFallbackInquiryLetter(
+        letterContent = generateFallbackInquiryDisputeLetter(
           creditReportData.personalInfo || {},
           inquiry,
           firstDispute.bureau
@@ -70,7 +71,7 @@ export async function generateEnhancedDisputeLetter(
       }
     } else if (account) {
       // For account disputes
-      letterContent = generateFallbackAccountLetter(
+      letterContent = generateFallbackAccountDisputeLetter(
         creditReportData.personalInfo || {},
         account,
         firstDispute.bureau,
@@ -78,7 +79,7 @@ export async function generateEnhancedDisputeLetter(
       );
     } else {
       // General dispute for unknown account
-      letterContent = generateFallbackAccountLetter(
+      letterContent = generateFallbackAccountDisputeLetter(
         creditReportData.personalInfo || {},
         {
           accountName: firstDispute.accountName,
@@ -90,7 +91,7 @@ export async function generateEnhancedDisputeLetter(
     }
     
     // Create the dispute letter object
-    const letter: DisputeLetter = {
+    const letter: DisputeLetterType = {
       id: generateUniqueId(),
       title: `${firstDispute.bureau} Dispute - ${firstDispute.accountName || 'Multiple Accounts'}`,
       content: letterContent,
@@ -121,7 +122,7 @@ function generateUniqueId(): string {
 /**
  * Creates a default letter if no specific issues were identified
  */
-function createDefaultLetter(creditReportData: CreditReportData, userId: string): DisputeLetter {
+function createDefaultLetter(creditReportData: CreditReportData, userId: string): DisputeLetterType {
   return {
     id: generateUniqueId(),
     title: 'General Credit Report Dispute',

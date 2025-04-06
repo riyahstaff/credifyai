@@ -1,51 +1,104 @@
 
-/**
- * Fallback template for inquiry dispute letters
- */
+import { PersonalInfo, CreditReportInquiry } from '../../types';
 
 /**
- * Generate a fallback letter template for inquiry disputes
+ * Generate a fallback dispute letter for inquiry issues
+ * @param personalInfo Consumer's personal information
+ * @param inquiry Inquiry to dispute
+ * @param bureau Credit bureau to send the letter to
+ * @returns Generated dispute letter content
  */
-export const generateFallbackInquiryDisputeLetter = (): string => {
-  // Generate a credit report/tracking number
-  const creditReportNumber = 'CR' + Math.floor(Math.random() * 10000000);
-  const trackingNumber = Math.random().toString(16).substring(2, 10) + Math.random().toString(16).substring(2, 10);
-  
-  // Format date using specific format to match sample letters
-  const today = new Date();
-  const formattedDate = `${today.toLocaleDateString('en-US', {
+export function generateFallbackInquiryDisputeLetter(
+  personalInfo: PersonalInfo,
+  inquiry: CreditReportInquiry,
+  bureau: string
+): string {
+  // Format date
+  const currentDate = new Date().toLocaleDateString('en-US', { 
+    year: 'numeric', 
     month: 'long', 
-    day: 'numeric',
-    year: 'numeric'
-  })}`;
+    day: 'numeric' 
+  });
+
+  // Determine bureau address
+  const bureauAddress = getBureauAddress(bureau);
+
+  // Create the letter
+  let letter = '';
+
+  // Add consumer info header
+  if (personalInfo.name) {
+    letter += `${personalInfo.name}\n`;
+  }
   
-  let letter = `Credit Report #: ${creditReportNumber}\nToday is ${formattedDate}\n\n`;
-  letter += `[YOUR NAME]\n`;
-  letter += `[YOUR ADDRESS]\n`;
-  letter += `[CITY], [STATE] [ZIP]\n\n`;
+  if (personalInfo.address) {
+    letter += `${personalInfo.address}\n`;
+  }
   
-  letter += `TransUnion\nP.O. Box 2000\nChester, PA 19016\n\n`;
+  if (personalInfo.city && personalInfo.state && personalInfo.zip) {
+    letter += `${personalInfo.city}, ${personalInfo.state} ${personalInfo.zip}\n`;
+  }
   
-  letter += `Re: Unauthorized inquiries on my credit report - Request for immediate removal\n\n`;
+  letter += `${currentDate}\n\n`;
   
+  // Add bureau address
+  letter += `${bureauAddress}\n\n`;
+  
+  // Add subject line
+  letter += `Re: Dispute of Unauthorized Credit Inquiry\n\n`;
+  
+  // Add greeting
   letter += `To Whom It May Concern:\n\n`;
-  letter += `I recently reviewed my credit report and discovered unauthorized inquiries that I did not authorize. Under the Fair Credit Reporting Act (FCRA), Section 604, inquiries can only be made with a permissible purpose and with my authorization.\n\n`;
   
-  letter += `DISPUTED ITEM(S):\n`;
-  letter += `- Unauthorized inquiry from [ACCOUNT_NAME] on [DATE]\n\n`;
+  // Add introduction
+  letter += `I am writing to dispute an unauthorized inquiry that appears on my credit report. I have identified the following inquiry that I did not authorize:\n\n`;
   
-  letter += `I did not authorize these inquiries and request their immediate investigation and removal. These unauthorized inquiries have negatively impacted my credit score and constitute a violation of my privacy rights.\n\n`;
+  // Add inquiry details
+  const inquiryName = inquiry.inquiryCompany || inquiry.inquiryBy || inquiry.creditor || "Unknown Company";
+  letter += `Inquiry By: ${inquiryName}\n`;
+  letter += `Inquiry Date: ${inquiry.inquiryDate}\n`;
+  if (inquiry.type) {
+    letter += `Inquiry Type: ${inquiry.type}\n`;
+  }
+  letter += `\n`;
   
-  letter += `According to the Fair Credit Reporting Act, Section 609 (a)(1)(A), you are required by federal law to verify any and all inquiries you post on a credit report. Under Section 611 of the FCRA, you must conduct a thorough investigation of this disputed information within 30 days.\n\n`;
+  // Add dispute reason
+  letter += `I did not authorize this inquiry and did not apply for credit with this company. Under the Fair Credit Reporting Act (FCRA), credit inquiries can only be made with a permissible purpose, typically with the consumer's consent. As I did not give my consent for this inquiry, it should be removed from my credit report.\n\n`;
   
-  letter += `Please remove these unauthorized inquiries immediately and provide confirmation when completed. If you find that these inquiries were authorized, please provide me with copies of my signed authorization for each inquiry.\n\n`;
+  // Add legal basis
+  letter += `Section 604 of the FCRA establishes permissible purposes for accessing a consumer's credit report, and Section 611 provides consumers with the right to dispute inaccurate information. This inquiry appears to violate these provisions as I did not authorize it.\n\n`;
   
-  letter += `Sincerely,\n\n`;
-  letter += `[YOUR NAME]\n\n`;
+  // Add conclusion and request
+  letter += `Please investigate this matter and remove this unauthorized inquiry from my credit report. Please send me written confirmation when this action has been completed.\n\n`;
   
-  letter += `Enclosures:\n`;
-  letter += `- Copy of Driver's License\n`;
-  letter += `- Copy of Social Security Card\n`;
+  // Add closing
+  letter += `Sincerely,\n\n\n`;
+  
+  if (personalInfo.name) {
+    letter += `${personalInfo.name}\n`;
+  } else {
+    letter += `_______________________\n`;
+  }
   
   return letter;
-};
+}
+
+/**
+ * Get the mailing address for a credit bureau
+ */
+function getBureauAddress(bureau: string): string {
+  const lowerBureau = bureau.toLowerCase();
+  
+  if (lowerBureau.includes('experian')) {
+    return 'Experian\nP.O. Box 4500\nAllen, TX 75013';
+  } else if (lowerBureau.includes('equifax')) {
+    return 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374';
+  } else if (lowerBureau.includes('transunion')) {
+    return 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016';
+  } else {
+    return `${bureau}\n[Bureau Address]`;
+  }
+}
+
+// Add an alias for the function to maintain backward compatibility
+export const generateFallbackInquiryLetter = generateFallbackInquiryDisputeLetter;

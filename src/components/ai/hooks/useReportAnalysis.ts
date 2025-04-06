@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { CreditReportData, RecommendedDispute, IdentifiedIssue, LegalReference } from '@/utils/creditReport/types';
+import { CreditReportData, RecommendedDispute, IdentifiedIssue } from '@/utils/creditReport/types';
 import { identifyIssues } from '@/utils/reportAnalysis/issueIdentification';
 import { getSuccessfulDisputePhrases } from '@/utils/creditReport/disputeLetters/sampleLanguage';
 import { getLegalReferencesForDispute } from '@/utils/creditReport/legalReferences';
@@ -49,7 +48,8 @@ export function useReportAnalysis(reportData: CreditReportData | null) {
           id: `dispute-${index}`,
           type: issue.type,
           title: issue.title,
-          bureau: issue.bureau || data.primaryBureau || "Unknown",
+          // Use primaryBureau from data if issue.bureau doesn't exist
+          bureau: data.primaryBureau || data.bureau || "Unknown",
           accountName: issue.account?.accountName || "Unknown Account",
           accountNumber: issue.account?.accountNumber || "",
           reason: issue.description,
