@@ -5,7 +5,7 @@ import Logo from '../ui/Logo';
 import { useNavbar } from './navbar/useNavbar';
 import DesktopNav from './navbar/DesktopNav';
 import MobileMenu from './navbar/MobileMenu';
-import { Profile } from '@/contexts/AuthContext';
+import { Profile } from '@/lib/supabase/client';
 
 const Navbar = () => {
   const {

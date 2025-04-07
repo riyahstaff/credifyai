@@ -7,7 +7,7 @@ import { useDisputeLettersData } from './hooks/useDisputeLettersData';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
-import { Profile } from '@/contexts/AuthContext';
+import { Profile } from '@/lib/supabase/client';
 
 // Import existing components
 import DisputeLettersList from './DisputeLettersList';  

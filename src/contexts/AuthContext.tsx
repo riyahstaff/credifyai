@@ -1,19 +1,14 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { Profile as SupabaseProfile } from '@/lib/supabase/client';
 
-// Define the shape of user and profile objects
+// Use the imported Profile type to ensure compatibility
+export type Profile = SupabaseProfile;
+
+// Define the shape of user object
 interface User {
   id: string;
   email: string;
-}
-
-// Make sure Profile matches what's expected in other components
-export interface Profile {
-  id: string;
-  email: string;
-  full_name?: string;
-  has_subscription: boolean;
-  created_at?: string;
 }
 
 // Define the shape of the context with all required methods
