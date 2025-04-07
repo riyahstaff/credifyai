@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,6 +58,7 @@ export const useNavbar = () => {
     return currentPathWithoutQuery === linkPathWithoutQuery;
   };
   
+  // Handle logout using signOut from auth context
   const handleLogout = async () => {
     // Clear test mode subscription flag on logout
     sessionStorage.removeItem('testModeSubscription');

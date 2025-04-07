@@ -7,18 +7,18 @@ import { MoonIcon, SunIcon, Home, Users, Settings, HelpCircle, LogOut, FileText 
 
 interface DashboardSidebarProps {
   testMode?: boolean;
+  hasSubscription?: boolean;
 }
 
-const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ testMode = false }) => {
-  const { user } = useAuth();
+const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ testMode = false, hasSubscription = false }) => {
+  const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
 
-  // Use window.location instead of logout function since it doesn't exist
+  // Use logout function from context
   const handleLogout = async () => {
     try {
-      // Redirect to login page instead of using logout function
-      window.location.href = '/login';
+      await logout();
     } catch (error) {
       console.error("Logout failed:", error);
     }

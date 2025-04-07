@@ -7,6 +7,7 @@ import { useDisputeLettersData } from './hooks/useDisputeLettersData';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
+import { Profile } from '@/contexts/AuthContext';
 
 // Import existing components
 import DisputeLettersList from './DisputeLettersList';  
@@ -100,7 +101,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
                 isLoading={isLoading}
                 onCreateLetter={handleCreateLetterFromIssues}
                 testMode={testMode}
-                userProfile={profile}
+                userProfile={profile as Profile}
               />
             </div>
             
@@ -109,7 +110,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
                 letter={selectedLetter}
                 isLoading={isLoading}
                 testMode={testMode}
-                userProfile={profile}
+                userProfile={profile as Profile}
               />
             </div>
           </div>

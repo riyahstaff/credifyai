@@ -5,6 +5,7 @@ import Logo from '../ui/Logo';
 import { useNavbar } from './navbar/useNavbar';
 import DesktopNav from './navbar/DesktopNav';
 import MobileMenu from './navbar/MobileMenu';
+import { Profile } from '@/contexts/AuthContext';
 
 const Navbar = () => {
   const {
@@ -29,7 +30,7 @@ const Navbar = () => {
           
           <DesktopNav 
             user={user}
-            profile={profile}
+            profile={profile as Profile}
             navLinks={navLinks}
             isActive={isActive}
             testMode={testMode}
@@ -51,7 +52,7 @@ const Navbar = () => {
         isOpen={isOpen}
         navLinks={navLinks}
         user={user}
-        profile={profile}
+        profile={profile as Profile}
         testMode={testMode}
         hasSubscription={hasSubscription}
         toggleTestMode={toggleTestMode}
