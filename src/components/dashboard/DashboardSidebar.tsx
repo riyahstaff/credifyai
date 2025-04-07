@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,13 +10,15 @@ interface DashboardSidebarProps {
 }
 
 const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ testMode = false }) => {
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
 
+  // Use window.location instead of logout function since it doesn't exist
   const handleLogout = async () => {
     try {
-      await logout();
+      // Redirect to login page instead of using logout function
+      window.location.href = '/login';
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -47,6 +50,14 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ testMode = false })
         >
           <Users size={20} className={location.pathname === '/profile' ? 'text-credify-teal' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-white'} />
           <span>Profile</span>
+        </Link>
+
+        <Link 
+          to="/dispute-letters" 
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg group ${location.pathname === '/dispute-letters' ? 'bg-credify-teal/10 text-credify-teal' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-credify-navy-light/10'}`}
+        >
+          <FileText size={20} className={location.pathname === '/dispute-letters' ? 'text-credify-teal' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-white'} />
+          <span>Dispute Letters</span>
         </Link>
         
         <Link 
