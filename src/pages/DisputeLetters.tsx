@@ -80,9 +80,11 @@ const DisputeLetters = () => {
       console.log("[DisputeLetters] Valid letters found in storage");
       setLettersLoaded(true);
       
-      // Set a flag to force refresh in component, but don't do it repeatedly
-      if (sessionStorage.getItem('forceLettersReload') !== 'done') {
+      // Don't try to reload more than once to prevent loop
+      const hasForceReloaded = sessionStorage.getItem('forceLettersReload') === 'done';
+      if (!hasForceReloaded && sessionStorage.getItem('forceLettersReload') === 'true') {
         sessionStorage.setItem('forceLettersReload', 'done');
+        console.log("[DisputeLetters] Force reload triggered once, setting to done");
       }
       
       // Also ensure auto-generated flag is set

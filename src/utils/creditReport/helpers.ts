@@ -1,4 +1,3 @@
-
 /**
  * Helper functions for credit report processing
  */
@@ -17,7 +16,7 @@ export const createMinimalReportData = (): CreditReportData => {
     accounts: [],
     inquiries: [],
     publicRecords: [],
-    rawText: "Sample credit report data",
+    rawText: "",
     analysisResults: {
       totalAccounts: 0,
       openAccounts: 0,
@@ -81,13 +80,13 @@ export const addSampleAccountToReport = (report: CreditReportData, accountDetail
 export const normalizeAccount = (account: any): CreditReportAccount => {
   // Create a normalized account with all expected fields
   const normalized: CreditReportAccount = {
-    accountName: account.accountName || account.name || "Unknown Account",
-    accountNumber: account.accountNumber || account.account_number,
-    accountType: account.accountType || account.type,
+    accountName: account.accountName || account.name || "",
+    accountNumber: account.accountNumber || account.account_number || "",
+    accountType: account.accountType || account.type || "",
     balance: account.balance || account.currentBalance || 0,
     currentBalance: account.currentBalance || account.balance || 0,
     creditLimit: account.creditLimit || account.limit || 0,
-    paymentStatus: account.paymentStatus || account.status,
+    paymentStatus: account.paymentStatus || account.status || "",
     dateOpened: account.dateOpened || account.openDate || "",
     lastActivity: account.lastActivity || "",
     status: account.status || "Unknown",

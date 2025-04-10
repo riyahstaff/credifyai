@@ -37,6 +37,12 @@ export const useReportNavigation = () => {
           return;
         }
         
+        // Check if we're already on the dispute letters page
+        if (window.location.pathname === '/dispute-letters') {
+          originalConsoleLog("Already on dispute letters page, skipping navigation");
+          return;
+        }
+        
         // Set navigation in progress flag
         navigationInProgress.current = true;
         sessionStorage.setItem('navigationInProgress', 'true');
@@ -71,6 +77,12 @@ export const useReportNavigation = () => {
     // Check if navigation is already in progress
     if (navigationInProgress.current) {
       console.log("Navigation already in progress, skipping");
+      return;
+    }
+    
+    // Check if we're already on the dispute letters page
+    if (window.location.pathname === '/dispute-letters') {
+      console.log("Already on dispute letters page, skipping navigation");
       return;
     }
     
