@@ -137,6 +137,9 @@ export const formatLetterFromStorage = (data: any, fallbackId: number): Letter =
     letterContent: data.letterContent || data.content || "No content available",
     createdAt: data.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     status: data.status || "ready",
-    errorType: data.errorType || "General Dispute"
+    errorType: data.errorType || "General Dispute",
+    // Add missing required properties for Letter type
+    recipient: data.recipient || "Credit Bureau",
+    bureaus: data.bureaus || [data.bureau || "Credit Bureau"]
   };
 };

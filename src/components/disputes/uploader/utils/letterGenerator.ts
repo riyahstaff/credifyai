@@ -23,10 +23,9 @@ export const generateDisputeLetters = async (
     for (const issue of issues) {
       console.log(`Generating letter for issue: ${issue.title}`);
       
-      // Find the account referenced in the issue
-      const account = issue.accountIndex !== undefined && reportData.accounts 
-        ? reportData.accounts[issue.accountIndex] 
-        : undefined;
+      // Find the account referenced in the issue - adjust this to use account from issue directly
+      // instead of an accountIndex which doesn't exist in IdentifiedIssue
+      const account = issue.account || undefined;
       
       if (account) {
         console.log(`Found account for issue: ${account.accountName}`);
@@ -67,20 +66,21 @@ async function createLetterFromIssue(
 ): Promise<any> {
   try {
     // Determine the bureau from the issue or report data
-    const bureau = issue.bureau || reportData?.primaryBureau || "Experian";
+    // Use a fallback approach since issue.bureau might not exist
+    const bureau = reportData?.primaryBureau || "Experian";
     
     // Create the letter object
     const letter = {
       id: Date.now(),
       title: issue.title || "Credit Report Dispute",
       bureau: bureau,
-      accountName: account?.accountName || issue.accountName || "Multiple Accounts",
-      accountNumber: account?.accountNumber || issue.accountNumber || "",
-      content: issue.letterContent || "",
-      letterContent: issue.letterContent || "",
+      accountName: account?.accountName || "Multiple Accounts",
+      accountNumber: account?.accountNumber || "",
+      content: issue.description || "",
+      letterContent: issue.description || "",
       createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       status: "ready",
-      errorType: issue.errorType || "Data Inaccuracy"
+      errorType: issue.type || "Data Inaccuracy"
     };
     
     return letter;
@@ -107,7 +107,7 @@ function createGenericLetter(reportData: CreditReportData): any {
     accountName: "Multiple Accounts",
     accountNumber: "",
     content: `Dear ${bureau},\n\nI am writing to dispute information in my credit report that I believe is inaccurate. After reviewing my credit report, I have identified several discrepancies that require investigation.\n\nPlease conduct a thorough investigation of all items I am disputing, as required by the Fair Credit Reporting Act. If you cannot verify this information, please remove it from my credit report.\n\nSincerely,\n[YOUR NAME]`,
-    letterContent: `Dear ${bureau},\n\nI am writing to dispute information in my credit report that I believe is inaccurate. After reviewing my credit report, I have identified several discrepancies that require investigation.\n\nPlease conduct a thorough investigation of all items I am disputing, as required by the Fair Credit Reporting Act. If you cannot verify this information, please remove it from my credit report.\n\nSincerely,\n[YOUR NAME]`,
+    letterContent: `Dear ${bureau},\n\nI am writing to dispute information in my credit report that I believe to be inaccurate. After reviewing my credit report, I have identified several discrepancies that require investigation.\n\nPlease conduct a thorough investigation of all items I am disputing, as required by the Fair Credit Reporting Act. If you cannot verify this information, please remove it from my credit report.\n\nSincerely,\n[YOUR NAME]`,
     createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     status: "ready",
     errorType: "Data Inaccuracy"
