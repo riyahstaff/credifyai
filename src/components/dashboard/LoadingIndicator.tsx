@@ -9,8 +9,12 @@ import { AlertTriangle } from "lucide-react";
 const LoadingIndicator = () => {
   const [showTimeout, setShowTimeout] = useState(false);
   const [extendedTimeout, setExtendedTimeout] = useState(false);
+  const [criticalTimeout, setCriticalTimeout] = useState(false);
 
   useEffect(() => {
+    // Add more detailed console logs for debugging
+    console.log("LoadingIndicator mounted, starting timers");
+    
     // If loading takes more than 1 second, show initial timeout message
     const timer = setTimeout(() => {
       console.log("Initial loading timeout occurred");
@@ -23,9 +27,17 @@ const LoadingIndicator = () => {
       setExtendedTimeout(true);
     }, 2500);
     
+    // If loading takes more than 10 seconds, show critical timeout message
+    const criticalTimer = setTimeout(() => {
+      console.log("Critical loading timeout occurred");
+      setCriticalTimeout(true);
+    }, 10000);
+    
     return () => {
+      console.log("LoadingIndicator unmounting, clearing timers");
       clearTimeout(timer);
       clearTimeout(extendedTimer);
+      clearTimeout(criticalTimer);
     };
   }, []);
 
@@ -60,6 +72,25 @@ const LoadingIndicator = () => {
                             Return to home page
                           </Link>
                         </div>
+                        
+                        {criticalTimeout && (
+                          <div className="mt-6 p-4 border border-red-300 dark:border-red-700/40 bg-red-50 dark:bg-red-900/20 rounded-md">
+                            <p className="text-red-700 dark:text-red-400 font-medium">Critical Timeout</p>
+                            <p className="text-sm text-red-600 dark:text-red-300">
+                              The application is taking too long to load. Try refreshing the page or clicking the button below to reload with test mode enabled.
+                            </p>
+                            <button 
+                              onClick={() => {
+                                // Enable test mode and reload
+                                sessionStorage.setItem('testModeSubscription', 'true');
+                                window.location.reload();
+                              }}
+                              className="mt-2 px-4 py-2 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-md text-sm font-medium hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors"
+                            >
+                              Enable Test Mode & Reload
+                            </button>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <p className="mb-2">We're connecting to our services. This should only take a moment...</p>

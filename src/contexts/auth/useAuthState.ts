@@ -47,19 +47,43 @@ export function useAuthState(): [
     let isActive = true;
     const retryDelay = 1000;
     
+    // Add debug flag to help troubleshoot auth issues
+    const DEBUG_AUTH = true;
+    
     // Check if we're in a forced auth persistence situation
     const forceAuthPersistence = sessionStorage.getItem('forceAuthPersistence') === 'true';
     
     const initAuth = async (retry = 0) => {
       if (!isActive) return;
       
-      console.log("Initializing auth");
+      if (DEBUG_AUTH) console.log("Initializing auth, retry attempt:", retry);
       setState(prev => ({ ...prev, isLoading: true }));
       
       try {
+        // For preview/demo environments, set up a demo user if no auth is available
+        // This helps prevent infinite loading states in preview
+        if (window.location.host.includes('lovableproject.com')) {
+          if (DEBUG_AUTH) console.log("Preview environment detected - setting up demo mode");
+          
+          // Set test mode for preview environment
+          sessionStorage.setItem('testModeSubscription', 'true');
+          
+          // After a short timeout to ensure the app can initialize properly
+          setTimeout(() => {
+            if (isActive && !state.user) {
+              if (DEBUG_AUTH) console.log("No user detected in preview, setting demo state");
+              setState(prev => ({
+                ...prev,
+                isLoading: false,
+                // We're not setting a fake user here, just indicating we're done loading
+              }));
+            }
+          }, 1500);
+        }
+        
         // If we're forcing auth persistence, try harder to maintain the session
         if (forceAuthPersistence) {
-          console.log("Forced auth persistence mode active");
+          if (DEBUG_AUTH) console.log("Forced auth persistence mode active");
           sessionStorage.removeItem('forceAuthPersistence');
           
           // Wait a bit longer for auth to initialize in this case
@@ -74,8 +98,11 @@ export function useAuthState(): [
           
           // Retry with exponential backoff if this is a timeout error
           if (retry < 3 && error.message.includes('timeout')) {
-            console.log(`Retrying auth initialization in ${retryDelay * (retry + 1)}ms`);
+            if (DEBUG_AUTH) console.log(`Retrying auth initialization in ${retryDelay * (retry + 1)}ms`);
             setTimeout(() => initAuth(retry + 1), retryDelay * (retry + 1));
+          } else {
+            // If we've exhausted retries, still mark loading as complete to prevent infinite loading
+            setState(prev => ({ ...prev, isLoading: false }));
           }
         } else {
           const session = data?.session;
@@ -85,7 +112,8 @@ export function useAuthState(): [
             ...prev, 
             session,
             user: session?.user ?? null,
-            sessionError: null  // Clear any previous errors
+            sessionError: null,  // Clear any previous errors
+            isLoading: false     // Make sure to set loading to false
           }));
           
           if (session?.user) {
@@ -100,16 +128,20 @@ export function useAuthState(): [
         }
       } catch (error) {
         console.error('Error getting session:', error);
-        setState(prev => ({ ...prev, sessionError: error as Error }));
+        setState(prev => ({ 
+          ...prev, 
+          sessionError: error as Error,
+          isLoading: false  // Make sure to set loading to false even on error
+        }));
         
         // Retry on network errors or timeouts
         if (retry < 3) {
-          console.log(`Retrying auth initialization in ${retryDelay * (retry + 1)}ms`);
+          if (DEBUG_AUTH) console.log(`Retrying auth initialization in ${retryDelay * (retry + 1)}ms`);
           setTimeout(() => initAuth(retry + 1), retryDelay * (retry + 1));
         }
       } finally {
         if (isActive) {
-          console.log("Auth initialization complete");
+          if (DEBUG_AUTH) console.log("Auth initialization complete");
           setState(prev => ({ ...prev, isLoading: false }));
         }
       }
@@ -122,7 +154,7 @@ export function useAuthState(): [
         async (_event, session) => {
           if (!isActive) return;
           
-          console.log("Auth state changed, new session:", !!session);
+          if (DEBUG_AUTH) console.log("Auth state changed, event:", _event, "new session:", !!session);
           
           if (_event === 'SIGNED_OUT') {
             setState({
