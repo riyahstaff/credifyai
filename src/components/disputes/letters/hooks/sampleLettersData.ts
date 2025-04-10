@@ -4,30 +4,14 @@
  * This file only contains types and an empty function for backward compatibility
  */
 
-export interface Letter {
-  id: number | string;
-  title: string;
-  recipient: string;
-  createdAt: string;
-  status: string;
-  bureaus: string[];
-  laws?: string[];
-  content: string;
-  resolvedAt?: string;
-  accountName?: string;
-  accountNumber?: string;
-  errorType?: string;
-  letterContent?: string;
-  explanation?: string;
-  bureau?: string;
-  timestamp?: string;
-}
+// Re-export the Letter type from our implementation
+export type { Letter } from './useDisputeLettersData.tsx';
 
 /**
  * Always returns an empty array - NO MOCK LETTERS
  * This exists only for backward compatibility
  */
-export const getSampleLetters = (): Letter[] => {
+export const getSampleLetters = (): any[] => {
   console.log("REMOVED: getSampleLetters called but returns empty array - NO MOCK DATA");
   return [];
 };

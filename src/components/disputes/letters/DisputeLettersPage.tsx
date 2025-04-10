@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../layout/Navbar';
 import Footer from '../../layout/Footer';
-import { useDisputeLettersData } from './hooks/useDisputeLettersData';
+import { useDisputeLettersData, Letter } from './hooks/useDisputeLettersData';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
@@ -103,6 +103,11 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
     }
   }, [letters.length, isLoading, letterLoadAttempts]);
   
+  // Function to handle letter selection that converts the type properly
+  const handleSelectLetter = (letter: Letter) => {
+    setSelectedLetter(letter);
+  };
+  
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-credify-navy-dark">
       <Navbar />
@@ -151,7 +156,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
               <DisputeLettersList 
                 letters={letters}
                 selectedLetter={selectedLetter}
-                onSelectLetter={setSelectedLetter}
+                onSelectLetter={handleSelectLetter}
                 isLoading={isLoading}
                 onCreateLetter={handleCreateLetterFromIssues}
                 testMode={testMode}
