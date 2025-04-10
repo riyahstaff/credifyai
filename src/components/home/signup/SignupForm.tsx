@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
@@ -12,6 +13,7 @@ interface SignupFormProps {
 }
 
 const SignupForm = ({ email, setEmail, setShowDialog, setErrorMessage }: SignupFormProps) => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { signUp } = useAuth();
   const [name, setName] = useState('');
@@ -48,8 +50,9 @@ const SignupForm = ({ email, setEmail, setShowDialog, setErrorMessage }: SignupF
           duration: 5000,
         });
       } else if (success) {
-        console.log('Signup successful, showing confirmation dialog');
-        setShowDialog(true);
+        console.log('Signup successful, redirecting to subscription page');
+        // Skip showing dialog and redirect directly to subscription page
+        navigate('/subscription');
       }
     } catch (error) {
       console.error('Unexpected signup error:', error);

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase/client';
 
 /**
@@ -26,28 +25,8 @@ export const signUpUser = async (email: string, password: string, fullName: stri
 
     console.log('Signup successful, user data:', data);
 
-    if (data?.user) {
-      // Create the user's profile in the profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: data.user.id,
-            email: email.toLowerCase(),
-            full_name: fullName,
-          },
-        ]);
-
-      if (profileError) {
-        console.error('Error creating user profile:', profileError);
-        return { error: profileError, success: false };
-      }
-
-      console.log('Profile created successfully');
-      return { error: null, success: true };
-    }
-
-    return { error: new Error('User creation failed'), success: false };
+    // We no longer need to manually create a profile since it's handled by the database trigger
+    return { error: null, success: true };
   } catch (error) {
     console.error('Sign up error:', error);
     return { error: error as Error, success: false };
