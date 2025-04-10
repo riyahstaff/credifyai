@@ -16,40 +16,40 @@ const AdvancedPlanCard: React.FC<AdvancedPlanCardProps> = ({ onSubscribe, isProc
       
       <div className="mb-6 relative z-10">
         <span className="inline-block bg-credify-teal/20 text-credify-teal px-3 py-1 rounded-full text-sm font-medium mb-2">
-          Best Value
+          Pay Per Letter
         </span>
-        <h3 className="text-xl font-bold">Advanced Access</h3>
+        <h3 className="text-xl font-bold">Dispute Letter</h3>
         <div className="mt-2">
-          <span className="text-3xl font-bold">$49.98</span>
-          <span className="text-white/70">/month</span>
+          <span className="text-3xl font-bold">$19.99</span>
+          <span className="text-white/70">/letter</span>
         </div>
       </div>
       
       <ul className="space-y-3 mb-8 flex-grow relative z-10">
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-white/80">All Premium features including AI dispute letter generator</span>
+          <span className="text-white/80">AI-powered dispute letter generator with proven templates</span>
         </li>
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-white/80">Data furnisher disputes for Innovis, Lexis Nexis, CoreLogic, and more</span>
+          <span className="text-white/80">Pay only for the letters you need - no subscription</span>
         </li>
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-white/80">Advanced Metro 2 compliance analysis with CDIA standards</span>
+          <span className="text-white/80">FCRA compliance with legal citations in every letter</span>
         </li>
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-white/80">Credit freeze automation across all reporting agencies</span>
+          <span className="text-white/80">Equifax, Experian, and TransUnion compatible formats</span>
         </li>
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-white/80">e-OSCAR platform dispute preparation assistance</span>
+          <span className="text-white/80">Data furnisher disputes available (same price)</span>
         </li>
       </ul>
       
       <button 
-        onClick={() => onSubscribe('advanced')}
+        onClick={() => window.location.href = '/upload-report'}
         disabled={isProcessing}
         className={`btn-secondary w-full relative z-10 ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''}`}
       >
@@ -59,7 +59,7 @@ const AdvancedPlanCard: React.FC<AdvancedPlanCardProps> = ({ onSubscribe, isProc
             Processing...
           </>
         ) : (
-          'Get Advanced'
+          'Upload Credit Report'
         )}
       </button>
     </div>

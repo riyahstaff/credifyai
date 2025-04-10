@@ -12,20 +12,16 @@ const PremiumPlanCard: React.FC<PremiumPlanCardProps> = ({ onSubscribe, isProces
     <div className="bg-white dark:bg-credify-navy/30 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700/30 p-6 flex flex-col h-full">
       <div className="mb-6">
         <span className="inline-block bg-credify-teal/10 text-credify-teal px-3 py-1 rounded-full text-sm font-medium mb-2">
-          Most Popular
+          Free Account
         </span>
-        <h3 className="text-xl font-bold text-credify-navy dark:text-white">Premium Access</h3>
+        <h3 className="text-xl font-bold text-credify-navy dark:text-white">Basic Access</h3>
         <div className="mt-2">
-          <span className="text-3xl font-bold text-credify-navy dark:text-white">$34.99</span>
-          <span className="text-credify-navy-light dark:text-white/70">/month</span>
+          <span className="text-3xl font-bold text-credify-navy dark:text-white">$0</span>
+          <span className="text-credify-navy-light dark:text-white/70">/forever</span>
         </div>
       </div>
       
       <ul className="space-y-3 mb-8 flex-grow">
-        <li className="flex items-start">
-          <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-credify-navy-light dark:text-white/80">AI-powered dispute letter generator with proven templates</span>
-        </li>
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
           <span className="text-credify-navy-light dark:text-white/80">Credit report analysis to identify all disputable items</span>
@@ -36,16 +32,16 @@ const PremiumPlanCard: React.FC<PremiumPlanCardProps> = ({ onSubscribe, isProces
         </li>
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-credify-navy-light dark:text-white/80">Unlimited disputes across all three credit bureaus</span>
+          <span className="text-credify-navy-light dark:text-white/80">Credit monitoring and score tracking</span>
         </li>
         <li className="flex items-start">
           <Check className="text-credify-teal mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-          <span className="text-credify-navy-light dark:text-white/80">FCRA compliance with legal citations in every letter</span>
+          <span className="text-credify-navy-light dark:text-white/80">Educational resources for credit improvement</span>
         </li>
       </ul>
       
       <button 
-        onClick={() => onSubscribe('premium')}
+        onClick={() => onSubscribe('free')}
         disabled={isProcessing}
         className={`btn-primary w-full ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''}`}
       >
@@ -55,7 +51,7 @@ const PremiumPlanCard: React.FC<PremiumPlanCardProps> = ({ onSubscribe, isProces
             Processing...
           </>
         ) : (
-          'Get Premium'
+          'Continue with Free Account'
         )}
       </button>
     </div>

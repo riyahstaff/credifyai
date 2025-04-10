@@ -32,10 +32,6 @@ export const useReportAnalysis = (
         toasts: []
       };
       
-      // Check if we're in test mode
-      const isTestMode = sessionStorage.getItem('testModeSubscription') === 'true';
-      console.log("Starting analysis with test mode:", isTestMode ? "enabled" : "disabled");
-      
       // Monitor analysis progress with web worker if possible
       let analysisMonitor: number | null = null;
       
@@ -71,7 +67,7 @@ export const useReportAnalysis = (
               setAnalyzing,
               setAnalyzed,
               toast: toastObject,
-              testMode: isTestMode
+              testMode: false // Always use real mode, no test mode with per-letter payments
             });
             
             // Debug: Log current state of analysis

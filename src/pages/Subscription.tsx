@@ -1,152 +1,24 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
-import SubscriptionHeader from '@/components/subscription/SubscriptionHeader';
-import PremiumPlanCard from '@/components/subscription/PremiumPlanCard';
-import AdvancedPlanCard from '@/components/subscription/AdvancedPlanCard';
-import WhyPremiumCard from '@/components/subscription/WhyPremiumCard';
-import SubscriptionFooter from '@/components/subscription/SubscriptionFooter';
-import { supabase } from '@/lib/supabase/client';
+import { ArrowLeft, FileText, CheckCircle } from 'lucide-react';
 
 const Subscription = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
-  const { user, profile, updateSubscriptionStatus } = useAuth();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [redirectPath, setRedirectPath] = useState<string | null>(null);
-  const [isAutoActivating, setIsAutoActivating] = useState(false);
+  const { user } = useAuth();
   
-  // Check if we're in test mode
-  const searchParams = new URLSearchParams(location.search);
-  const testMode = searchParams.get('testMode') === 'true';
+  const handleContinue = () => {
+    // No payment needed for account creation, just redirect to dashboard
+    navigate('/dashboard');
+  };
   
-  // Get the redirect path from session storage on mount
-  useEffect(() => {
-    const returnPath = sessionStorage.getItem('returnToAfterSubscription');
-    if (returnPath) {
-      setRedirectPath(returnPath);
-      console.log("Subscription page - return path detected:", returnPath);
-    }
-    
-    console.log("Subscription page - testMode:", testMode);
-    
-    // If in test mode, simulate having a subscription already
-    if (testMode && user && !isAutoActivating) {
-      console.log("In test mode with user - activating test subscription");
-      setIsAutoActivating(true);
-      
-      // Auto-activate in test mode after a short delay
-      const timer = setTimeout(() => {
-        handleSubscribe('premium');
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [testMode, user, isAutoActivating]);
-
-  const handleSubscribe = async (plan: string) => {
-    try {
-      setIsProcessing(true);
-      
-      // In test mode, skip the actual subscription process
-      if (testMode) {
-        toast({
-          title: "Test Mode Subscription",
-          description: `Your ${plan === 'advanced' ? 'Advanced' : 'Premium'} subscription has been activated in test mode.`,
-        });
-        
-        // Update the user's profile to indicate they have a subscription (in-memory only for test mode)
-        if (updateSubscriptionStatus) {
-          await updateSubscriptionStatus(true);
-        }
-        
-        // Set flag in session storage to indicate we have test mode subscription
-        sessionStorage.setItem('testModeSubscription', 'true');
-        
-        // Redirect after a short delay
-        setTimeout(() => {
-          // Determine where to redirect
-          let targetPath = '/dispute-letters';
-          
-          if (redirectPath) {
-            // Use stored path if available
-            targetPath = redirectPath;
-            // Clear it from storage
-            sessionStorage.removeItem('returnToAfterSubscription');
-          }
-          
-          // Add testMode param if not already present
-          if (!targetPath.includes('testMode=true')) {
-            targetPath += (targetPath.includes('?') ? '&' : '?') + 'testMode=true';
-          }
-          
-          console.log("Test mode subscription activated - Redirecting to:", targetPath);
-          navigate(targetPath);
-        }, 1000);
-        
-        return;
-      }
-      
-      // In a real implementation, this would create a checkout session via Supabase
-      const subscriptionData = {
-        user_id: user?.id,
-        plan_type: plan,
-        status: 'active',
-        created_at: new Date().toISOString()
-      };
-      
-      // Update the user's subscription status in Supabase
-      const { error } = await supabase
-        .from('subscriptions')
-        .insert(subscriptionData);
-        
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      // Update the user's profile to indicate they have a subscription
-      await supabase
-        .from('profiles')
-        .update({ has_subscription: true })
-        .eq('id', user?.id);
-      
-      // Also update the context
-      if (updateSubscriptionStatus) {
-        await updateSubscriptionStatus(true);
-      }
-      
-      toast({
-        title: "Subscription activated",
-        description: `Your ${plan === 'advanced' ? 'Advanced' : 'Premium'} subscription has been activated successfully.`,
-      });
-      
-      // Redirect to the stored path or dispute letters page
-      setTimeout(() => {
-        // Clear the redirect path from session storage
-        sessionStorage.removeItem('returnToAfterSubscription');
-        
-        // Navigate to the redirect path or default to dispute letters
-        if (redirectPath) {
-          navigate(redirectPath);
-        } else {
-          navigate('/dispute-letters');
-        }
-      }, 1500);
-    } catch (error) {
-      console.error("Subscription error:", error);
-      toast({
-        title: "Error",
-        description: "There was a problem processing your subscription request.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleGoBack = () => {
+    navigate(-1);
   };
 
   return (
@@ -154,34 +26,84 @@ const Subscription = () => {
       <Navbar />
       
       <main className="flex-grow pt-24 pb-20">
-        <div className="container mx-auto px-4 md:px-6 max-w-6xl">
-          <SubscriptionHeader />
-          
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <PremiumPlanCard onSubscribe={handleSubscribe} isProcessing={isProcessing} />
-            <AdvancedPlanCard onSubscribe={handleSubscribe} isProcessing={isProcessing} />
-            <WhyPremiumCard />
+        <div className="container mx-auto px-4 md:px-6 max-w-3xl">
+          <div className="mb-8">
+            <button 
+              onClick={handleGoBack}
+              className="flex items-center text-credify-navy-light dark:text-white/70 hover:text-credify-navy dark:hover:text-white transition-colors"
+            >
+              <ArrowLeft className="mr-2" size={18} />
+              Back
+            </button>
           </div>
           
-          {redirectPath && (
-            <div className="text-center mb-12 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-amber-800">
-                Subscribe to continue to your generated dispute letters.
-              </p>
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
+              <CheckCircle className="text-green-600 dark:text-green-400" size={32} />
             </div>
-          )}
+            <h1 className="text-2xl md:text-3xl font-bold text-credify-navy dark:text-white mb-2">
+              Account Created Successfully
+            </h1>
+            <p className="text-credify-navy-light dark:text-white/70 max-w-lg mx-auto">
+              Your free account has been created. You now have access to credit monitoring tools and can generate dispute letters as needed.
+            </p>
+          </div>
           
-          {testMode && (
-            <div className="text-center mb-12 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-amber-800">
-                <strong>Test Mode Active:</strong> You can click any plan to get instant access without actual payment.
-                {!isProcessing && !isAutoActivating && <span className="block mt-2">Auto-activating test subscription in a moment...</span>}
-                {isAutoActivating && <span className="block mt-2">Auto-activation in progress...</span>}
-              </p>
+          <div className="bg-white dark:bg-credify-navy/30 rounded-xl shadow-soft border border-gray-100 dark:border-gray-700/30 p-6 md:p-8 mb-10">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                <FileText className="text-blue-500" size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-credify-navy dark:text-white">
+                  Pay-Per-Letter Model
+                </h3>
+                <p className="text-credify-navy-light dark:text-white/70">
+                  Only pay when you need to send dispute letters
+                </p>
+              </div>
             </div>
-          )}
+            
+            <div className="space-y-4 mb-6">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="text-green-500 mt-0.5 flex-shrink-0" size={18} />
+                <span className="text-credify-navy dark:text-white">
+                  <strong>Free account access</strong> with no monthly fees
+                </span>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle className="text-green-500 mt-0.5 flex-shrink-0" size={18} />
+                <span className="text-credify-navy dark:text-white">
+                  <strong>$19.99 per dispute letter</strong> - only pay for what you need
+                </span>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle className="text-green-500 mt-0.5 flex-shrink-0" size={18} />
+                <span className="text-credify-navy dark:text-white">
+                  <strong>AI-powered dispute letter generator</strong> with proven templates
+                </span>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle className="text-green-500 mt-0.5 flex-shrink-0" size={18} />
+                <span className="text-credify-navy dark:text-white">
+                  <strong>Free credit monitoring</strong> and report analysis
+                </span>
+              </div>
+            </div>
+            
+            <button 
+              onClick={handleContinue}
+              className="w-full bg-credify-teal hover:bg-credify-teal-dark text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <span>Continue to Dashboard</span>
+            </button>
+          </div>
           
-          <SubscriptionFooter />
+          <div className="text-center">
+            <p className="text-sm text-credify-navy-light dark:text-white/70">
+              Need help? Contact our support team at support@credify.ai
+            </p>
+          </div>
         </div>
       </main>
       

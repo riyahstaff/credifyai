@@ -138,12 +138,12 @@ const SignupForm = ({ email, setEmail, setShowDialog, setErrorMessage }: SignupF
           {isSubmitting ? (
             <div className="h-5 w-5 border-2 border-white/70 border-t-transparent rounded-full animate-spin mr-2"></div>
           ) : null}
-          {isSubmitting ? "Creating Account..." : "Join Free for 7 Days"}
+          {isSubmitting ? "Creating Account..." : "Create Free Account"}
         </button>
       </div>
       
       <p className="text-xs text-center text-credify-navy-light dark:text-white/70">
-        No credit card required. Cancel anytime.
+        Free account creation. Pay only for dispute letters.
       </p>
     </form>
   );
