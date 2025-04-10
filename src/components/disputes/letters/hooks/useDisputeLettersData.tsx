@@ -8,6 +8,7 @@ import {
   addLetterToStorage
 } from './letterStorageUtils';
 
+// Export the Letter interface/type separately so it can be imported elsewhere
 export interface Letter {
   id: number | string;
   title: string;

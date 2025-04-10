@@ -1,5 +1,6 @@
 
-import { Letter } from './useDisputeLettersData.tsx';
+// Import Letter type directly from useDisputeLettersData.tsx
+import { Letter } from './useDisputeLettersData';
 
 const STORAGE_KEY = 'disputeLetters';
 
