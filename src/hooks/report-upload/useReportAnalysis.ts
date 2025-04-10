@@ -4,6 +4,9 @@ import { CreditReportData, IdentifiedIssue } from '@/utils/creditReport/types';
 import { handleAnalysisComplete } from '@/components/disputes/uploader/handlers/analysisHandler';
 import { useToast } from '@/hooks/use-toast';
 
+// Helper function to yield control back to the browser
+const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
+
 export const useReportAnalysis = (
   uploadedFile: File | null,
   setReportData: (data: CreditReportData) => void,
@@ -16,8 +19,8 @@ export const useReportAnalysis = (
 ) => {
   const { toast } = useToast();
   
-  // Enhance startAnalysis to include a timeout mechanism
-  const startAnalysis = useCallback(() => {
+  // Enhanced startAnalysis with better handling to prevent browser unresponsive errors
+  const startAnalysis = useCallback(async () => {
     if (uploadedFile) {
       console.log("Starting analysis of uploaded file:", uploadedFile.name);
       setAnalyzing(true);
@@ -33,6 +36,9 @@ export const useReportAnalysis = (
       const isTestMode = sessionStorage.getItem('testModeSubscription') === 'true';
       console.log("Starting analysis with test mode:", isTestMode ? "enabled" : "disabled");
       
+      // Monitor analysis progress with web worker if possible
+      let analysisMonitor: number | null = null;
+      
       // Set up a backup timeout to force complete if the analysis gets stuck
       const analysisTimeout = setTimeout(() => {
         console.log("Analysis timeout reached - forcing completion");
@@ -40,31 +46,55 @@ export const useReportAnalysis = (
           console.log("Analysis did not complete in time - triggering manual completion");
           onAnalysisComplete();
         }
-      }, 30000); // 30 second timeout
+      }, 45000); // 45 second timeout
       
       try {
-        // Updated to pass the props object that handleAnalysisComplete expects
-        handleAnalysisComplete({
-          uploadedFile,
-          setReportData,
-          setIssues,
-          setLetterGenerated,
-          setAnalysisError,
-          setAnalyzing,
-          setAnalyzed,
-          toast: toastObject,
-          testMode: isTestMode
-        });
+        // Periodically yield control back to main thread to prevent unresponsive dialog
+        analysisMonitor = window.setInterval(async () => {
+          await yieldToMain();
+          console.log("Analysis monitor yielding control to main thread...");
+        }, 2000); // Check every 2 seconds
         
-        // Debug: Log current state of analysis
-        console.log("Analysis initiated successfully");
+        // Use setTimeout to allow the browser to update UI before starting analysis
+        setTimeout(async () => {
+          try {
+            // Yield control once more before starting CPU-intensive task
+            await yieldToMain();
+            
+            // Updated to pass the props object that handleAnalysisComplete expects
+            await handleAnalysisComplete({
+              uploadedFile,
+              setReportData,
+              setIssues,
+              setLetterGenerated,
+              setAnalysisError,
+              setAnalyzing,
+              setAnalyzed,
+              toast: toastObject,
+              testMode: isTestMode
+            });
+            
+            // Debug: Log current state of analysis
+            console.log("Analysis initiated successfully");
+          } catch (err) {
+            console.error("Error in analysis:", err);
+            setAnalysisError(err instanceof Error ? err.message : "Unknown error occurred");
+            setAnalyzing(false);
+          }
+        }, 100);
         
         return () => {
           clearTimeout(analysisTimeout);
+          if (analysisMonitor !== null) {
+            clearInterval(analysisMonitor);
+          }
         };
       } catch (error) {
         console.error("Error initiating analysis:", error);
         clearTimeout(analysisTimeout);
+        if (analysisMonitor !== null) {
+          clearInterval(analysisMonitor);
+        }
         setAnalysisError(error instanceof Error ? error.message : "Unknown error occurred");
         setAnalyzing(false);
         

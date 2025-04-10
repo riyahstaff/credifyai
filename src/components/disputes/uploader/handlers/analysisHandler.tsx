@@ -21,6 +21,8 @@ export interface AnalysisHandlerProps {
   testMode?: boolean;
 }
 
+const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
+
 export const analyzeReport = async (
   file: File,
   onProgress?: (progress: number) => void
@@ -31,6 +33,8 @@ export const analyzeReport = async (
     
     const isTestMode = sessionStorage.getItem('testModeSubscription') === 'true';
     console.log("Report analysis running in test mode:", isTestMode ? 'yes' : 'no');
+    
+    await yieldToMain();
     
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
     let textContent = '';
@@ -60,6 +64,7 @@ export const analyzeReport = async (
       }
       
       onProgress?.(25);
+      await yieldToMain();
       
       try {
         textContent = await extractTextFromPDF(file);
@@ -92,6 +97,8 @@ export const analyzeReport = async (
       onProgress?.(40);
     }
     
+    await yieldToMain();
+    
     if (!textContent || textContent.length < 100) {
       console.error("Extracted text is too short to be a valid credit report");
       throw new Error("The file doesn't appear to contain valid credit report data");
@@ -104,6 +111,8 @@ export const analyzeReport = async (
     onProgress?.(50);
     console.log("Parsing report content, processing text...");
     
+    await yieldToMain();
+    
     const reportData = parseReportContent(textContent, isPdf);
     
     try {
@@ -113,6 +122,8 @@ export const analyzeReport = async (
     } catch (e) {
       console.warn("Could not save report text to session storage:", e);
     }
+    
+    await yieldToMain();
     
     console.log("Report parsing complete. Found:", {
       accounts: reportData.accounts?.length || 0,
@@ -126,6 +137,7 @@ export const analyzeReport = async (
     });
     
     onProgress?.(70);
+    await yieldToMain();
     
     try {
       sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
@@ -135,6 +147,7 @@ export const analyzeReport = async (
     }
     
     onProgress?.(90);
+    await yieldToMain();
     onProgress?.(100);
     
     return reportData;
@@ -142,6 +155,33 @@ export const analyzeReport = async (
     console.error("Error analyzing report:", error);
     throw new Error(`Failed to analyze report: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+};
+
+const processIssuesInBatches = async (reportData: CreditReportData): Promise<IdentifiedIssue[]> => {
+  const allIssues: IdentifiedIssue[] = [];
+  let generatedIssues = identifyIssues(reportData);
+  
+  const batchSize = 10;
+  for (let i = 0; i < generatedIssues.length; i += batchSize) {
+    const batch = generatedIssues.slice(i, i + batchSize);
+    allIssues.push(...batch);
+    
+    if (i + batchSize < generatedIssues.length) {
+      await yieldToMain();
+    }
+  }
+  
+  if (allIssues.length === 0) {
+    console.log("No issues were detected - adding fallback issues");
+    allIssues.push(...addFallbackGenericIssues());
+  }
+  
+  if (allIssues.length < 3) {
+    const additionalIssues = addFallbackGenericIssues().slice(0, 3 - allIssues.length);
+    allIssues.push(...additionalIssues);
+  }
+  
+  return allIssues;
 };
 
 export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
@@ -174,7 +214,7 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
     const analysisTimeout = setTimeout(() => {
       console.log("Analysis timeout triggered - forcing completion");
       completeAnalysisWithFallbackData();
-    }, 15000);
+    }, 20000);
     
     console.log("Processing uploaded report:", uploadedFile.name);
     
@@ -198,18 +238,8 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
     setReportData(reportData);
     
     console.log("Identifying issues in the uploaded credit report");
-    let generatedIssues = identifyIssues(reportData);
     
-    if (generatedIssues.length === 0) {
-      console.log("No issues were detected - adding fallback issues");
-      generatedIssues = addFallbackGenericIssues();
-    }
-    
-    if (generatedIssues.length < 3) {
-      const additionalIssues = addFallbackGenericIssues().slice(0, 3 - generatedIssues.length);
-      generatedIssues = [...generatedIssues, ...additionalIssues];
-    }
-    
+    const generatedIssues = await processIssuesInBatches(reportData);
     setIssues(generatedIssues);
     
     setAnalyzing(false);
@@ -223,14 +253,28 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
         <ToastAction altText="View Issues">View Issues</ToastAction> : undefined
     });
     
-    const convertedIssues: Issue[] = generatedIssues.map(issue => ({
-      ...issue,
-      bureau: issue.account?.bureau || reportData.primaryBureau || 'experian',
-      severity: determineSeverity(issue.impact)
-    }));
+    const convertedIssues: Issue[] = [];
+    for (let i = 0; i < generatedIssues.length; i++) {
+      const issue = generatedIssues[i];
+      convertedIssues.push({
+        ...issue,
+        bureau: issue.account?.bureau || reportData.primaryBureau || 'experian',
+        severity: determineSeverity(issue.impact)
+      });
+      
+      if (i % 5 === 0 && i > 0) {
+        await yieldToMain();
+      }
+    }
     
-    storeCreditReport(reportData, 'user-id', convertedIssues);
-    generateDisputeLetters(reportData, convertedIssues, 'user-id');
+    Promise.all([
+      storeCreditReport(reportData, 'user-id', convertedIssues),
+      generateDisputeLetters(reportData, convertedIssues, 'user-id')
+    ]).then(() => {
+      console.log("Background tasks completed: report stored and letters generated");
+    }).catch(err => {
+      console.error("Error in background tasks:", err);
+    });
     
   } catch (error) {
     console.error("Error in handleAnalysisComplete:", error);
@@ -340,6 +384,8 @@ export const handleAnalysisComplete = async (props: AnalysisHandlerProps) => {
         if (bureauIssues.length === 0) {
           continue;
         }
+        
+        await yieldToMain();
         
         const processedData = processDisputeData(creditReportData, bureauIssues);
         

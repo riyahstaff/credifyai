@@ -3,6 +3,9 @@
  * Specialized in extracting text from PDF files with enhanced detection for credit reports
  */
 
+// Function to yield control back to the browser to prevent unresponsive dialogs
+const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
+
 export const extractTextFromPDF = async (file: File): Promise<string> => {
   console.log(`Starting enhanced PDF extraction for ${file.name} (${file.type})`);
   
@@ -13,6 +16,9 @@ export const extractTextFromPDF = async (file: File): Promise<string> => {
       console.log("Using PDF.js for extraction");
       return await extractWithPDFJS(file);
     }
+    
+    // Yield to prevent unresponsiveness
+    await yieldToMain();
     
     // Second attempt: Use the browser's PDF capabilities if available
     const arrayBuffer = await file.arrayBuffer();
@@ -36,16 +42,19 @@ export const extractTextFromPDF = async (file: File): Promise<string> => {
       URL.revokeObjectURL(blobUrl);
     }
     
+    // Yield to prevent unresponsiveness
+    await yieldToMain();
+    
     // Last resort: Convert the binary PDF data to text and look for patterns
     console.log("Falling back to binary pattern extraction");
     const decoder = new TextDecoder('utf-8');
     let textContent = decoder.decode(arrayBuffer);
     
     // Remove binary data and extract readable text
-    textContent = cleanPDFText(textContent);
+    textContent = await cleanPDFText(textContent);
     
     // Look for credit report specific sections
-    const extractedSections = extractCreditReportSections(textContent);
+    const extractedSections = await extractCreditReportSections(textContent);
     
     if (extractedSections && extractedSections.length > 100) {
       console.log(`Extracted ${extractedSections.length} characters from structured sections`);
@@ -69,12 +78,17 @@ const extractWithPDFJS = async (file: File): Promise<string> => {
     
     let fullText = '';
     
-    // Extract text from each page
+    // Process pages in chunks to prevent long-running script warnings
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const pageText = content.items.map((item: any) => item.str).join(' ');
       fullText += pageText + '\n\n';
+      
+      // Yield to main thread every 3 pages
+      if (i % 3 === 0 && i < pdf.numPages) {
+        await yieldToMain();
+      }
     }
     
     console.log(`Extracted ${fullText.length} characters using PDF.js`);
@@ -129,23 +143,42 @@ const extractTextWithBrowser = (pdfUrl: string): Promise<string> => {
 };
 
 // Clean PDF text by removing binary data and non-text content
-const cleanPDFText = (rawText: string): string => {
+const cleanPDFText = async (rawText: string): Promise<string> => {
+  // Process text in chunks to prevent long-running script warnings
+  await yieldToMain();
+  
   // Remove PDF binary headers and content
   let text = rawText.replace(/%PDF-[\d.]+[\s\S]*?stream/gi, '')
                    .replace(/endstream[\s\S]*?endobj/gi, '')
                    .replace(/<<[\s\S]*?>>/gi, '');
+  
+  await yieldToMain();
   
   // Replace escaped characters
   text = text.replace(/\\n/g, '\n')
             .replace(/\\r/g, '\r')
             .replace(/\\t/g, '\t');
   
-  // Keep only printable ASCII characters
+  await yieldToMain();
+  
+  // Keep only printable ASCII characters - process in chunks
   let cleaned = '';
-  for (let i = 0; i < text.length; i++) {
-    const code = text.charCodeAt(i);
-    if ((code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13) {
-      cleaned += text.charAt(i);
+  const chunkSize = 10000; // Process 10K characters at a time
+  
+  for (let chunk = 0; chunk < rawText.length; chunk += chunkSize) {
+    const endIndex = Math.min(chunk + chunkSize, rawText.length);
+    const textChunk = rawText.substring(chunk, endIndex);
+    
+    for (let i = 0; i < textChunk.length; i++) {
+      const code = textChunk.charCodeAt(i);
+      if ((code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13) {
+        cleaned += textChunk.charAt(i);
+      }
+    }
+    
+    // Yield to main thread after each chunk
+    if (chunk + chunkSize < rawText.length) {
+      await yieldToMain();
     }
   }
   
@@ -156,7 +189,7 @@ const cleanPDFText = (rawText: string): string => {
 };
 
 // Extract important credit report sections using known keywords
-const extractCreditReportSections = (text: string): string => {
+const extractCreditReportSections = async (text: string): Promise<string> => {
   const sections = [];
   
   // Common credit report sections
@@ -170,8 +203,9 @@ const extractCreditReportSections = (text: string): string => {
   
   const lowerText = text.toLowerCase();
   
-  // Find paragraphs containing relevant information
-  sectionKeywords.forEach(keyword => {
+  // Find paragraphs containing relevant information - process in chunks
+  for (let i = 0; i < sectionKeywords.length; i++) {
+    const keyword = sectionKeywords[i];
     const lowerKeyword = keyword.toLowerCase();
     const keywordIndex = lowerText.indexOf(lowerKeyword);
     
@@ -186,11 +220,18 @@ const extractCreditReportSections = (text: string): string => {
         sections.push(`--- ${keyword.toUpperCase()} SECTION ---\n${sectionText}\n`);
       }
     }
-  });
+    
+    // Yield every 5 keywords
+    if (i % 5 === 0 && i > 0) {
+      await yieldToMain();
+    }
+  }
   
   // Look for account numbers and card numbers (masked with X's)
   const accountPattern = /(?:account|acct)[^\d]*?(?:number|#|no)?[^\d]*?(\d[\dX]+\d)/gi;
   let match;
+  let matchCount = 0;
+  
   while ((match = accountPattern.exec(text)) !== null) {
     if (match[1] && match[1].length > 4) {
       const start = Math.max(0, match.index - 50);
@@ -198,6 +239,12 @@ const extractCreditReportSections = (text: string): string => {
       const context = text.substring(start, end);
       
       sections.push(`--- ACCOUNT DETAIL ---\n${context}\n`);
+    }
+    
+    // Yield every 5 matches to prevent browser hanging
+    matchCount++;
+    if (matchCount % 5 === 0) {
+      await yieldToMain();
     }
   }
   
