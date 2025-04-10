@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import SignupForm from '../components/home/SignupForm';
@@ -7,18 +7,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 
 const Signup = () => {
-  const [connectionError, setConnectionError] = useState(false);
-
-  useEffect(() => {
-    // Check if Supabase credentials are missing
-    const hasSupabaseCredentials = 
-      import.meta.env.VITE_SUPABASE_URL && 
-      import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder-url.supabase.co' &&
-      import.meta.env.VITE_SUPABASE_ANON_KEY && 
-      import.meta.env.VITE_SUPABASE_ANON_KEY !== 'placeholder-key';
-    
-    setConnectionError(!hasSupabaseCredentials);
-  }, []);
+  // Since we now have hardcoded credentials, we don't need to check for them
+  const connectionError = false;
 
   return (
     <div className="min-h-screen flex flex-col">
