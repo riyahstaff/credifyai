@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Letter } from './sampleLettersData';
 import { loadLettersFromStorage, saveLettersToStorage, addLetterToStorage, formatLetterFromStorage } from './letterStorageUtils';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 
 export const useDisputeLettersData = (testMode: boolean = false) => {
   const [letters, setLetters] = useState<Letter[]>([]);

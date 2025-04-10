@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { getUserDisputeLetters, saveDisputeLetter } from '@/lib/supabase/disputeLetters';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 
 interface Letter {
   id: number;
