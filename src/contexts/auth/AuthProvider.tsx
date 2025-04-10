@@ -14,6 +14,7 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => ({ error: null, success: false }),
   signOut: async () => {},
   updateSubscriptionStatus: async () => {},
+  logout: async () => {}, // Add missing logout function in default context
 });
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
@@ -25,6 +26,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const updateSubscriptionStatus = async (hasSubscription: boolean) => {
     await updateSubscription(user, profile, setProfile, hasSubscription);
+  };
+  
+  // Create an additional simple logout function
+  const logout = async () => {
+    console.log("Logout requested");
+    await handleSignOut();
+    
+    // For immediate UI feedback, clear auth state locally
+    setUser(null);
+    setSession(null);
+    setProfile(null);
   };
 
   return (
@@ -38,6 +50,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         signIn: handleSignIn,
         signOut: handleSignOut,
         updateSubscriptionStatus,
+        logout, // Add logout to the provider value
       }}
     >
       {children}
