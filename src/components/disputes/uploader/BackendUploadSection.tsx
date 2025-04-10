@@ -1,54 +1,81 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import CreditReportBackendUploader from './CreditReportBackendUploader';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/auth';
 
 interface BackendUploadSectionProps {
   onUploadSuccess: (reportId: string) => void;
   testMode?: boolean;
 }
 
-const BackendUploadSection: React.FC<BackendUploadSectionProps> = ({
+const BackendUploadSection: React.FC<BackendUploadSectionProps> = ({ 
   onUploadSuccess,
   testMode = false
 }) => {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleUploadSuccess = (reportId: string) => {
+    console.log("Backend upload successful with report ID:", reportId);
+    
+    // Set flag to indicate we're using the backend
+    sessionStorage.setItem('usingBackendProcessor', 'true');
+    
+    // Call the onUploadSuccess callback
+    onUploadSuccess(reportId);
+    
+    // Show success message
+    toast({
+      title: "Upload successful",
+      description: "Your credit report has been uploaded and is being processed.",
+      duration: 3000,
+    });
+    
+    // Navigate to dispute letters page after a delay
+    setTimeout(() => {
+      navigate('/dispute-letters' + (testMode ? '?testMode=true' : ''));
+    }, 3000);
+  };
+
+  // Check if user is logged in
+  if (!user && !testMode) {
+    return (
+      <div className="mb-8 p-6 border-2 border-dashed border-gray-200 dark:border-gray-700/50 rounded-lg text-center">
+        <h4 className="text-lg font-medium text-credify-navy dark:text-white mb-2">
+          Login Required
+        </h4>
+        <p className="text-credify-navy-light dark:text-white/70 text-sm mb-4">
+          You need to login to use our cloud processing service.
+        </p>
+        <button
+          onClick={() => navigate('/login')}
+          className="px-4 py-2 bg-credify-teal text-white rounded-md"
+        >
+          Go to Login
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-8">
       <div className="border-b border-gray-200 dark:border-gray-700/30 pb-4 mb-6">
         <h3 className="text-xl font-semibold text-credify-navy dark:text-white">
-          Upload to Cloud Storage
+          Upload to Cloud
           {testMode && <span className="text-amber-500 text-sm ml-2">(Test Mode)</span>}
         </h3>
         <p className="text-credify-navy-light dark:text-white/70 text-sm mt-1">
-          Upload your credit report to our secure cloud storage for advanced processing and automated dispute letter generation.
+          Upload your credit report to our secure cloud for processing.
         </p>
       </div>
       
       <CreditReportBackendUploader
-        onSuccess={onUploadSuccess}
+        onSuccess={handleUploadSuccess}
         testMode={testMode}
       />
-      
-      <div className="mt-6 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/20 rounded-lg p-4">
-        <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Enhanced Features with Cloud Processing</h4>
-        <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-2">
-          <li className="flex items-start gap-2">
-            <span className="text-blue-500 mt-1">•</span>
-            <span>More accurate issue detection with advanced AI</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-blue-500 mt-1">•</span>
-            <span>Permanent storage of your reports and letters</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-blue-500 mt-1">•</span>
-            <span>Automated follow-up and tracking for disputes</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-blue-500 mt-1">•</span>
-            <span>Better personalization of dispute letters</span>
-          </li>
-        </ul>
-      </div>
     </div>
   );
 };

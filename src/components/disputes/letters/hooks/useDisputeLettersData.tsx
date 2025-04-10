@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Letter } from './sampleLettersData';
 import { loadLettersFromStorage, saveLettersToStorage, addLetterToStorage, formatLetterFromStorage } from './letterStorageUtils';
@@ -11,6 +12,9 @@ export const useDisputeLettersData = (testMode: boolean = false) => {
 
   useEffect(() => {
     console.log("Loading dispute letters...");
+    // Check if there's a force reload flag set by the letter generator
+    const forceReload = sessionStorage.getItem('forceLettersReload');
+    
     // Load letters from session storage
     const result = loadLettersFromStorage();
     
@@ -28,7 +32,30 @@ export const useDisputeLettersData = (testMode: boolean = false) => {
         console.log("Found valid letters with substantial content");
         setLetters(result.letters);
         setSelectedLetter(result.selectedLetter);
+      } else if (forceReload) {
+        console.log("Force reload flag detected, but no valid letters found");
+        // Try to get the pending dispute letter from storage
+        const pendingLetter = sessionStorage.getItem('pendingDisputeLetter');
+        if (pendingLetter) {
+          try {
+            const letterData = JSON.parse(pendingLetter);
+            console.log("Found pending dispute letter:", letterData);
+            const newLetter = formatLetterFromStorage(letterData, 0);
+            setLetters([newLetter]);
+            setSelectedLetter(newLetter);
+          } catch (error) {
+            console.error("Error parsing pending dispute letter:", error);
+          }
+        } else {
+          console.log("No pending dispute letter found");
+        }
       }
+    }
+    
+    // Clear the force reload flag
+    if (forceReload) {
+      console.log("Clearing force reload flag");
+      sessionStorage.removeItem('forceLettersReload');
     }
     
     setIsLoading(false);
