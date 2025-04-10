@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { Upload, FileUp, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '@/lib/supabase/client';
+import { analyzeReport } from '@/services/externalBackendService';
 
 interface CreditReportBackendUploaderProps {
   onSuccess?: (reportId: string) => void;
@@ -59,20 +58,6 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
         return;
       }
       
-      // Get the current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        setError('You must be logged in to upload a credit report.');
-        setIsUploading(false);
-        toast({
-          title: "Authentication required",
-          description: "You must be logged in to upload a credit report.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
       // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
@@ -81,23 +66,13 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
         });
       }, 500);
       
-      // Create a FormData object
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('userId', user.id);
-      
-      // Upload the file using the edge function
-      const { data, error: uploadError } = await supabase.functions.invoke(
-        'upload-credit-report',
-        {
-          body: formData,
-        }
-      );
+      // Upload the file to the external backend
+      const response = await analyzeReport(file);
       
       clearInterval(progressInterval);
       
-      if (uploadError) {
-        throw new Error(`Error uploading file: ${uploadError.message}`);
+      if (!response.success) {
+        throw new Error(`Error uploading file: ${response.error}`);
       }
       
       setUploadComplete(true);
@@ -110,16 +85,26 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
         description: "Your credit report is being processed. This may take a few moments.",
       });
       
-      if (data?.credit_report_id) {
-        // Call onSuccess callback if provided
-        if (onSuccess) {
-          onSuccess(data.credit_report_id);
+      if (response.data?.id) {
+        // Store the analysis results in session storage for use in letter generation
+        try {
+          sessionStorage.setItem('creditReportAnalysis', JSON.stringify(response.data));
+          
+          // Extract reportId from response
+          const reportId = response.data.id;
+          
+          // Call onSuccess callback if provided
+          if (onSuccess) {
+            onSuccess(reportId);
+          }
+          
+          // Navigate to the dispute letters page after a delay
+          setTimeout(() => {
+            navigate(APP_ROUTES.DISPUTE_LETTERS);
+          }, 3000);
+        } catch (storageError) {
+          console.error("Error storing analysis results:", storageError);
         }
-        
-        // Navigate to the dispute letters page after a delay
-        setTimeout(() => {
-          navigate(APP_ROUTES.DISPUTE_LETTERS);
-        }, 3000);
       }
     } catch (error) {
       console.error("Error uploading credit report:", error);

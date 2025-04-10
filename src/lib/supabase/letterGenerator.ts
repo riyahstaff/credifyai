@@ -1,9 +1,9 @@
-
 import { fetchDisputeTemplate } from './legalTemplates';
 import { getRelevantFCRASections } from './legalTemplates';
 import { getSuccessfulDisputeExamples } from './disputeLetters';
 import { DISPUTE_TEMPLATES } from './constants';
 import { CreditReportData, CreditReportAccount, UserInfo } from '@/utils/creditReport/types';
+import { generateDisputeLetter } from '@/services/externalBackendService';
 
 /**
  * Enhanced function to generate comprehensive dispute letters using templates and FCRA provisions
@@ -20,7 +20,7 @@ export async function generateEnhancedDisputeLetter(
     accountNumber?: string;
     errorDescription: string;
     bureau: string;
-    relevantReportText?: string; // Add this as an optional parameter
+    relevantReportText?: string;
   },
   userInfo: {
     name: string;
@@ -54,6 +54,62 @@ export async function generateEnhancedDisputeLetter(
       return "ERROR: Consumer name information is missing from the credit report. Please ensure you've uploaded a valid credit report.";
     }
     
+    // Try to get analysis data from session storage
+    let analysisData = null;
+    try {
+      const storedAnalysis = sessionStorage.getItem('creditReportAnalysis');
+      if (storedAnalysis) {
+        analysisData = JSON.parse(storedAnalysis);
+      }
+    } catch (e) {
+      console.error("Error retrieving analysis data from storage:", e);
+    }
+    
+    // Use the external backend service to generate the letter
+    const response = await generateDisputeLetter(
+      {
+        analysisData,
+        disputeType,
+        accountDetails,
+        creditReportData
+      },
+      userInfo
+    );
+    
+    if (!response.success || !response.data) {
+      // If external service fails, fall back to the original letter generation method
+      console.warn("External letter generation failed, falling back to local generation");
+      return generateLocalFallbackLetter(disputeType, accountDetails, userInfo, creditReportData);
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error generating enhanced dispute letter:", error);
+    // Fall back to local generation if the API call fails
+    return generateLocalFallbackLetter(disputeType, accountDetails, userInfo, creditReportData);
+  }
+}
+
+// Original letter generation function renamed as a fallback
+async function generateLocalFallbackLetter(
+  disputeType: string,
+  accountDetails: {
+    accountName: string;
+    accountNumber?: string;
+    errorDescription: string;
+    bureau: string;
+    relevantReportText?: string;
+  },
+  userInfo: {
+    name: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+  },
+  creditReportData?: CreditReportData | null
+): Promise<string> {
+  try {
     // Determine the dispute category and type based on the input
     let disputeCategory: keyof typeof DISPUTE_TEMPLATES = 'general';
     let templateType = 'GENERAL_DISPUTE';
@@ -244,7 +300,7 @@ Reason for Dispute: ${disputeType}
     console.log("Generated letter content length:", result.length);
     return result;
   } catch (error) {
-    console.error("Error generating enhanced dispute letter:", error);
-    throw new Error("Failed to generate dispute letter");
+    console.error("Error generating fallback dispute letter:", error);
+    return "Failed to generate dispute letter. Please try again later.";
   }
 }
