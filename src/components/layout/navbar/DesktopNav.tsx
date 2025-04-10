@@ -13,7 +13,7 @@ type DesktopNavProps = {
   testMode: boolean;
   hasSubscription: boolean;
   toggleTestMode: () => void;
-  handleLogout: () => void;
+  handleLogout: () => Promise<void>;
 };
 
 const DesktopNav = ({

@@ -1,7 +1,6 @@
-
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext'; // Fix import path
+import { useAuth } from '@/contexts/auth';
 import { handleAuthError } from '@/utils/auth/authRedirect';
 
 type PrivateRouteProps = {

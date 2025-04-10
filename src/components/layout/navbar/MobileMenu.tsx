@@ -13,7 +13,7 @@ type MobileMenuProps = {
   testMode: boolean;
   hasSubscription: boolean;
   toggleTestMode: () => void;
-  handleLogout: () => void;
+  handleLogout: () => Promise<void>;
   isActive: (path: string) => boolean;
 };
 

@@ -1,14 +1,14 @@
 
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
 import { NavLinkType } from './types';
 
 export const useNavbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { toast } = useToast();
@@ -59,11 +59,11 @@ export const useNavbar = () => {
     return currentPathWithoutQuery === linkPathWithoutQuery;
   };
   
-  // Handle logout using signOut from auth context
+  // Handle logout using logout from auth context
   const handleLogout = async () => {
     // Clear test mode subscription flag on logout
     sessionStorage.removeItem('testModeSubscription');
-    await signOut();
+    await logout();
     navigate('/');
   };
 

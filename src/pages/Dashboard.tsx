@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
-import { useAuth } from '@/contexts/AuthContext'; // Keep this import
+import { useAuth } from '@/contexts/auth';
 import LoadingIndicator from '@/components/dashboard/LoadingIndicator';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import DashboardContent from '@/components/dashboard/DashboardContent';

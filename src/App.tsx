@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster"
 import Dashboard from './pages/Dashboard';
 import UploadReport from './pages/UploadReport';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/auth';
 import PrivateRoute from './components/auth/PrivateRoute';
 import Login from './pages/Login';
 import TemplateManagerPage from './pages/TemplateManager';
