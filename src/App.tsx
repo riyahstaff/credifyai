@@ -8,6 +8,7 @@ import { AuthProvider } from './contexts/auth';
 import PrivateRoute from './components/auth/PrivateRoute';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Subscription from './pages/Subscription';
 import TemplateManagerPage from './pages/TemplateManager';
 import DisputeLetters from './pages/DisputeLetters';
 import LoadingIndicator from './components/dashboard/LoadingIndicator';
@@ -33,6 +34,7 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/subscription" element={<Subscription />} />
             <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/dispute-letters" element={<PrivateRoute><DisputeLetters /></PrivateRoute>} />
