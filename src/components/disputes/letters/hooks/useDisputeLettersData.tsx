@@ -19,8 +19,8 @@ export interface Letter {
   createdAt: string;
   status: string;
   errorType?: string;
-  recipient?: string;
-  bureaus?: string[]; // Added bureaus property for type compatibility
+  recipient: string; // Changed from optional to required
+  bureaus: string[]; // Added bureaus property for type compatibility
 }
 
 /**
@@ -93,7 +93,7 @@ export function useDisputeLettersData(testMode: boolean = false) {
         status: "ready",
         errorType: letterData.errorType || "General Dispute",
         recipient: letterData.recipient || letterData.bureau || "Credit Bureau",
-        bureaus: letterData.bureaus || [letterData.bureau || "Credit Bureau"], // Initialize bureaus from data or bureau
+        bureaus: letterData.bureaus || [letterData.bureau || "Credit Bureau"],
       };
       
       // Validate letter content
