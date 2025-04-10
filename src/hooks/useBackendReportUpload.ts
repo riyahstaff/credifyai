@@ -164,19 +164,9 @@ export const useBackendReportUpload = () => {
           continue;
         }
 
-        // Fix: Check for specific status values
+        // Fix: Check each status case separately instead of combining conditions
         if (report.status === 'Processed') {
-          // Check if there was a processing error by looking at status separately
-          if (report.status === 'Error' || report.status === 'Failed') {
-            // This condition should never execute since we already checked report.status === 'Processed'
-            // It's kept as a placeholder for the previous logic
-            return {
-              success: false,
-              reportId,
-              message: `Error processing report: ${report.status}`,
-              error: report.status
-            };
-          }
+          // Process "Processed" status separately
           
           // Check if any letters were generated
           const { data: letters, error: lettersError } = await supabase
