@@ -1,90 +1,177 @@
 
 import { useState, useEffect } from 'react';
-import { Letter } from './sampleLettersData';
-import { loadLettersFromStorage, saveLettersToStorage, addLetterToStorage, formatLetterFromStorage } from './letterStorageUtils';
 import { useAuth } from '@/contexts/auth';
+import { useToast } from '@/hooks/use-toast';
+import {
+  loadLettersFromStorage,
+  saveLettersToStorage,
+  addLetterToStorage
+} from './letterStorageUtils';
 
-export const useDisputeLettersData = (testMode: boolean = false) => {
+export interface Letter {
+  id: number | string;
+  title: string;
+  bureau: string;
+  accountName: string;
+  accountNumber?: string;
+  content: string;
+  letterContent?: string; // For compatibility
+  createdAt: string;
+  status: string;
+  errorType?: string;
+  recipient?: string;
+}
+
+/**
+ * Hook to manage dispute letter data
+ */
+export function useDisputeLettersData(testMode: boolean = false) {
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
+  
   const [letters, setLetters] = useState<Letter[]>([]);
   const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, profile } = useAuth();
-
+  
+  // Effect to load letters on mount
   useEffect(() => {
-    console.log("Loading dispute letters...");
-    // Check if there's a force reload flag set by the letter generator
-    const forceReload = sessionStorage.getItem('forceLettersReload');
-    
-    // Load letters from session storage
-    const result = loadLettersFromStorage();
-    
-    if (result.foundLetters && result.letters.length > 0) {
-      console.log(`Successfully parsed ${result.letters.length} letters from storage`);
-      
-      // Check if the letters have actual content
-      const hasValidContent = result.letters.some(letter => 
-        letter.content && 
-        letter.content.length > 100 && 
-        !letter.content.includes("Sample dispute letter content")
-      );
-      
-      if (hasValidContent) {
-        console.log("Found valid letters with substantial content");
-        setLetters(result.letters);
-        setSelectedLetter(result.selectedLetter);
-      } else if (forceReload) {
-        console.log("Force reload flag detected, but no valid letters found");
-        // Try to get the pending dispute letter from storage
-        const pendingLetter = sessionStorage.getItem('pendingDisputeLetter');
-        if (pendingLetter) {
-          try {
-            const letterData = JSON.parse(pendingLetter);
-            console.log("Found pending dispute letter:", letterData);
-            const newLetter = formatLetterFromStorage(letterData, 0);
-            setLetters([newLetter]);
-            setSelectedLetter(newLetter);
-          } catch (error) {
-            console.error("Error parsing pending dispute letter:", error);
-          }
-        } else {
-          console.log("No pending dispute letter found");
+    const loadLetters = async () => {
+      try {
+        setIsLoading(true);
+        console.log("Loading letters from storage, user:", user?.id, "profile:", profile?.id);
+        
+        // Load letters from storage
+        const loadedLetters = await loadLettersFromStorage();
+        console.log("Loaded letters:", loadedLetters.length);
+        
+        // Set letters state
+        setLetters(loadedLetters);
+        
+        // Select the first letter if available
+        if (loadedLetters.length > 0 && !selectedLetter) {
+          setSelectedLetter(loadedLetters[0]);
         }
+      } catch (error) {
+        console.error("Error loading letters:", error);
+        toast({
+          title: "Error Loading Letters",
+          description: "Failed to load dispute letters. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
     
-    // Clear the force reload flag
-    if (forceReload) {
-      console.log("Clearing force reload flag");
-      sessionStorage.removeItem('forceLettersReload');
-    }
+    loadLetters();
     
-    setIsLoading(false);
-  }, []);
+    // Add an interval to check for new letters (useful when navigated back from letter generation)
+    const checkInterval = setInterval(() => {
+      if (letters.length === 0) {
+        console.log("Checking for new letters...");
+        loadLetters();
+      }
+    }, 2000);
+    
+    return () => clearInterval(checkInterval);
+  }, [user, profile, toast]);
 
-  const addLetter = (letterData: any) => {
-    const newLetter = formatLetterFromStorage(letterData, letters.length);
-    const updatedLetters = [...letters, newLetter];
-    setLetters(updatedLetters);
-    setSelectedLetter(newLetter);
-    saveLettersToStorage(updatedLetters, newLetter);
+  // Function to add a new letter
+  const addLetter = async (letterData: any) => {
+    try {
+      // Create a new letter object
+      const newLetter: Letter = {
+        id: Date.now(),
+        title: letterData.title || "Credit Report Dispute",
+        bureau: letterData.bureau || "Credit Bureau",
+        accountName: letterData.accountName || "Multiple Accounts",
+        accountNumber: letterData.accountNumber || "",
+        content: letterData.content || letterData.letterContent || "",
+        letterContent: letterData.letterContent || letterData.content || "",
+        createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        status: "ready",
+        errorType: letterData.errorType || "General Dispute",
+        recipient: letterData.recipient || letterData.bureau || "Credit Bureau",
+      };
+      
+      // Validate letter content
+      if (!newLetter.content || newLetter.content.length < 10) {
+        console.error("Invalid letter content:", newLetter.content);
+        toast({
+          title: "Error Adding Letter",
+          description: "The letter content is invalid or too short.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("Adding new letter:", newLetter);
+      
+      // Update state
+      const updatedLetters = [...letters, newLetter];
+      setLetters(updatedLetters);
+      setSelectedLetter(newLetter);
+      
+      // Save to storage
+      await addLetterToStorage(newLetter);
+      
+      // Show success toast
+      toast({
+        title: "Letter Added",
+        description: "Your dispute letter has been added successfully.",
+      });
+      
+      return newLetter;
+    } catch (error) {
+      console.error("Error adding letter:", error);
+      toast({
+        title: "Error Adding Letter",
+        description: "Failed to add dispute letter. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const saveLetter = (letter: Letter) => {
-    const updatedLetters = letters.map(l => 
-      l.id === letter.id ? letter : l
-    );
-    setLetters(updatedLetters);
-    saveLettersToStorage(updatedLetters, letter);
+  // Function to save a letter
+  const saveLetter = async (letter: Letter) => {
+    try {
+      // Find and update the letter
+      const updatedLetters = letters.map((l) => (l.id === letter.id ? letter : l));
+      setLetters(updatedLetters);
+      
+      // Update selection if this is the selected letter
+      if (selectedLetter && selectedLetter.id === letter.id) {
+        setSelectedLetter(letter);
+      }
+      
+      // Save to storage
+      await saveLettersToStorage(updatedLetters);
+      
+      // Show success toast
+      toast({
+        title: "Letter Saved",
+        description: "Your dispute letter has been saved successfully.",
+      });
+      
+      return letter;
+    } catch (error) {
+      console.error("Error saving letter:", error);
+      toast({
+        title: "Error Saving Letter",
+        description: "Failed to save dispute letter. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
-
+  
   return {
     letters,
     setLetters,
-    addLetter,
-    saveLetter,
     selectedLetter,
     setSelectedLetter,
     isLoading,
-    profile
+    addLetter,
+    saveLetter,
+    profile,
   };
-};
+}

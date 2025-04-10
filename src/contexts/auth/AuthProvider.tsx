@@ -1,5 +1,5 @@
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 import { AuthContextType, AuthProviderProps } from './types';
 import { useAuthState } from './useAuthState';
 import { useAuthActions } from './useAuthActions';
@@ -34,6 +34,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setSession(null);
     setProfile(null);
   };
+
+  // Store profile data in localStorage for letter generation
+  useEffect(() => {
+    if (profile) {
+      console.log("Storing user profile data in localStorage:", profile);
+      localStorage.setItem('userProfile', JSON.stringify(profile));
+      
+      if (profile.full_name) {
+        localStorage.setItem('userName', profile.full_name);
+      }
+    }
+  }, [profile]);
 
   return (
     <AuthContext.Provider

@@ -51,7 +51,7 @@ export const generateDisputeLetters = async (
         
         // Create a properly formatted letter object
         const letter = {
-          id: Date.now(),
+          id: Date.now() + Math.random(),
           title: issue.title || "Credit Report Dispute",
           bureau: reportData?.primaryBureau || "Experian",
           accountName: account?.accountName || "Multiple Accounts",
@@ -67,7 +67,7 @@ export const generateDisputeLetters = async (
         
         letters.push(letter);
       } else {
-        console.error("Failed to generate letter using external API:", response.error);
+        console.warn("Failed to generate letter using external API:", response.error);
         
         // Fall back to local letter generation
         const letter = await createLetterFromIssue(issue, account, reportData);
@@ -82,6 +82,7 @@ export const generateDisputeLetters = async (
       // Create a generic letter
       const genericLetter = createGenericLetter(reportData);
       letters.push(genericLetter);
+      console.log("Created generic letter as fallback");
     }
 
     console.log(`Generated ${letters.length} letters`);
@@ -89,7 +90,9 @@ export const generateDisputeLetters = async (
   } catch (error) {
     console.error("Error generating dispute letters:", error);
     // Return a fallback letter
-    return [createFallbackLetter()];
+    const fallbackLetter = createFallbackLetter();
+    console.log("Created fallback letter due to error:", fallbackLetter);
+    return [fallbackLetter];
   }
 };
 
@@ -99,10 +102,25 @@ export const generateDisputeLetters = async (
 function getUserInfoFromStorage(): { name: string; address?: string; city?: string; state?: string; zip?: string; } {
   try {
     // Get user name from various sources
-    const userName = localStorage.getItem('userName') || 
-                    sessionStorage.getItem('userName') ||
-                    JSON.parse(localStorage.getItem('userProfile') || '{}')?.full_name ||
-                    '[YOUR NAME]';
+    let userName = localStorage.getItem('userName') || 
+                  sessionStorage.getItem('userName') ||
+                  JSON.parse(localStorage.getItem('userProfile') || '{}')?.full_name ||
+                  '[YOUR NAME]';
+                  
+    console.log("User name retrieved for letter:", userName);
+    
+    if (userName === '[YOUR NAME]') {
+      // Try to get the profile from session storage as a last resort
+      try {
+        const profile = JSON.parse(sessionStorage.getItem('userProfile') || '{}');
+        if (profile && profile.full_name) {
+          userName = profile.full_name;
+          console.log("Retrieved user name from session profile:", userName);
+        }
+      } catch (e) {
+        console.error("Error parsing user profile from session:", e);
+      }
+    }
     
     // Get address info
     const address = localStorage.getItem('userAddress') || sessionStorage.getItem('userAddress');

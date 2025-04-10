@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
 import { Profile } from '@/lib/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 // Import existing components
 import DisputeLettersList from './DisputeLettersList';  
@@ -21,6 +22,7 @@ interface DisputeLettersPageProps {
 
 const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = false, requirePayment = false }) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { 
     letters, 
     setLetters, 
@@ -34,6 +36,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
   
   // States for letter generation
   const [isGenerating, setIsGenerating] = useState(false);
+  const [letterLoadAttempts, setLetterLoadAttempts] = useState(0);
   
   // Handler for generating new dispute letters
   const handleGenerateDispute = async (disputeData: any) => {
@@ -48,6 +51,27 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
   
   const [navHeight, setNavHeight] = useState<number>(0);
   
+  // Check for forced reload flag
+  useEffect(() => {
+    const forceReload = sessionStorage.getItem('forceLettersReload');
+    if (forceReload === 'true' && letters.length === 0 && !isLoading && letterLoadAttempts === 0) {
+      console.log("Force reload flag detected, refreshing letters data");
+      // Clear the flag
+      sessionStorage.removeItem('forceLettersReload');
+      // Force a refresh by incrementing the attempt counter
+      setLetterLoadAttempts(prev => prev + 1);
+      
+      // Show loading toast
+      toast({
+        title: "Loading letters",
+        description: "Retrieving your generated dispute letters...",
+      });
+      
+      // Refresh the page once to ensure data is loaded
+      window.location.reload();
+    }
+  }, [letters.length, isLoading, letterLoadAttempts, toast]);
+  
   // Effect to measure navbar height
   useEffect(() => {
     const navbar = document.getElementById('main-navbar');
@@ -60,6 +84,24 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
   const handleCreateLetterFromIssues = () => {
     navigate('/upload-report' + (testMode ? '?testMode=true' : ''));
   };
+
+  // Check for pending dispute letter
+  useEffect(() => {
+    if (letters.length === 0 && !isLoading && letterLoadAttempts < 3) {
+      console.log(`Checking for pending dispute letter (attempt ${letterLoadAttempts + 1})`);
+      
+      const pendingLetter = sessionStorage.getItem('pendingDisputeLetter');
+      const generatedLetters = sessionStorage.getItem('generatedDisputeLetters');
+      
+      if ((pendingLetter || generatedLetters) && letterLoadAttempts === 0) {
+        console.log("Found pending letters in session storage, reloading component");
+        setLetterLoadAttempts(prev => prev + 1);
+        
+        // No need to reload the page here as it may cause an infinite loop
+        // Instead, our useDisputeLettersData hook should reload the data
+      }
+    }
+  }, [letters.length, isLoading, letterLoadAttempts]);
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-credify-navy-dark">
@@ -72,7 +114,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
         <div className="container mx-auto px-4 md:px-6">
           <DisputeLetterHeader testMode={testMode} />
           
-          {letters.length === 0 && !isLoading && (
+          {letters.length === 0 && !isLoading && letterLoadAttempts >= 3 && (
             <Alert className="mb-8 border-amber-300 bg-amber-50 dark:bg-amber-900/30 dark:border-amber-800/50">
               <FileText className="h-5 w-5 text-amber-600 dark:text-amber-500" />
               <AlertTitle className="text-amber-800 dark:text-amber-400 font-semibold">
@@ -90,6 +132,17 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
                 <FileText className="mr-2 h-4 w-4" />
                 Upload Credit Report
               </Button>
+            </Alert>
+          )}
+          
+          {isLoading && (
+            <Alert className="mb-8 border-blue-300 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-800/50">
+              <AlertTitle className="text-blue-800 dark:text-blue-400 font-semibold">
+                Loading Letters
+              </AlertTitle>
+              <AlertDescription className="text-blue-700 dark:text-blue-300">
+                Please wait while we load your dispute letters...
+              </AlertDescription>
             </Alert>
           )}
           
