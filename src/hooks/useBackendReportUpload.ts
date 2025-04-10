@@ -182,6 +182,7 @@ export const useBackendReportUpload = () => {
             // Store letters in session storage for the dispute letters page
             console.log(`Found ${letters.length} letters, storing in session storage`);
             sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(letters));
+            sessionStorage.setItem('forceLettersReload', 'true');
             
             return {
               success: true,
@@ -199,7 +200,16 @@ export const useBackendReportUpload = () => {
         }
         
         // Handle error statuses separately
-        if (report.status === 'Error' || report.status === 'Failed') {
+        if (report.status === 'Error') {
+          return {
+            success: false,
+            reportId,
+            message: `Error processing report: ${report.status}`,
+            error: report.status
+          };
+        }
+        
+        if (report.status === 'Failed') {
           return {
             success: false,
             reportId,

@@ -50,6 +50,14 @@ export function useDisputeLettersData(testMode: boolean = false) {
         setIsLoading(true);
         console.log("Loading letters from storage, user:", user?.id, "profile:", profile?.id);
         
+        // Check if we should reload based on the forceLettersReload flag
+        const forceReload = sessionStorage.getItem('forceLettersReload');
+        if (forceReload === 'true') {
+          console.log("Force reload flag detected, clearing cached letters");
+          // Clear the flag so it doesn't cause infinite reloads
+          sessionStorage.setItem('forceLettersReload', 'done');
+        }
+        
         // Check if we should load from Supabase
         if (user?.id && !testMode) {
           console.log("Attempting to load letters from Supabase for user:", user.id);

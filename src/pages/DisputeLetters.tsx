@@ -47,6 +47,7 @@ const DisputeLetters = () => {
           const { data: backendLetters, error } = await supabase
             .from('dispute_letters')
             .select('*')
+            .eq('userId', user.id)
             .order('createdAt', { ascending: false })
             .limit(10);
             

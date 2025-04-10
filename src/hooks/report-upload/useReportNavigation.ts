@@ -60,8 +60,8 @@ export const useReportNavigation = () => {
       navigationInProgress.current = true;
       sessionStorage.setItem('navigationInProgress', 'true');
       
-      // Reset force reload flag to prevent loops
-      sessionStorage.setItem('forceLettersReload', 'done');
+      // Set force reload flag to ensure letters are properly loaded
+      sessionStorage.setItem('forceLettersReload', 'true');
       
       // Use window.location for the most reliable navigation
       setTimeout(() => {
@@ -171,8 +171,8 @@ export const useReportNavigation = () => {
     navigationInProgress.current = true;
     sessionStorage.setItem('navigationInProgress', 'true');
     
-    // Reset the forceLettersReload flag to prevent loops
-    sessionStorage.setItem('forceLettersReload', 'done');
+    // Reset the forceLettersReload flag
+    sessionStorage.setItem('forceLettersReload', 'true');
     
     // Check if test mode is active
     const isTestMode = window.location.search.includes('testMode=true');
@@ -187,4 +187,3 @@ export const useReportNavigation = () => {
     toast
   };
 };
-
