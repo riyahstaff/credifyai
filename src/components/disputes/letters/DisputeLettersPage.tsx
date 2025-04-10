@@ -16,9 +16,10 @@ import DisputeLetterHeader from './DisputeLetterHeader';
 
 interface DisputeLettersPageProps {
   testMode?: boolean;
+  requirePayment?: boolean;
 }
 
-const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = false }) => {
+const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = false, requirePayment = false }) => {
   const navigate = useNavigate();
   const { 
     letters, 

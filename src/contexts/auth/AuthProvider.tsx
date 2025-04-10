@@ -3,6 +3,7 @@ import { createContext, useContext } from 'react';
 import { AuthContextType, AuthProviderProps } from './types';
 import { useAuthState } from './useAuthState';
 import { useAuthActions } from './useAuthActions';
+import { useSubscription } from './useSubscription';
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
@@ -13,11 +14,13 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => ({ error: null, success: false }),
   signOut: async () => {},
   logout: async () => {},
+  updateSubscriptionStatus: async () => ({ success: true }),
 });
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [state, setSession, setUser, setProfile] = useAuthState();
   const { handleSignUp, handleSignIn, handleSignOut } = useAuthActions();
+  const { updateSubscriptionStatus: handleUpdateSubscription } = useSubscription();
 
   const { session, user, profile, isLoading } = state;
   
@@ -43,6 +46,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         signIn: handleSignIn,
         signOut: handleSignOut,
         logout,
+        updateSubscriptionStatus: handleUpdateSubscription,
       }}
     >
       {children}
