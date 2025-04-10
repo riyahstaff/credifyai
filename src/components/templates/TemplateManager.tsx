@@ -60,6 +60,7 @@ const TemplateManager: React.FC = () => {
       
       if (error) throw error;
       
+      // The data from Supabase already matches our Template interface
       setTemplates(data || []);
     } catch (error) {
       console.error('Error fetching templates:', error);
