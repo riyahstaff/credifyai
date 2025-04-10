@@ -28,6 +28,6 @@ export interface AuthContextType {
     success: boolean;
   }>;
   signOut: () => Promise<void>;
-  updateSubscriptionStatus: (hasSubscription: boolean) => Promise<void>;
+  updateSubscriptionStatus: (hasSubscription: boolean) => Promise<{ success: boolean }>;
   logout: () => Promise<void>; // Added this
 }

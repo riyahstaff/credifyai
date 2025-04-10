@@ -8,7 +8,7 @@ export function useSubscription() {
   const { toast } = useToast();
 
   // This function is kept for backward compatibility but no longer performs subscription updates
-  const updateSubscriptionStatus = async () => {
+  const updateSubscriptionStatus = async (hasSubscription: boolean): Promise<{ success: boolean }> => {
     console.log("Subscription functionality has been removed in favor of per-letter payments");
     return { success: true };
   };
