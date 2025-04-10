@@ -163,13 +163,13 @@ export const useBackendReportUpload = () => {
           console.error("Error checking report status:", error);
           continue;
         }
-        
-        // Instead of checking 'processed', check the 'status' field
+
+        // Fix: Check for specific status values
         if (report.status === 'Processed') {
-          // Check if there was a processing error by looking at status
-          const hasError = report.status === 'Error' || report.status === 'Failed';
-          
-          if (hasError) {
+          // Check if there was a processing error by looking at status separately
+          if (report.status === 'Error' || report.status === 'Failed') {
+            // This condition should never execute since we already checked report.status === 'Processed'
+            // It's kept as a placeholder for the previous logic
             return {
               success: false,
               reportId,
@@ -205,6 +205,16 @@ export const useBackendReportUpload = () => {
             success: true,
             reportId,
             message: "Credit report processed successfully"
+          };
+        }
+        
+        // Handle error statuses separately
+        if (report.status === 'Error' || report.status === 'Failed') {
+          return {
+            success: false,
+            reportId,
+            message: `Error processing report: ${report.status}`,
+            error: report.status
           };
         }
         
