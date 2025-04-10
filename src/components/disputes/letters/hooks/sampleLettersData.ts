@@ -5,7 +5,7 @@
  */
 
 // Re-export the Letter type from our implementation
-export type { Letter } from './useDisputeLettersData.tsx';
+export { Letter } from './useDisputeLettersData.tsx';
 
 /**
  * Always returns an empty array - NO MOCK LETTERS

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Letter } from './hooks/sampleLettersData';
+import { Letter } from './hooks/useDisputeLettersData'; // Import from correct file
 import { Button } from '@/components/ui/button';
 import { FileText, Plus, Loader2 } from 'lucide-react';
 import { Profile } from '@/lib/supabase/client';
@@ -79,7 +79,7 @@ const DisputeLettersList: React.FC<DisputeLettersListProps> = ({
               
               <div className="flex justify-between items-center mt-1">
                 <div className="text-xs text-credify-navy-light dark:text-white/60">
-                  {letter.bureaus?.map((bureau) => bureau).join(', ') || letter.bureau || 'Credit Bureau'}
+                  {letter.bureaus?.join(', ') || letter.bureau || 'Credit Bureau'}
                 </div>
                 
                 <div className="text-xs text-credify-navy-light dark:text-white/60">

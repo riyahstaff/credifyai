@@ -4,19 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import DisputeLettersList from './DisputeLettersList';
 import DisputeGenerator from '../DisputeGenerator';
 import { Loader2 } from 'lucide-react';
-
-interface Letter {
-  id: number;
-  title: string;
-  recipient: string;
-  createdAt: string;
-  status: string;
-  bureaus: string[];
-  content: string;
-  accountName?: string;
-  accountNumber?: string;
-  errorType?: string;
-}
+import { Letter } from './hooks/useDisputeLettersData'; // Import the Letter type from the correct file
 
 interface DisputeLettersTabsProps {
   selectedView: string;

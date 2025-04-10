@@ -19,8 +19,8 @@ export interface Letter {
   createdAt: string;
   status: string;
   errorType?: string;
-  recipient: string; // Changed from optional to required
-  bureaus: string[]; // Added bureaus property for type compatibility
+  recipient: string;
+  bureaus: string[]; // Required property for compatibility
 }
 
 /**
