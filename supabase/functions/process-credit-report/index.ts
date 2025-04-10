@@ -68,12 +68,11 @@ serve(async (req) => {
     if (downloadError || !fileData) {
       console.error("Error downloading file:", downloadError);
       
-      // Update the credit report record with the error
+      // Update the credit report record with the error status
       await supabase
         .from("credit_reports")
         .update({
-          processed: true,
-          processing_error: `Error downloading file: ${downloadError?.message || "Unknown error"}`,
+          status: "Error",
         })
         .eq("id", credit_report_id);
       
@@ -154,7 +153,7 @@ serve(async (req) => {
     if (letters.length > 0) {
       // Insert letters into the database
       const letterRecords = letters.map((letter) => ({
-        user_id: reportData.user_id,
+        userId: reportData.user_id,
         title: letter.title || "Credit Report Dispute",
         letterContent: letter.content || letter.letterContent,
         content: letter.content || letter.letterContent,
@@ -177,12 +176,10 @@ serve(async (req) => {
       }
     }
     
-    // Update the credit report record
+    // Update the credit report record with success status
     await supabase
       .from("credit_reports")
       .update({
-        processed: true,
-        processing_error: null,
         status: "Processed"
       })
       .eq("id", credit_report_id);

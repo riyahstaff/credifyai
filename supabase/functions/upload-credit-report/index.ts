@@ -70,6 +70,7 @@ serve(async (req) => {
         user_id: userId,
         file_name: file.name,
         file_path: filePath,
+        status: "Uploading"
       })
       .select()
       .single();
@@ -100,6 +101,15 @@ serve(async (req) => {
 
     if (processingError) {
       console.error("Error processing credit report:", processingError);
+      
+      // Update the report status to reflect error
+      await supabase
+        .from("credit_reports")
+        .update({
+          status: "Failed"
+        })
+        .eq("id", reportData.id);
+        
       return new Response(
         JSON.stringify({
           error: "Error processing credit report",

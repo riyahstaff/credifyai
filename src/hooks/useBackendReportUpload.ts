@@ -164,14 +164,17 @@ export const useBackendReportUpload = () => {
           continue;
         }
         
-        if (report.processed === true) {
-          // Check if there was a processing error
-          if (report.processing_error) {
+        // Instead of checking 'processed', check the 'status' field
+        if (report.status === 'Processed') {
+          // Check if there was a processing error by looking at status
+          const hasError = report.status === 'Error' || report.status === 'Failed';
+          
+          if (hasError) {
             return {
               success: false,
               reportId,
-              message: `Error processing report: ${report.processing_error}`,
-              error: report.processing_error
+              message: `Error processing report: ${report.status}`,
+              error: report.status
             };
           }
           
@@ -179,7 +182,7 @@ export const useBackendReportUpload = () => {
           const { data: letters, error: lettersError } = await supabase
             .from('dispute_letters')
             .select('*')
-            .eq('user_id', user?.id)
+            .eq('userId', user?.id)
             .order('createdAt', { ascending: false })
             .limit(10);
           
@@ -250,7 +253,7 @@ export const useBackendReportUpload = () => {
       const { data: letters } = await supabase
         .from('dispute_letters')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('userId', user.id)
         .order('createdAt', { ascending: false })
         .limit(10);
       
