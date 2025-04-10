@@ -16,6 +16,12 @@ const App: React.FC = () => {
   useEffect(() => {
     // Log when App component mounts to verify initialization
     console.log('App component mounted');
+    
+    // For preview environments, automatically enable test mode
+    if (window.location.host.includes('lovableproject.com')) {
+      sessionStorage.setItem('testModeSubscription', 'true');
+      console.log('Preview environment detected, test mode enabled');
+    }
   }, []);
 
   return (
@@ -25,7 +31,7 @@ const App: React.FC = () => {
         <Suspense fallback={<LoadingIndicator />}>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Index />} /> {/* Ensure the Index route is properly defined */}
+            <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/dispute-letters" element={<PrivateRoute><DisputeLetters /></PrivateRoute>} />
             <Route path="/upload-report" element={<PrivateRoute><UploadReport /></PrivateRoute>} />

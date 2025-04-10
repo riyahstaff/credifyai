@@ -34,8 +34,20 @@ export function useAuthActions() {
   };
 
   const handleSignOut = async () => {
-    // Clear additional storage items not cleared in signOutUser
-    localStorage.removeItem('sb-frfeyttlztydgwahjjsw-auth-token');
+    console.log("Performing logout operation");
+    
+    // Clear all session data before signout
+    sessionStorage.clear();
+    
+    // Remove any Supabase tokens from localStorage
+    try {
+      localStorage.removeItem('sb-frfeyttlztydgwahjjsw-auth-token');
+      localStorage.removeItem('hasAuthSession');
+      localStorage.removeItem('lastAuthTime');
+      localStorage.removeItem('supabase.auth.token');
+    } catch (e) {
+      console.error("Error clearing localStorage:", e);
+    }
     
     const { error } = await signOutUser();
     
@@ -46,8 +58,7 @@ export function useAuthActions() {
         duration: 3000,
       });
       
-      // Use window.location instead of navigate for a clean redirect
-      // This avoids the router context issue
+      // Force a clean navigation to the home page
       window.location.href = '/';
     } else {
       toast({

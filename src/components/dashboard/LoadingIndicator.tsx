@@ -5,6 +5,7 @@ import Footer from '../layout/Footer';
 import { Link } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const LoadingIndicator = () => {
   const [showTimeout, setShowTimeout] = useState(false);
@@ -41,6 +42,30 @@ const LoadingIndicator = () => {
     };
   }, []);
 
+  const handleReset = () => {
+    console.log("Resetting application state...");
+    
+    // Clear all auth-related state
+    sessionStorage.clear();
+    
+    try {
+      // Clear auth tokens
+      localStorage.removeItem('sb-frfeyttlztydgwahjjsw-auth-token');
+      localStorage.removeItem('hasAuthSession');
+      localStorage.removeItem('lastAuthTime');
+      
+      // Set test mode for preview environments
+      if (window.location.host.includes('lovableproject.com')) {
+        sessionStorage.setItem('testModeSubscription', 'true');
+      }
+    } catch (e) {
+      console.error("Error clearing storage:", e);
+    }
+    
+    // Hard reload the page to reset app state
+    window.location.href = '/';
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -71,6 +96,13 @@ const LoadingIndicator = () => {
                           <Link to="/" className="text-amber-700 dark:text-amber-300 font-medium px-4 py-2 bg-amber-100 dark:bg-amber-900/40 rounded-md text-sm hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors">
                             Return to home page
                           </Link>
+                          <Button
+                            onClick={handleReset}
+                            variant="outline"
+                            className="text-amber-700 dark:text-amber-300 font-medium px-4 py-2 bg-amber-100 dark:bg-amber-900/40 rounded-md text-sm hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors"
+                          >
+                            Reset App State
+                          </Button>
                         </div>
                         
                         {criticalTimeout && (
@@ -79,16 +111,24 @@ const LoadingIndicator = () => {
                             <p className="text-sm text-red-600 dark:text-red-300">
                               The application is taking too long to load. Try refreshing the page or clicking the button below to reload with test mode enabled.
                             </p>
-                            <button 
-                              onClick={() => {
-                                // Enable test mode and reload
-                                sessionStorage.setItem('testModeSubscription', 'true');
-                                window.location.reload();
-                              }}
-                              className="mt-2 px-4 py-2 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-md text-sm font-medium hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors"
-                            >
-                              Enable Test Mode & Reload
-                            </button>
+                            <div className="mt-2 flex flex-col sm:flex-row gap-2">
+                              <button 
+                                onClick={() => {
+                                  // Enable test mode and reload
+                                  sessionStorage.setItem('testModeSubscription', 'true');
+                                  window.location.reload();
+                                }}
+                                className="px-4 py-2 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-md text-sm font-medium hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors"
+                              >
+                                Enable Test Mode & Reload
+                              </button>
+                              <button 
+                                onClick={handleReset}
+                                className="px-4 py-2 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-md text-sm font-medium hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors"
+                              >
+                                Hard Reset & Go to Homepage
+                              </button>
+                            </div>
                           </div>
                         )}
                       </>

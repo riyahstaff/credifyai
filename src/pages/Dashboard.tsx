@@ -18,6 +18,9 @@ const Dashboard = () => {
   const [authChecked, setAuthChecked] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Add a state to force a demo view after a certain timeout
+  const [forceDemo, setForceDemo] = useState(false);
 
   useEffect(() => {
     // Mark auth as checked immediately if we have a user or explicit loading is false
@@ -27,13 +30,14 @@ const Dashboard = () => {
     
     console.log("Dashboard auth state:", { user, isLoading, profile, authChecked });
     
-    // Very short timeout (3 seconds) for mobile devices
+    // Very short timeout (2 seconds) to show dashboard even if auth is slow
     const timeoutId = setTimeout(() => {
       console.log("Auth timeout check triggered");
       if (!authChecked) {
         console.log("Auth timeout occurred, showing dashboard in demo mode");
         setAuthTimeout(true);
         setAuthChecked(true);
+        setForceDemo(true);
         
         toast({
           title: "Loading dashboard",
@@ -41,13 +45,31 @@ const Dashboard = () => {
           duration: 3000,
         });
       }
-    }, 3000);
+    }, 2000); // Reduced from 3000 to 2000ms for faster response
     
-    return () => clearTimeout(timeoutId);
+    // Force demo mode after 5 seconds no matter what
+    const forceDemoId = setTimeout(() => {
+      if (!user) {
+        console.log("Forcing demo mode after extended wait");
+        setForceDemo(true);
+        setAuthChecked(true);
+        
+        toast({
+          title: "Preview Mode Active",
+          description: "Viewing dashboard in demo mode for preview.",
+          duration: 3000,
+        });
+      }
+    }, 5000);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      clearTimeout(forceDemoId);
+    };
   }, [isLoading, toast, user, profile, authChecked]);
 
-  // If still in initial loading state, show a loading indicator
-  if (!authChecked) {
+  // If still in initial loading state and not forcing demo, show a loading indicator
+  if (!authChecked && !forceDemo) {
     console.log("Showing loading indicator");
     return <LoadingIndicator />;
   }
@@ -56,7 +78,12 @@ const Dashboard = () => {
   const userName = profile?.full_name || user?.email?.split('@')[0] || 'User';
   const isAuthenticated = !!user;
 
-  console.log("Rendering dashboard with auth state:", { isAuthenticated, userName, authTimeout });
+  console.log("Rendering dashboard with auth state:", { isAuthenticated, userName, authTimeout, forceDemo });
+
+  // Enable test mode for previews
+  if (window.location.host.includes('lovableproject.com') && !sessionStorage.getItem('testModeSubscription')) {
+    sessionStorage.setItem('testModeSubscription', 'true');
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -91,7 +118,7 @@ const Dashboard = () => {
             <DashboardContent />
             
             {/* Sidebar */}
-            <DashboardSidebar hasSubscription={!!profile?.has_subscription} />
+            <DashboardSidebar hasSubscription={!!profile?.has_subscription || forceDemo} />
           </div>
         </div>
       </main>
