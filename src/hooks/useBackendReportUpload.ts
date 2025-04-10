@@ -1,180 +1,278 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useAuth } from '@/contexts/auth';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from './use-toast';
 
-export function useBackendReportUpload() {
+export interface UploadResult {
+  success: boolean;
+  reportId?: string;
+  message: string;
+  error?: any;
+}
+
+export const useBackendReportUpload = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [uploadingBackend, setUploadingBackend] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedReportId, setUploadedReportId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [letters, setLetters] = useState<any[]>([]);
-  const [loadingLetters, setLoadingLetters] = useState(false);
   
-  const uploadToBackend = async (file: File) => {
+  // Upload file to Supabase storage and process it
+  const uploadFile = async (file: File): Promise<UploadResult> => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to upload credit reports.",
+        variant: "destructive",
+      });
+      return { success: false, message: "Authentication required" };
+    }
+    
     try {
-      setUploadingBackend(true);
+      setIsUploading(true);
+      setUploadProgress(10);
       setUploadError(null);
       
-      // Get the current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('You must be logged in to upload credit reports to the cloud.');
-      }
-      
-      // Create form data for the file upload
+      // Create form data
       const formData = new FormData();
       formData.append('file', file);
       formData.append('userId', user.id);
       
-      // Call the upload-credit-report function
-      const { data, error } = await supabase.functions.invoke(
-        'upload-credit-report',
-        {
+      // Initialize the result object
+      let result: UploadResult = {
+        success: false,
+        message: "Upload failed"
+      };
+      
+      try {
+        // Call the upload-credit-report edge function
+        const { data, error } = await supabase.functions.invoke('upload-credit-report', {
           body: formData
-        }
-      );
-      
-      if (error) {
-        throw error;
-      }
-      
-      console.log('Upload success:', data);
-      
-      if (data.credit_report_id) {
-        setUploadedReportId(data.credit_report_id);
-        toast({
-          title: 'Report uploaded successfully',
-          description: 'Your credit report is being processed. Results will be available shortly.',
         });
         
-        // Call the function to fetch dispute letters
-        fetchDisputeLetters();
+        if (error) {
+          throw error;
+        }
         
-        return data.credit_report_id;
-      } else {
-        throw new Error('No credit report ID returned from the server.');
+        setUploadProgress(70);
+        
+        if (data?.credit_report_id) {
+          setUploadedReportId(data.credit_report_id);
+          
+          // Check if the report was already processed
+          if (data.processing_result) {
+            setUploadProgress(100);
+            
+            result = {
+              success: true,
+              reportId: data.credit_report_id,
+              message: "Credit report uploaded and processed successfully",
+            };
+            
+            toast({
+              title: "Report Processed",
+              description: "Credit report uploaded and processed successfully",
+            });
+          } else {
+            // Report was uploaded but not yet processed
+            setUploadProgress(80);
+            
+            // Wait for processing completion
+            const processingResult = await waitForReportProcessing(data.credit_report_id);
+            
+            if (processingResult.success) {
+              setUploadProgress(100);
+              result = {
+                success: true,
+                reportId: data.credit_report_id,
+                message: processingResult.message,
+              };
+              
+              toast({
+                title: "Report Processed",
+                description: processingResult.message,
+              });
+            } else {
+              setUploadProgress(100);
+              setUploadError(processingResult.message);
+              result = {
+                success: false,
+                reportId: data.credit_report_id,
+                message: processingResult.message,
+                error: processingResult.error
+              };
+              
+              toast({
+                title: "Processing Issue",
+                description: processingResult.message,
+                variant: "destructive",
+              });
+            }
+          }
+        } else {
+          // No report ID returned
+          throw new Error("No report ID returned from upload function");
+        }
+      } catch (error) {
+        console.error("Error during upload:", error);
+        
+        setUploadProgress(0);
+        setUploadError(error instanceof Error ? error.message : "Unknown error");
+        
+        result = {
+          success: false,
+          message: "Failed to upload credit report",
+          error
+        };
+        
+        toast({
+          title: "Upload Failed",
+          description: "Failed to upload credit report. Please try again.",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error('Error uploading credit report:', error);
-      setUploadError(error instanceof Error ? error.message : 'Failed to upload credit report');
-      toast({
-        title: 'Upload failed',
-        description: error instanceof Error ? error.message : 'Failed to upload credit report',
-        variant: 'destructive',
-      });
-      return null;
+      
+      return result;
     } finally {
-      setUploadingBackend(false);
+      setIsUploading(false);
     }
   };
   
+  // Wait for report processing to complete
+  const waitForReportProcessing = async (reportId: string): Promise<UploadResult> => {
+    try {
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      while (attempts < maxAttempts) {
+        attempts++;
+        
+        // Wait before checking
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Check report status
+        const { data: report, error } = await supabase
+          .from('credit_reports')
+          .select('*')
+          .eq('id', reportId)
+          .single();
+        
+        if (error) {
+          console.error("Error checking report status:", error);
+          continue;
+        }
+        
+        if (report.processed === true) {
+          // Check if there was a processing error
+          if (report.processing_error) {
+            return {
+              success: false,
+              reportId,
+              message: `Error processing report: ${report.processing_error}`,
+              error: report.processing_error
+            };
+          }
+          
+          // Check if any letters were generated
+          const { data: letters, error: lettersError } = await supabase
+            .from('dispute_letters')
+            .select('*')
+            .eq('user_id', user?.id)
+            .order('createdAt', { ascending: false })
+            .limit(10);
+          
+          if (lettersError) {
+            console.error("Error checking for generated letters:", lettersError);
+          } else if (letters && letters.length > 0) {
+            // Store letters in session storage for the dispute letters page
+            console.log(`Found ${letters.length} letters, storing in session storage`);
+            sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(letters));
+            
+            return {
+              success: true,
+              reportId,
+              message: `Credit report processed with ${letters.length} letters generated`
+            };
+          }
+          
+          // Report was processed but no letters were found
+          return {
+            success: true,
+            reportId,
+            message: "Credit report processed successfully"
+          };
+        }
+        
+        // Update progress
+        setUploadProgress(80 + (attempts * 2));
+      }
+      
+      // Max attempts reached
+      return {
+        success: false,
+        reportId,
+        message: "Report processing timeout. Please check later for results.",
+      };
+    } catch (error) {
+      console.error("Error waiting for report processing:", error);
+      
+      return {
+        success: false,
+        reportId,
+        message: "Error checking report processing status",
+        error
+      };
+    }
+  };
+  
+  // Handle successful upload in parent component
   const handleUploadSuccess = (reportId: string) => {
     setUploadedReportId(reportId);
-    fetchDisputeLetters();
+    
+    // In addition to storing the report ID, also trigger a navigation to dispute letters if available
+    checkForDisputeLetters().then(hasLetters => {
+      if (hasLetters) {
+        // Trigger navigation to dispute letters
+        console.log("ANALYSIS_COMPLETE_READY_FOR_NAVIGATION");
+      }
+    });
   };
   
-  const fetchDisputeLetters = async () => {
-    try {
-      setLoadingLetters(true);
-      
-      // Get the current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('You must be logged in to fetch dispute letters.');
-      }
-      
-      // Call the get-dispute-letters function
-      const { data, error } = await supabase.functions.invoke(
-        'get-dispute-letters',
-        {
-          body: { userId: user.id },
-        }
-      );
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (data?.letters) {
-        setLetters(data.letters);
-        
-        // Store user information from letters in localStorage if available
-        storeUserInfoFromLetters(data.letters);
-      }
-    } catch (error) {
-      console.error('Error fetching dispute letters:', error);
-      toast({
-        title: 'Error fetching letters',
-        description: error instanceof Error ? error.message : 'Failed to fetch dispute letters',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingLetters(false);
+  // Check if dispute letters exist for the current user
+  const checkForDisputeLetters = async (): Promise<boolean> => {
+    if (!user) {
+      return false;
     }
-  };
-  
-  // Helper function to extract and store user information from letters
-  const storeUserInfoFromLetters = (letters: any[]) => {
-    if (!letters || letters.length === 0) return;
     
     try {
-      // Get the first letter content to extract user info
-      const letterContent = letters[0].letter_content;
+      const { data: letters } = await supabase
+        .from('dispute_letters')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('createdAt', { ascending: false })
+        .limit(10);
       
-      if (!letterContent) return;
-      
-      // Extract name
-      const nameMatch = letterContent.match(/^([A-Za-z\s\.]{2,50}?)(?:\n|\r|,)/);
-      if (nameMatch && nameMatch[1] && nameMatch[1].trim().length > 3) {
-        localStorage.setItem('userName', nameMatch[1].trim());
+      if (letters && letters.length > 0) {
+        // Store letters in session storage
+        sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(letters));
+        return true;
       }
       
-      // Extract address, city, state, zip
-      const addressMatch = letterContent.match(/^[A-Za-z\s\.]{2,50}?\n(.*?)(?:\n|\r)/);
-      if (addressMatch && addressMatch[1]) {
-        const addressLine = addressMatch[1].trim();
-        
-        // Try to parse address, city, state, zip
-        const cityStateZipMatch = addressLine.match(/^(.*?),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)/);
-        if (cityStateZipMatch) {
-          localStorage.setItem('userAddress', cityStateZipMatch[1].trim());
-          localStorage.setItem('userCity', cityStateZipMatch[2].trim());
-          localStorage.setItem('userState', cityStateZipMatch[3].trim());
-        } else {
-          localStorage.setItem('userAddress', addressLine);
-        }
-      }
-      
-      console.log('Stored user information from generated letters');
+      return false;
     } catch (error) {
-      console.error('Error extracting user info from letters:', error);
+      console.error("Error checking for dispute letters:", error);
+      return false;
     }
-  };
-  
-  // Load existing letters on mount
-  useEffect(() => {
-    if (supabase) {
-      fetchDisputeLetters();
-    }
-  }, []);
-  
-  const resetUpload = () => {
-    setUploadedReportId(null);
-    setUploadError(null);
   };
   
   return {
-    uploadingBackend,
+    uploadFile,
+    isUploading,
+    uploadProgress,
     uploadedReportId,
     uploadError,
-    letters,
-    loadingLetters,
-    uploadToBackend,
     handleUploadSuccess,
-    fetchDisputeLetters,
-    resetUpload,
   };
-}
+};

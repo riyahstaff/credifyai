@@ -63,7 +63,7 @@ serve(async (req) => {
     // Download the credit report file from storage
     const { data: fileData, error: downloadError } = await supabase.storage
       .from("credit_reports")
-      .download(`${reportData.user_id}/${reportData.file_path}`);
+      .download(reportData.file_path);
 
     if (downloadError || !fileData) {
       console.error("Error downloading file:", downloadError);
@@ -73,7 +73,7 @@ serve(async (req) => {
         .from("credit_reports")
         .update({
           processed: true,
-          processing_error: `Error downloading file: ${downloadError.message}`,
+          processing_error: `Error downloading file: ${downloadError?.message || "Unknown error"}`,
         })
         .eq("id", credit_report_id);
       
@@ -106,33 +106,37 @@ serve(async (req) => {
 
     // Detect issues in the credit report
     console.log("Detecting issues in credit report");
-    const issues = detect_issues(text);
+    const issues = await detect_issues(text);
     
-    if (issues.length === 0) {
+    // Log and store the detected issues
+    console.log(`Found ${issues.length} issues in credit report`);
+    
+    if (issues.length > 0) {
+      // Insert issues into the credit_report_issues table
+      const issueRecords = issues.map(issue => ({
+        credit_report_id,
+        user_id: reportData.user_id,
+        type: issue.type || "Unknown Issue",
+        description: issue.description || "",
+        severity: issue.severity || "medium",
+        account_name: issue.account?.accountName,
+        account_number: issue.account?.accountNumber,
+        bureau: reportData.bureau || "Unknown",
+        details: issue
+      }));
+      
+      const { error: issueInsertError } = await supabase
+        .from("credit_report_issues")
+        .insert(issueRecords);
+        
+      if (issueInsertError) {
+        console.error("Error storing issues:", issueInsertError);
+      } else {
+        console.log(`Stored ${issueRecords.length} issues in database`);
+      }
+    } else {
       console.log("No issues detected in credit report");
-      
-      // Update the credit report record
-      await supabase
-        .from("credit_reports")
-        .update({
-          processed: true,
-          processing_error: null,
-        })
-        .eq("id", credit_report_id);
-      
-      return new Response(
-        JSON.stringify({
-          message: "Credit report processed but no issues detected",
-          credit_report_id,
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
     }
-    
-    console.log(`Detected ${issues.length} issues in credit report`);
     
     // Get letter templates
     const { data: templates, error: templateError } = await supabase
@@ -141,32 +145,24 @@ serve(async (req) => {
     
     if (templateError) {
       console.error("Error fetching letter templates:", templateError);
-      return new Response(
-        JSON.stringify({
-          error: "Error fetching letter templates",
-          details: templateError,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
     }
     
     // Generate dispute letters
     console.log("Generating dispute letters");
-    const letters = generate_letters(issues, userData || {}, text, templates);
+    const letters = await generate_letters(issues, userData || {}, text, templates || []);
     
     if (letters.length > 0) {
       // Insert letters into the database
       const letterRecords = letters.map((letter) => ({
         user_id: reportData.user_id,
-        issue_type: letter.issue_type,
-        letter_content: letter.content,
-        credit_report_id,
-        bureau: letter.bureau,
-        account_number: letter.account_number,
-        creditor_name: letter.creditor_name,
+        title: letter.title || "Credit Report Dispute",
+        letterContent: letter.content || letter.letterContent,
+        content: letter.content || letter.letterContent,
+        bureau: letter.bureau || reportData.bureau || "Unknown",
+        accountNumber: letter.account_number || "",
+        accountName: letter.creditor_name || letter.accountName || "Unknown Account",
+        errorType: letter.issue_type || "General Dispute",
+        status: "ready"
       }));
       
       const { data: insertedLetters, error: insertError } = await supabase
@@ -177,7 +173,7 @@ serve(async (req) => {
       if (insertError) {
         console.error("Error inserting dispute letters:", insertError);
       } else {
-        console.log(`Inserted ${insertedLetters.length} dispute letters`);
+        console.log(`Inserted ${insertedLetters.length} dispute letters into database`);
       }
     }
     
@@ -187,6 +183,7 @@ serve(async (req) => {
       .update({
         processed: true,
         processing_error: null,
+        status: "Processed"
       })
       .eq("id", credit_report_id);
     
@@ -208,7 +205,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: "Error processing credit report",
-        details: error.message,
+        details: error instanceof Error ? error.message : "Unknown error",
       }),
       {
         status: 500,

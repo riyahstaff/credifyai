@@ -23,43 +23,78 @@ export const useReportNavigation = () => {
         // First check if we have letters in storage before navigating
         const generatedLetters = sessionStorage.getItem('generatedDisputeLetters');
         if (!generatedLetters) {
-          toast({
-            title: "Navigation Error",
-            description: "No dispute letters found to display. Please try again.",
-            variant: "destructive",
+          // Try to get letters from the backend before showing an error
+          checkForLettersInBackend().then(hasBackendLetters => {
+            if (!hasBackendLetters) {
+              toast({
+                title: "Navigation Error",
+                description: "No dispute letters found to display. Please try again.",
+                variant: "destructive",
+              });
+            } else {
+              // Backend letters exist, proceed with navigation
+              proceedWithNavigation();
+            }
           });
           return;
         }
         
-        // Prevent multiple navigations
-        if (navigationInProgress.current) {
-          originalConsoleLog("Navigation already in progress, skipping");
-          return;
-        }
-        
-        // Check if we're already on the dispute letters page
-        if (window.location.pathname === '/dispute-letters') {
-          originalConsoleLog("Already on dispute letters page, skipping navigation");
-          return;
-        }
-        
-        // Set navigation in progress flag
-        navigationInProgress.current = true;
-        sessionStorage.setItem('navigationInProgress', 'true');
-        
-        // Reset force reload flag to prevent loops
-        sessionStorage.setItem('forceLettersReload', 'done');
-        
-        // Use window.location for the most reliable navigation
-        setTimeout(() => {
-          // Check if test mode is active
-          const isTestMode = window.location.search.includes('testMode=true');
-          
-          // Force a full page refresh to ensure clean state
-          window.location.href = `/dispute-letters${isTestMode ? '?testMode=true' : ''}`;
-        }, 500);
+        proceedWithNavigation();
       }
     };
+    
+    function proceedWithNavigation() {
+      // Prevent multiple navigations
+      if (navigationInProgress.current) {
+        originalConsoleLog("Navigation already in progress, skipping");
+        return;
+      }
+      
+      // Check if we're already on the dispute letters page
+      if (window.location.pathname === '/dispute-letters') {
+        originalConsoleLog("Already on dispute letters page, skipping navigation");
+        return;
+      }
+      
+      // Set navigation in progress flag
+      navigationInProgress.current = true;
+      sessionStorage.setItem('navigationInProgress', 'true');
+      
+      // Reset force reload flag to prevent loops
+      sessionStorage.setItem('forceLettersReload', 'done');
+      
+      // Use window.location for the most reliable navigation
+      setTimeout(() => {
+        // Check if test mode is active
+        const isTestMode = window.location.search.includes('testMode=true');
+        
+        // Force a full page refresh to ensure clean state
+        window.location.href = `/dispute-letters${isTestMode ? '?testMode=true' : ''}`;
+      }, 500);
+    }
+    
+    async function checkForLettersInBackend() {
+      try {
+        // Try to fetch letters from the backend using Supabase client
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: letters } = await supabase
+          .from('dispute_letters')
+          .select('*')
+          .order('createdAt', { ascending: false })
+          .limit(10);
+        
+        if (letters && letters.length > 0) {
+          // Store these letters in session storage for the dispute letters page to use
+          sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(letters));
+          return true;
+        }
+        
+        return false;
+      } catch (error) {
+        console.error("Error checking for backend letters:", error);
+        return false;
+      }
+    }
     
     return () => {
       // Restore original console.log when component unmounts
@@ -71,7 +106,7 @@ export const useReportNavigation = () => {
   }, [navigate, toast]);
 
   // Navigate to dispute letters page with more forceful approach
-  const navigateToDisputeLetters = () => {
+  const navigateToDisputeLetters = async () => {
     console.log("Forcefully navigating to dispute letters page");
     
     // Check if navigation is already in progress
@@ -86,24 +121,55 @@ export const useReportNavigation = () => {
       return;
     }
     
+    // Try to check for letters in the backend first
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: letters } = await supabase
+        .from('dispute_letters')
+        .select('*')
+        .order('createdAt', { ascending: false })
+        .limit(10);
+      
+      if (letters && letters.length > 0) {
+        // Store these letters in session storage for the dispute letters page to use
+        sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(letters));
+      } else {
+        // No letters found in backend, check session storage
+        const generatedLetters = sessionStorage.getItem('generatedDisputeLetters');
+        if (!generatedLetters) {
+          toast({
+            title: "Navigation Error",
+            description: "No dispute letters found to display. Please try again.",
+            variant: "destructive",
+          });
+          
+          // Clear navigation flag
+          navigationInProgress.current = false;
+          sessionStorage.removeItem('navigationInProgress');
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Error checking for backend letters:", error);
+      // Continue with local letters if available
+      const generatedLetters = sessionStorage.getItem('generatedDisputeLetters');
+      if (!generatedLetters) {
+        toast({
+          title: "Navigation Error",
+          description: "No dispute letters found to display. Please try again.",
+          variant: "destructive",
+        });
+        
+        // Clear navigation flag
+        navigationInProgress.current = false;
+        sessionStorage.removeItem('navigationInProgress');
+        return;
+      }
+    }
+    
     // Set navigation in progress flag
     navigationInProgress.current = true;
     sessionStorage.setItem('navigationInProgress', 'true');
-    
-    // Verify letters exist before navigating
-    const generatedLetters = sessionStorage.getItem('generatedDisputeLetters');
-    if (!generatedLetters) {
-      toast({
-        title: "Navigation Error",
-        description: "No dispute letters found to display. Please try again.",
-        variant: "destructive",
-      });
-      
-      // Clear navigation flag
-      navigationInProgress.current = false;
-      sessionStorage.removeItem('navigationInProgress');
-      return;
-    }
     
     // Reset the forceLettersReload flag to prevent loops
     sessionStorage.setItem('forceLettersReload', 'done');
@@ -121,3 +187,4 @@ export const useReportNavigation = () => {
     toast
   };
 };
+

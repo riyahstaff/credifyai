@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import DisputeLettersPage from '../components/disputes/letters/DisputeLettersPage';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
+import { supabase } from '@/integrations/supabase/client';
 
 const DisputeLetters = () => {
   const { toast } = useToast();
@@ -11,108 +12,137 @@ const DisputeLetters = () => {
   const navigate = useNavigate();
   const { profile, user } = useAuth();
   const [lettersLoaded, setLettersLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Effect to load letters on mount - with proper dependency array
   useEffect(() => {
     console.log("DisputeLetters page: User auth state:", user ? "Logged in" : "Not logged in");
     
-    // Store profile data in localStorage for letter generation if not already done in AuthProvider
-    if (profile) {
-      localStorage.setItem('userProfile', JSON.stringify(profile));
+    const loadLetters = async () => {
+      setIsLoading(true);
       
-      if (profile.full_name) {
-        localStorage.setItem('userName', profile.full_name);
+      // Store profile data in localStorage for letter generation if not already done in AuthProvider
+      if (profile) {
+        localStorage.setItem('userProfile', JSON.stringify(profile));
+        
+        if (profile.full_name) {
+          localStorage.setItem('userName', profile.full_name);
+        }
       }
-    }
-    
-    // Check for letter data
-    const pendingLetter = sessionStorage.getItem('pendingDisputeLetter');
-    const generatedLetters = sessionStorage.getItem('generatedDisputeLetters');
-    
-    // Log current state for debugging
-    console.log("[DisputeLetters] Checking for letter flags");
-    console.log("[DisputeLetters] pendingLetter:", pendingLetter ? "Present" : "Not present");
-    console.log("[DisputeLetters] generatedLetters:", generatedLetters ? "Present" : "Not present");
-    
-    let validLetters = false;
-    
-    if (pendingLetter) {
-      try {
-        const letterObj = JSON.parse(pendingLetter);
-        if (letterObj && letterObj.content && letterObj.content.length > 0) {
-          validLetters = true;
-          console.log("[DisputeLetters] Letter content found, length:", letterObj.content.length);
-          
-          if (letterObj.content.includes("Sample dispute letter content") || 
-              letterObj.content.length < 100) {
-            console.log("[DisputeLetters] Found placeholder content, regenerating letter");
-            toast({
-              title: "Regenerating Letter",
-              description: "The previous letter contained placeholder content. Generating a proper letter now.",
-            });
+      
+      // First check if we already have letters in session storage
+      const sessionLetters = sessionStorage.getItem('generatedDisputeLetters');
+      
+      if (sessionLetters) {
+        console.log("[DisputeLetters] Found letters in session storage");
+        setLettersLoaded(true);
+        setIsLoading(false);
+        return;
+      }
+      
+      // If no letters in session storage, try to get them from the backend
+      if (user) {
+        try {
+          console.log("[DisputeLetters] Fetching letters from backend");
+          const { data: backendLetters, error } = await supabase
+            .from('dispute_letters')
+            .select('*')
+            .order('createdAt', { ascending: false })
+            .limit(10);
             
-            setTimeout(() => {
-              navigate('/upload-report');
-            }, 2000);
-            return;
+          if (error) {
+            throw error;
           }
-        } else {
-          console.warn("[DisputeLetters] Found letter with invalid/placeholder content");
+            
+          if (backendLetters && backendLetters.length > 0) {
+            console.log(`[DisputeLetters] Found ${backendLetters.length} letters in backend`);
+            sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(backendLetters));
+            setLettersLoaded(true);
+          } else {
+            console.log("[DisputeLetters] No letters found in backend");
+            // Check for pendingLetter as last resort
+            checkPendingLetter();
+          }
+        } catch (error) {
+          console.error("[DisputeLetters] Error fetching backend letters:", error);
+          // Check for pendingLetter as fallback
+          checkPendingLetter();
         }
-      } catch (e) {
-        console.error("[DisputeLetters] Error parsing letter:", e);
+      } else {
+        // No user logged in, check for pendingLetter as fallback
+        checkPendingLetter();
       }
-    }
+      
+      setIsLoading(false);
+    };
     
-    if (generatedLetters) {
-      try {
-        const lettersArray = JSON.parse(generatedLetters);
-        if (Array.isArray(lettersArray) && lettersArray.length > 0) {
-          validLetters = true;
-          console.log("[DisputeLetters] Found valid generated letters array:", lettersArray.length);
+    const checkPendingLetter = () => {
+      // Check for letter data as fallback
+      const pendingLetter = sessionStorage.getItem('pendingDisputeLetter');
+      
+      // Log current state for debugging
+      console.log("[DisputeLetters] Checking for pending letter flag");
+      console.log("[DisputeLetters] pendingLetter:", pendingLetter ? "Present" : "Not present");
+      
+      if (pendingLetter) {
+        try {
+          const letterObj = JSON.parse(pendingLetter);
+          if (letterObj && letterObj.content && letterObj.content.length > 0) {
+            console.log("[DisputeLetters] Letter content found, length:", letterObj.content.length);
+            
+            if (letterObj.content.includes("Sample dispute letter content") || 
+                letterObj.content.length < 100) {
+              console.log("[DisputeLetters] Found placeholder content, regenerating letter");
+              toast({
+                title: "Regenerating Letter",
+                description: "The previous letter contained placeholder content. Generating a proper letter now.",
+              });
+              
+              setTimeout(() => {
+                navigate('/upload-report');
+              }, 2000);
+              return;
+            }
+            
+            // Convert pendingLetter to format expected by DisputeLettersPage
+            const letters = [{
+              ...letterObj,
+              id: Date.now(),
+              title: letterObj.title || "Credit Report Dispute",
+              createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              status: "ready"
+            }];
+            
+            // Store in session storage
+            sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(letters));
+            setLettersLoaded(true);
+          }
+        } catch (e) {
+          console.error("[DisputeLetters] Error parsing letter:", e);
         }
-      } catch (e) {
-        console.error("[DisputeLetters] Error parsing generated letters:", e);
       }
-    }
+    };
     
-    if (validLetters) {
-      console.log("[DisputeLetters] Valid letters found in storage");
-      setLettersLoaded(true);
-      
-      // Don't try to reload more than once to prevent loop
-      const hasForceReloaded = sessionStorage.getItem('forceLettersReload') === 'done';
-      if (!hasForceReloaded && sessionStorage.getItem('forceLettersReload') === 'true') {
-        sessionStorage.setItem('forceLettersReload', 'done');
-        console.log("[DisputeLetters] Force reload triggered once, setting to done");
-      }
-      
-      // Also ensure auto-generated flag is set
-      sessionStorage.setItem('autoGeneratedLetter', 'true');
-    } 
-    else if (!lettersLoaded && sessionStorage.getItem('autoGeneratedLetter') === 'true' && !sessionStorage.getItem('redirectInProgress')) {
-      console.log("[DisputeLetters] Auto-generated flag is true but no valid letters found");
-      
-      toast({
-        title: "Letter Access Issue",
-        description: "Unable to load dispute letters. Redirecting to upload page to try again.",
-      });
-      
-      // Set a flag to prevent multiple redirects
-      sessionStorage.setItem('redirectInProgress', 'true');
-      
-      setTimeout(() => {
-        sessionStorage.removeItem('redirectInProgress');
-        navigate('/upload-report');
-      }, 1500);
-    }
+    loadLetters();
     
     // Clean up any navigation flags from previous attempts
     return () => {
       sessionStorage.removeItem('navigationInProgress');
       sessionStorage.removeItem('redirectInProgress');
     };
-  }, [toast, profile, navigate, user, lettersLoaded]);
+  }, [toast, profile, navigate, user]);
+  
+  // If still loading, show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading your dispute letters...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <DisputeLettersPage testMode={false} requirePayment={true} />
