@@ -5,11 +5,9 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = 'https://nnpsiyuwlovbngqzyxlg.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ucHNpeXV3bG92Ym5ncXp5eGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwMDE0ODEsImV4cCI6MjA1OTU3NzQ4MX0.dMuHGHCxHsX4ujAoxP4k3GNKuTFFEI5SfT50xWGmmts';
 
-// Only show error for missing credentials if we're not using the hardcoded ones
-const hasMissingCredentials = (!import.meta.env.VITE_SUPABASE_URL || 
-                             !import.meta.env.VITE_SUPABASE_ANON_KEY) &&
-                             (supabaseUrl === 'https://placeholder-url.supabase.co' ||
-                             supabaseAnonKey === 'placeholder-key');
+// Only show error for missing credentials if we're using environment variables that aren't defined
+const hasMissingCredentials = (import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL) || 
+                             (import.meta.env.VITE_SUPABASE_ANON_KEY && !import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 if (hasMissingCredentials) {
   console.error('Supabase credentials missing. To connect this app to Supabase:');
