@@ -3,24 +3,21 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { MoonIcon, SunIcon, Home, Users, Settings, HelpCircle, LogOut, FileText } from 'lucide-react';
+import { MoonIcon, SunIcon, Home, Users, Settings, FileText, LogOut } from 'lucide-react';
 
 interface DashboardSidebarProps {
-  testMode?: boolean;
   hasSubscription?: boolean;
 }
 
-const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ testMode = false, hasSubscription = false }) => {
+const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ hasSubscription = false }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Use the logout function from auth context
   const handleLogout = async () => {
     try {
       await logout();
-      // After logout, navigate to home page
       navigate('/');
     } catch (error) {
       console.error("Logout failed:", error);
@@ -32,9 +29,11 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ testMode = false, h
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-credify-navy-medium flex items-center justify-center">
-            <Home className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            {user?.email?.charAt(0).toUpperCase() || 'U'}
           </div>
-          <span className="text-lg font-semibold text-gray-800 dark:text-white">Credify</span>
+          <span className="text-lg font-semibold text-gray-800 dark:text-white">
+            {user?.email?.split('@')[0] || 'User'}
+          </span>
         </div>
       </div>
       
