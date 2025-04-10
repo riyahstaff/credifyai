@@ -83,18 +83,37 @@ export const loadLettersFromStorage = (): { foundLetters: boolean, letters: Lett
  */
 export const saveLettersToStorage = (letters: Letter[], selectedLetter?: Letter | null): void => {
   try {
-    sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(letters));
-    console.log(`Saved ${letters.length} letters to storage`);
+    // Ensure all letters have required properties
+    const completeLetters = letters.map(letter => {
+      return {
+        ...letter,
+        recipient: letter.recipient || letter.bureau || "Credit Bureau",
+        bureaus: letter.bureaus || [letter.bureau || "Credit Bureau"]
+      };
+    });
+    
+    sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(completeLetters));
+    console.log(`Saved ${completeLetters.length} letters to storage`);
     
     // If a letter was selected, store that as the pending letter
     if (selectedLetter) {
-      sessionStorage.setItem('pendingDisputeLetter', JSON.stringify({
+      const completeLetter = {
         ...selectedLetter,
         content: selectedLetter.content || selectedLetter.letterContent,
-        letterContent: selectedLetter.letterContent || selectedLetter.content
-      }));
+        letterContent: selectedLetter.letterContent || selectedLetter.content,
+        recipient: selectedLetter.recipient || selectedLetter.bureau || "Credit Bureau",
+        bureaus: selectedLetter.bureaus || [selectedLetter.bureau || "Credit Bureau"]
+      };
+      
+      sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(completeLetter));
       console.log("Saved selected letter as pending letter");
     }
+    
+    // Set flag to indicate letter generation is complete
+    sessionStorage.setItem('letterGenerationComplete', 'true');
+    
+    // Remove the reload flag to prevent infinite reloading
+    sessionStorage.removeItem('forceLettersReload');
   } catch (error) {
     console.error("Error saving letters to storage:", error);
   }

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { FileText, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,46 @@ interface DisputeLetterHeaderProps {
 
 const DisputeLetterHeader: React.FC<DisputeLetterHeaderProps> = ({ testMode = false }) => {
   const { profile, user } = useAuth();
+  const [userName, setUserName] = useState('User');
   
-  // Improved name extraction logic
-  const userName = profile?.full_name || user?.email?.split('@')[0] || 'User';
+  // Improved name extraction logic with fallback mechanisms
+  useEffect(() => {
+    const getUserName = () => {
+      // First priority: profile from auth context
+      if (profile?.full_name) {
+        return profile.full_name;
+      }
+      
+      // Second priority: user email from auth context
+      if (user?.email) {
+        return user.email.split('@')[0];
+      }
+      
+      // Third priority: stored user name from localStorage
+      const storedName = localStorage.getItem('userName');
+      if (storedName && storedName !== '[YOUR NAME]') {
+        return storedName;
+      }
+      
+      // Fourth priority: stored user profile from localStorage
+      try {
+        const storedProfile = localStorage.getItem('userProfile');
+        if (storedProfile) {
+          const parsedProfile = JSON.parse(storedProfile);
+          if (parsedProfile.full_name) {
+            return parsedProfile.full_name;
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing stored profile:", error);
+      }
+      
+      // Default fallback
+      return 'User';
+    };
+    
+    setUserName(getUserName());
+  }, [profile, user]);
 
   return (
     <div className="mb-6">
