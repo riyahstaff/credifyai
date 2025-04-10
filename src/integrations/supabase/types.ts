@@ -9,137 +9,174 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      credit_reports: {
+      credit_report_issues: {
         Row: {
-          created_at: string | null
-          file_name: string
-          file_path: string
+          account_name: string | null
+          account_number: string | null
+          bureau: string
+          created_at: string
+          credit_report_id: string
+          description: string
+          details: Json
           id: string
-          processed: boolean | null
-          processing_error: string | null
+          severity: string
+          status: string
+          type: string
+          updated_at: string
           user_id: string
         }
         Insert: {
-          created_at?: string | null
-          file_name: string
-          file_path: string
+          account_name?: string | null
+          account_number?: string | null
+          bureau: string
+          created_at?: string
+          credit_report_id?: string
+          description: string
+          details: Json
           id?: string
-          processed?: boolean | null
-          processing_error?: string | null
-          user_id: string
+          severity: string
+          status?: string
+          type: string
+          updated_at?: string
+          user_id?: string
         }
         Update: {
-          created_at?: string | null
-          file_name?: string
-          file_path?: string
+          account_name?: string | null
+          account_number?: string | null
+          bureau?: string
+          created_at?: string
+          credit_report_id?: string
+          description?: string
+          details?: Json
           id?: string
-          processed?: boolean | null
-          processing_error?: string | null
+          severity?: string
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_reports: {
+        Row: {
+          bureau: string | null
+          created_at: string | null
+          file_name: string | null
+          file_path: string | null
+          file_url: string | null
+          id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          bureau?: string | null
+          created_at?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_url?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Update: {
+          bureau?: string | null
+          created_at?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_url?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
       }
       dispute_letters: {
         Row: {
-          account_number: string | null
-          bureau: string | null
-          credit_report_id: string | null
-          creditor_name: string | null
-          generated_at: string | null
+          accountName: string | null
+          accountNumber: string | null
+          bureau: string
+          content: string
+          createdAt: string
+          errorType: string
           id: string
-          issue_type: string
-          letter_content: string
-          sent: boolean | null
-          sent_at: string | null
-          user_id: string
+          letterContent: string
+          status: string
+          title: string
+          updatedAt: string
+          userId: string
         }
         Insert: {
-          account_number?: string | null
-          bureau?: string | null
-          credit_report_id?: string | null
-          creditor_name?: string | null
-          generated_at?: string | null
+          accountName?: string | null
+          accountNumber?: string | null
+          bureau: string
+          content: string
+          createdAt?: string
+          errorType: string
           id?: string
-          issue_type: string
-          letter_content: string
-          sent?: boolean | null
-          sent_at?: string | null
-          user_id: string
+          letterContent: string
+          status?: string
+          title: string
+          updatedAt?: string
+          userId?: string
         }
         Update: {
-          account_number?: string | null
-          bureau?: string | null
-          credit_report_id?: string | null
-          creditor_name?: string | null
-          generated_at?: string | null
-          id?: string
-          issue_type?: string
-          letter_content?: string
-          sent?: boolean | null
-          sent_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "dispute_letters_credit_report_id_fkey"
-            columns: ["credit_report_id"]
-            isOneToOne: false
-            referencedRelation: "credit_reports"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      letter_templates: {
-        Row: {
-          content: string
-          created_at: string | null
-          id: string
-          issue_type: string
-          name: string
-          updated_at: string | null
-        }
-        Insert: {
-          content: string
-          created_at?: string | null
-          id?: string
-          issue_type: string
-          name: string
-          updated_at?: string | null
-        }
-        Update: {
+          accountName?: string | null
+          accountNumber?: string | null
+          bureau?: string
           content?: string
-          created_at?: string | null
+          createdAt?: string
+          errorType?: string
           id?: string
-          issue_type?: string
-          name?: string
-          updated_at?: string | null
+          letterContent?: string
+          status?: string
+          title?: string
+          updatedAt?: string
+          userId?: string
         }
         Relationships: []
       }
-      profiles: {
+      dispute_progress: {
         Row: {
-          created_at: string | null
-          email: string
-          full_name: string | null
-          has_subscription: boolean | null
+          accountName: string
+          accountNumber: string
+          bureau: string
+          date_sent: string
+          date_updated: string
           id: string
-          updated_at: string | null
+          letter_id: string
+          response_date: string | null
+          response_received: boolean
+          status: string
+          user_id: string
         }
         Insert: {
-          created_at?: string | null
-          email: string
-          full_name?: string | null
-          has_subscription?: boolean | null
-          id: string
-          updated_at?: string | null
+          accountName: string
+          accountNumber: string
+          bureau: string
+          date_sent?: string
+          date_updated?: string
+          id?: string
+          letter_id?: string
+          response_date?: string | null
+          response_received?: boolean
+          status?: string
+          user_id?: string
         }
         Update: {
-          created_at?: string | null
-          email?: string
-          full_name?: string | null
-          has_subscription?: boolean | null
+          accountName?: string
+          accountNumber?: string
+          bureau?: string
+          date_sent?: string
+          date_updated?: string
           id?: string
-          updated_at?: string | null
+          letter_id?: string
+          response_date?: string | null
+          response_received?: boolean
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }
