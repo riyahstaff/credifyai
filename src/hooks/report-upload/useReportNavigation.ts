@@ -41,21 +41,16 @@ export const useReportNavigation = () => {
         navigationInProgress.current = true;
         sessionStorage.setItem('navigationInProgress', 'true');
         
-        // Include the current timestamp in the URL to force a fresh load
-        const timestamp = Date.now();
+        // Reset force reload flag to prevent loops
+        sessionStorage.setItem('forceLettersReload', 'done');
         
-        // Preserve authentication by using state in navigation
+        // Use window.location for the most reliable navigation
         setTimeout(() => {
           // Check if test mode is active
           const isTestMode = window.location.search.includes('testMode=true');
           
-          // Important: Use the History API to preserve auth state
-          // This is more reliable than window.location for maintaining auth
-          sessionStorage.setItem('forceAuthPersistence', 'true');
-          sessionStorage.setItem('authTimestamp', timestamp.toString());
-          
           // Force a full page refresh to ensure clean state
-          window.location.href = `/dispute-letters?t=${timestamp}${isTestMode ? '&testMode=true' : ''}`;
+          window.location.href = `/dispute-letters${isTestMode ? '?testMode=true' : ''}`;
         }, 500);
       }
     };
@@ -98,19 +93,14 @@ export const useReportNavigation = () => {
       return;
     }
     
-    // Add timestamp to force a refresh of the page
-    const timestamp = Date.now();
+    // Reset the forceLettersReload flag to prevent loops
+    sessionStorage.setItem('forceLettersReload', 'done');
     
     // Check if test mode is active
     const isTestMode = window.location.search.includes('testMode=true');
     
-    // Set flag to force reload on letters page and include timestamp
-    sessionStorage.setItem('forceLettersReload', 'true');
-    sessionStorage.setItem('forceAuthPersistence', 'true');
-    sessionStorage.setItem('authTimestamp', timestamp.toString());
-    
     // Use window.location for the most reliable navigation that preserves auth state
-    window.location.href = `/dispute-letters?t=${timestamp}${isTestMode ? '&testMode=true' : ''}`;
+    window.location.href = `/dispute-letters${isTestMode ? '?testMode=true' : ''}`;
   };
 
   return {
