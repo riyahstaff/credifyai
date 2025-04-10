@@ -98,6 +98,14 @@ export const addLetterToStorage = async (letter: Letter): Promise<boolean> => {
  * Format a letter from storage to ensure it has all required fields
  */
 export const formatLetterFromStorage = (letter: any): Letter => {
+  // Ensure bureaus is an array
+  const bureaus = letter.bureaus || [];
+  if (!Array.isArray(bureaus) && letter.bureau) {
+    bureaus.push(letter.bureau);
+  } else if (bureaus.length === 0 && letter.bureau) {
+    bureaus.push(letter.bureau);
+  }
+
   return {
     id: letter.id || Date.now(),
     title: letter.title || "Credit Report Dispute",
@@ -110,5 +118,6 @@ export const formatLetterFromStorage = (letter: any): Letter => {
     status: letter.status || "ready",
     errorType: letter.errorType || "General Dispute",
     recipient: letter.recipient || letter.bureau || "Credit Bureau",
+    bureaus: bureaus.length > 0 ? bureaus : [letter.bureau || "Credit Bureau"],
   };
 };

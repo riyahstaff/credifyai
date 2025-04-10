@@ -5,7 +5,7 @@
  */
 
 export interface Letter {
-  id: number;
+  id: number | string;
   title: string;
   recipient: string;
   createdAt: string;
