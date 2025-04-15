@@ -61,28 +61,38 @@ export const useNavbar = () => {
   
   // Handle logout with improved error handling and fallback
   const handleLogout = async () => {
-    console.log("Navbar: Logout initiated with hard redirect");
+    console.log("CRITICAL: Navbar: Logout initiated with hard redirect");
     
     try {
+      // Add a body class to signal immediate logout intent
+      document.body.classList.add('logout-in-progress');
+      
       // Clear session storage first for immediate feedback
       sessionStorage.clear();
       localStorage.removeItem('userProfile');
       localStorage.removeItem('userName');
       
+      // Start a direct navigation timer that will trigger regardless of auth outcome
+      const immediateTimer = setTimeout(() => {
+        console.log("CRITICAL: Immediate logout timer triggered");
+        window.location.replace('/');
+      }, 100);
+      
       // Use a fallback timer to ensure navigation happens even if logout hangs
       const fallbackTimer = setTimeout(() => {
-        console.log("Logout fallback timer triggered - forcing navigation");
+        console.log("CRITICAL: Logout fallback timer triggered - forcing navigation");
         window.location.replace('/');
-      }, 1000);
+      }, 500);
       
       // Call the logout function
       await logout();
       
-      // Clear the fallback timer if logout completes normally
+      // Clear the timers if logout completes normally
+      clearTimeout(immediateTimer);
       clearTimeout(fallbackTimer);
       
       // Force navigation to ensure we leave the page
-      console.log("Logout successful, forcing navigation");
+      console.log("CRITICAL: Logout successful, forcing navigation");
       window.location.replace('/');
       
       toast({
@@ -91,7 +101,7 @@ export const useNavbar = () => {
         duration: 3000,
       });
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("CRITICAL: Logout error:", error);
       toast({
         title: "Logout Error",
         description: "There was an issue during logout. Please try again.",

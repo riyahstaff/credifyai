@@ -26,9 +26,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   
   // Create a more forceful logout function
   const logout = async () => {
-    console.log("Logout requested - performing full cleanup");
+    console.log("CRITICAL: Logout requested - performing full cleanup");
     
     try {
+      // Mark document for immediate logout redirection
+      document.body.classList.add('logging-out');
+      
+      // Start a force redirect timer immediately for best UX
+      const forceTimer = setTimeout(() => {
+        console.log("CRITICAL: Force logout timer triggered");
+        window.location.replace('/');
+      }, 300);
+      
       // Clear all React state
       setUser(null);
       setSession(null);
@@ -48,11 +57,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Call the sign out function
       await handleSignOut();
       
+      // Clear the timer if we got here fast enough
+      clearTimeout(forceTimer);
+      
       // Use window.location.replace for a complete page refresh and cache clearing
-      console.log("Forcing clean navigation to home page");
+      console.log("CRITICAL: Forcing clean navigation to home page");
       window.location.replace('/');
     } catch (error) {
-      console.error("Error during logout:", error);
+      console.error("CRITICAL: Error during logout:", error);
       // Still force navigation even on error
       window.location.replace('/');
     }

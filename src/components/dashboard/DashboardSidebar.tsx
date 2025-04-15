@@ -15,31 +15,41 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ hasSubscription = f
 
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent default button behavior
-    console.log("Dashboard sidebar: Logout initiated with hard redirect");
+    console.log("CRITICAL: Dashboard sidebar: Logout initiated with hard redirect");
     
     try {
+      // Mark the logout in progress
+      document.body.classList.add('logout-in-progress');
+      
       // Clear storage immediately for faster feedback
       sessionStorage.clear();
       localStorage.removeItem('userProfile');
       localStorage.removeItem('userName');
       
+      // Trigger immediate navigation
+      const immediateTimer = setTimeout(() => {
+        console.log("CRITICAL: Immediate redirect triggered");
+        window.location.replace('/');
+      }, 50);
+      
       // Use a fallback timer to ensure navigation happens even if logout hangs
       const fallbackTimer = setTimeout(() => {
-        console.log("Logout fallback timer triggered - forcing navigation");
+        console.log("CRITICAL: Logout fallback timer triggered - forcing navigation");
         window.location.replace('/');
-      }, 1000);
+      }, 300);
       
       // Call the logout function
       await logout();
       
-      // Clear the fallback timer if logout completes normally
+      // Clear the timers if logout completes normally
+      clearTimeout(immediateTimer);
       clearTimeout(fallbackTimer);
       
       // Force hard navigation to home page
-      console.log("Forcing navigation to home page");
+      console.log("CRITICAL: Forcing navigation to home page");
       window.location.replace('/');
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.error("CRITICAL: Logout failed:", error);
       // Force navigation even on error
       window.location.replace('/');
     }
@@ -118,14 +128,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ hasSubscription = f
           )}
         </button>
         
-        <a 
-          href="/"
+        <button 
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-credify-navy-light/10"
         >
           <LogOut size={20} className="text-red-500" />
           <span>Logout</span>
-        </a>
+        </button>
       </div>
     </div>
   );
