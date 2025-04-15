@@ -27,15 +27,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Create a simple logout function
   const logout = async () => {
     console.log("Logout requested");
-    await handleSignOut();
     
-    // For immediate UI feedback, clear auth state locally
-    setUser(null);
-    setSession(null);
-    setProfile(null);
-    
-    // Force navigation to home page
-    window.location.href = '/';
+    try {
+      // Call the sign out function
+      await handleSignOut();
+      
+      // For immediate UI feedback, clear auth state locally
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      
+      // Clear any user data from localStorage
+      localStorage.removeItem('userProfile');
+      localStorage.removeItem('userName');
+      
+      // Force full page reload and navigation to home page
+      console.log("Redirecting to home page after logout");
+      window.location.href = '/';
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // Still redirect even if there was an error
+      window.location.href = '/';
+    }
   };
 
   // Store profile data in localStorage for letter generation

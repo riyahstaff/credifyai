@@ -62,10 +62,31 @@ export const useNavbar = () => {
   // Handle logout using logout from auth context
   const handleLogout = async () => {
     console.log("Navbar: Logout initiated");
-    // Clear test mode subscription flag on logout
-    sessionStorage.removeItem('testModeSubscription');
-    await logout();
-    // No need for manual navigation, logout handles it
+    
+    try {
+      // Clear test mode subscription flag on logout
+      sessionStorage.removeItem('testModeSubscription');
+      
+      // Call the logout function from auth context
+      await logout();
+      
+      // Force a hard navigation to the home page to ensure full page reload
+      window.location.href = '/';
+      
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Logout Error",
+        description: "There was an issue during logout. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
   };
 
   // Toggle test mode function

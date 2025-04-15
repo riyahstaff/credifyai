@@ -61,6 +61,7 @@ export function useAuthActions() {
       });
       
       // Force a clean navigation to the home page
+      console.log("Redirecting to home page after successful logout");
       window.location.href = '/';
     } else {
       toast({
@@ -69,6 +70,10 @@ export function useAuthActions() {
         variant: "destructive",
         duration: 3000,
       });
+      
+      // Still attempt to redirect even on error
+      console.log("Redirecting to home page despite logout error");
+      window.location.href = '/';
     }
   };
 
