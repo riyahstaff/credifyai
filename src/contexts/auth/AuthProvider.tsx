@@ -24,30 +24,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const { session, user, profile, isLoading } = state;
   
-  // Create a simple logout function
+  // Create a more forceful logout function
   const logout = async () => {
-    console.log("Logout requested");
+    console.log("Logout requested - performing full cleanup");
     
     try {
-      // Call the sign out function
-      await handleSignOut();
-      
-      // For immediate UI feedback, clear auth state locally
+      // Clear all React state
       setUser(null);
       setSession(null);
       setProfile(null);
       
-      // Clear any user data from localStorage
+      // Clear all storage
+      sessionStorage.clear();
+      
+      // Clear specific localStorage items that might persist
       localStorage.removeItem('userProfile');
       localStorage.removeItem('userName');
+      localStorage.removeItem('sb-frfeyttlztydgwahjjsw-auth-token');
+      localStorage.removeItem('hasAuthSession');
+      localStorage.removeItem('lastAuthTime');
+      localStorage.removeItem('supabase.auth.token');
       
-      // Force full page reload and navigation to home page
-      console.log("Redirecting to home page after logout");
-      window.location.href = '/';
+      // Call the sign out function
+      await handleSignOut();
+      
+      // Use window.location.replace for a complete page refresh and cache clearing
+      console.log("Forcing clean navigation to home page");
+      window.location.replace('/');
     } catch (error) {
       console.error("Error during logout:", error);
-      // Still redirect even if there was an error
-      window.location.href = '/';
+      // Still force navigation even on error
+      window.location.replace('/');
     }
   };
 

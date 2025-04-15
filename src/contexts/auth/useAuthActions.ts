@@ -60,9 +60,9 @@ export function useAuthActions() {
         duration: 3000,
       });
       
-      // Force a clean navigation to the home page
-      console.log("Redirecting to home page after successful logout");
-      window.location.href = '/';
+      // Force a hard refresh to ensure all React state is cleared
+      console.log("Forcing hard refresh after logout");
+      window.location.replace('/'); 
     } else {
       toast({
         title: "Error",
@@ -71,9 +71,9 @@ export function useAuthActions() {
         duration: 3000,
       });
       
-      // Still attempt to redirect even on error
-      console.log("Redirecting to home page despite logout error");
-      window.location.href = '/';
+      // Still force navigation even on error
+      console.log("Still forcing navigation despite logout error");
+      window.location.replace('/');
     }
   };
 

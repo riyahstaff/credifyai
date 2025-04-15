@@ -10,7 +10,7 @@ type PrivateRouteProps = {
 };
 
 const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRouteProps) => {
-  const { user, profile, isLoading } = useAuth();
+  const { user, profile, isLoading, logout } = useAuth();
   const location = useLocation();
   
   // Check if we're in test mode
@@ -26,33 +26,35 @@ const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRoutePr
     profile?.has_subscription || 
     (testMode || hasTestSubscription);
 
+  // Handle case where session expired but page is still loaded
+  // Clear stale session and force re-authentication
   useEffect(() => {
-    // If the user is logged out but we previously had a session
-    // this might be due to a session timeout or error
+    // If loaded (not in loading state) and no user but expected one
     if (!isLoading && !user && sessionStorage.getItem('had_previous_session') === 'true') {
       console.log('Session expired, handling auth error');
       
-      // Don't immediately redirect on first error - may be a temporary network issue
-      const errorCount = parseInt(sessionStorage.getItem('auth_error_count') || '0', 10);
-      if (errorCount > 2) {
-        // Only force logout after multiple errors
-        // Use window.location instead of navigate to avoid router context issues
-        const returnPath = encodeURIComponent(location.pathname);
-        window.location.href = `/login?authError=true&returnTo=${returnPath}`;
-        // Reset error count after redirecting
-        sessionStorage.setItem('auth_error_count', '0');
-      } else {
-        // Increment error count
-        sessionStorage.setItem('auth_error_count', (errorCount + 1).toString());
-        console.warn(`Auth error detected (${errorCount + 1}/3), waiting for recovery`);
-      }
+      // Try to clean up and redirect to login
+      const handleExpiredSession = async () => {
+        try {
+          // Try to clear auth state
+          await logout();
+        } catch (e) {
+          console.error("Error during session cleanup:", e);
+        } finally {
+          // Force redirect to login page
+          const returnPath = encodeURIComponent(location.pathname);
+          window.location.replace(`/login?authError=true&returnTo=${returnPath}`);
+        }
+      };
+      
+      handleExpiredSession();
     } else if (user) {
       // Reset error count when user is logged in
       sessionStorage.setItem('auth_error_count', '0');
       // Track that we've had a session
       sessionStorage.setItem('had_previous_session', 'true');
     }
-  }, [user, isLoading, location.pathname]);
+  }, [user, isLoading, location.pathname, logout]);
 
   if (isLoading) {
     // Show loading state while checking auth

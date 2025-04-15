@@ -59,19 +59,31 @@ export const useNavbar = () => {
     return currentPathWithoutQuery === linkPathWithoutQuery;
   };
   
-  // Handle logout using logout from auth context
+  // Handle logout with improved error handling and fallback
   const handleLogout = async () => {
-    console.log("Navbar: Logout initiated");
+    console.log("Navbar: Logout initiated with hard redirect");
     
     try {
-      // Clear test mode subscription flag on logout
-      sessionStorage.removeItem('testModeSubscription');
+      // Clear session storage first for immediate feedback
+      sessionStorage.clear();
+      localStorage.removeItem('userProfile');
+      localStorage.removeItem('userName');
       
-      // Call the logout function from auth context
+      // Use a fallback timer to ensure navigation happens even if logout hangs
+      const fallbackTimer = setTimeout(() => {
+        console.log("Logout fallback timer triggered - forcing navigation");
+        window.location.replace('/');
+      }, 1000);
+      
+      // Call the logout function
       await logout();
       
-      // Force a hard navigation to the home page to ensure full page reload
-      window.location.href = '/';
+      // Clear the fallback timer if logout completes normally
+      clearTimeout(fallbackTimer);
+      
+      // Force navigation to ensure we leave the page
+      console.log("Logout successful, forcing navigation");
+      window.location.replace('/');
       
       toast({
         title: "Logged out successfully",
@@ -86,6 +98,9 @@ export const useNavbar = () => {
         variant: "destructive",
         duration: 3000,
       });
+      
+      // Force navigation even if there's an error
+      window.location.replace('/');
     }
   };
 

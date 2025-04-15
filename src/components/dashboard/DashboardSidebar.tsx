@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -14,12 +13,35 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ hasSubscription = f
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
 
-  const handleLogout = async () => {
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent default button behavior
+    console.log("Dashboard sidebar: Logout initiated with hard redirect");
+    
     try {
+      // Clear storage immediately for faster feedback
+      sessionStorage.clear();
+      localStorage.removeItem('userProfile');
+      localStorage.removeItem('userName');
+      
+      // Use a fallback timer to ensure navigation happens even if logout hangs
+      const fallbackTimer = setTimeout(() => {
+        console.log("Logout fallback timer triggered - forcing navigation");
+        window.location.replace('/');
+      }, 1000);
+      
+      // Call the logout function
       await logout();
-      // No need to manually navigate - the logout function will handle this
+      
+      // Clear the fallback timer if logout completes normally
+      clearTimeout(fallbackTimer);
+      
+      // Force hard navigation to home page
+      console.log("Forcing navigation to home page");
+      window.location.replace('/');
     } catch (error) {
       console.error("Logout failed:", error);
+      // Force navigation even on error
+      window.location.replace('/');
     }
   };
 
@@ -96,13 +118,14 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ hasSubscription = f
           )}
         </button>
         
-        <button 
+        <a 
+          href="/"
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-credify-navy-light/10"
         >
           <LogOut size={20} className="text-red-500" />
           <span>Logout</span>
-        </button>
+        </a>
       </div>
     </div>
   );
