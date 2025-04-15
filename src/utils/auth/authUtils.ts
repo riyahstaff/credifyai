@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase/client';
 
 /**
@@ -67,6 +68,8 @@ export const signOutUser = async () => {
     sessionStorage.removeItem('pendingDisputeLetter');
     sessionStorage.removeItem('creditReportData');
     sessionStorage.removeItem('selectedAccount');
+    sessionStorage.removeItem('navigationInProgress');
+    sessionStorage.removeItem('redirectInProgress');
     
     console.log('Signing out: cleared session storage');
     

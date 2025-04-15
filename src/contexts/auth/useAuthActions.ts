@@ -38,6 +38,8 @@ export function useAuthActions() {
     
     // Clear all session data before signout
     sessionStorage.clear();
+    localStorage.removeItem('userProfile');
+    localStorage.removeItem('userName');
     
     // Remove any Supabase tokens from localStorage
     try {

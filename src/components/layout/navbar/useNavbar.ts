@@ -61,10 +61,11 @@ export const useNavbar = () => {
   
   // Handle logout using logout from auth context
   const handleLogout = async () => {
+    console.log("Navbar: Logout initiated");
     // Clear test mode subscription flag on logout
     sessionStorage.removeItem('testModeSubscription');
     await logout();
-    navigate('/');
+    // No need for manual navigation, logout handles it
   };
 
   // Toggle test mode function

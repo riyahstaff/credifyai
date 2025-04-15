@@ -33,6 +33,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(null);
     setSession(null);
     setProfile(null);
+    
+    // Force navigation to home page
+    window.location.href = '/';
   };
 
   // Store profile data in localStorage for letter generation

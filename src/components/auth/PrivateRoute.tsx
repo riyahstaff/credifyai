@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -57,13 +58,15 @@ const PrivateRoute = ({ children, requiresSubscription = false }: PrivateRoutePr
     // Show loading state while checking auth
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="h-12 w-12 border-4 border-t-credify-teal border-b-credify-teal border-r-transparent border-l-transparent rounded-full animate-spin"></div>
+        <div className="h-12 w-12 border-4 border-t-blue-500 border-blue-200 border-r-transparent border-l-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-300">Loading your account...</p>
       </div>
     );
   }
 
   if (!user) {
     // User is not logged in, redirect to login
+    console.log("PrivateRoute: No user found, redirecting to login");
     return <Navigate to={`/login${testMode ? '?testMode=true' : ''}`} state={{ from: location }} replace />;
   }
 

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { useTheme } from '@/contexts/ThemeContext';
 import { MoonIcon, SunIcon, Home, Users, Settings, FileText, LogOut } from 'lucide-react';
@@ -13,12 +13,11 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ hasSubscription = f
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
-  const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/');
+      // No need to manually navigate - the logout function will handle this
     } catch (error) {
       console.error("Logout failed:", error);
     }
