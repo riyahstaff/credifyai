@@ -30,12 +30,15 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
         description: "Creating dispute letters for all identified issues",
       });
       
+      console.log("Starting letter generation for all issues:", issues);
+      
       try {
         console.log("Generating dispute letters for all issues");
         const generatedLetters = await generateDisputeLetters(issues, reportData);
         
         if (generatedLetters && generatedLetters.length > 0) {
           console.log(`Successfully generated ${generatedLetters.length} dispute letters`);
+          console.log("First letter sample:", generatedLetters[0].content.substring(0, 100));
           
           // Ensure each letter has content in both fields
           const normalizedLetters = generatedLetters.map(letter => ({
@@ -100,9 +103,11 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
           }
         }
       } catch (error) {
+        console.error("Error in letter generation:", error);
         handleLetterGenerationError(error, toast, navigate);
       }
     } else {
+      console.error("No report data available for letter generation");
       toast({
         title: "Error generating letters",
         description: "No report data available. Please try uploading your report again.",
@@ -143,6 +148,7 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
         
         if (generatedLetters && generatedLetters.length > 0) {
           console.log("Successfully generated letter for selected issue:", generatedLetters);
+          console.log("Letter content sample:", generatedLetters[0].content.substring(0, 100));
           
           // Ensure each letter has content in both fields
           const normalizedLetters = generatedLetters.map(letter => ({
@@ -177,9 +183,11 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
           throw new Error("No letter was generated");
         }
       } catch (error) {
+        console.error("Error in single issue letter generation:", error);
         handleLetterGenerationError(error, toast, navigate);
       }
     } else {
+      console.error("No report data available for letter generation");
       toast({
         title: "Error generating letter",
         description: "No report data available. Please try uploading your report again.",

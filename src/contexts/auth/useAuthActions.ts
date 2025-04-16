@@ -44,6 +44,7 @@ export function useAuthActions() {
     // Remove any Supabase tokens from localStorage
     try {
       localStorage.removeItem('sb-frfeyttlztydgwahjjsw-auth-token');
+      localStorage.removeItem('sb-nnpsiyuwlovbngqzyxlg-auth-token');
       localStorage.removeItem('hasAuthSession');
       localStorage.removeItem('lastAuthTime');
       localStorage.removeItem('supabase.auth.token');
@@ -59,49 +60,53 @@ export function useAuthActions() {
       console.log("CRITICAL: Force redirect timer activated");
       try {
         // Try multiple methods to ensure navigation happens
-        window.location.replace('/');
+        window.location.href = '/';
       } catch (e) {
         console.error("Navigation error:", e);
         window.location.href = '/';
       }
     }, 300); // Very short timeout
     
-    const { error } = await signOutUser();
+    try {
+      console.log("Starting forceful signout process...");
+      
+      // Clear token from local storage directly
+      console.log("Removing localStorage key: sb-nnpsiyuwlovbngqzyxlg-auth-token");
+      localStorage.removeItem('sb-nnpsiyuwlovbngqzyxlg-auth-token');
+      
+      console.log("Storage cleared, signing out from Supabase...");
+      const { error } = await signOutUser();
+      
+      if (error) {
+        console.error("Error during Supabase signout:", error);
+        // Continue with forced navigation despite error
+      } else {
+        console.log("Supabase signout successful");
+      }
+    } catch (error) {
+      console.error("Exception during signout process:", error);
+    }
     
     clearTimeout(forceRedirectTimer); // Clear the timer if Supabase signout completes quickly
     
-    if (!error) {
-      toast({
-        title: "Signed out",
-        description: "You have been successfully logged out.",
-        duration: 3000,
-      });
+    // Force a hard refresh to ensure all React state is cleared - MOST IMPORTANT PART
+    console.log("CRITICAL: Forcing immediate hard redirect after logout");
+    try {
+      // Set flag to clear auth on next load - important for handling edge cases
+      localStorage.setItem('clearAuthOnLoad', 'true');
       
-      // Force a hard refresh to ensure all React state is cleared - MOST IMPORTANT PART
-      console.log("CRITICAL: Forcing immediate hard redirect after logout");
-      try {
-        window.location.replace('/');
-      } catch (e) {
-        console.error("Navigation error:", e);
-        window.location.href = '/';
-      }
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to sign out. Please try again.",
-        variant: "destructive",
-        duration: 3000,
-      });
-      
-      // Still force navigation even on error
-      console.log("CRITICAL: Still forcing navigation despite logout error");
-      try {
-        window.location.replace('/');
-      } catch (e) {
-        console.error("Navigation error:", e);
-        window.location.href = '/';
-      }
+      // Force navigation to home page
+      window.location.href = '/';
+    } catch (e) {
+      console.error("Navigation error:", e);
+      window.location.href = '/';
     }
+    
+    toast({
+      title: "Signed out",
+      description: "You have been successfully logged out.",
+      duration: 3000,
+    });
   };
 
   return {

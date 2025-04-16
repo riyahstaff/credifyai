@@ -31,6 +31,12 @@ export async function generateAutomaticDisputeLetter(
       accountToDispute = creditReportData.accounts.find(
         account => account.accountName === accountName
       );
+      
+      if (!accountToDispute) {
+        console.warn(`Account "${accountName}" not found in credit report accounts`);
+      } else {
+        console.log(`Found account to dispute:`, accountToDispute.accountName);
+      }
     }
     
     // Get primary bureau from credit report
@@ -38,6 +44,8 @@ export async function generateAutomaticDisputeLetter(
                   (creditReportData.bureaus?.experian ? 'experian' : 
                    creditReportData.bureaus?.equifax ? 'equifax' : 
                    creditReportData.bureaus?.transunion ? 'transunion' : 'experian');
+    
+    console.log(`Using bureau: ${bureau} for letter generation`);
     
     // Use enhanced dispute letter generator
     const letterContent = await generateEnhancedDisputeLetter(
@@ -49,12 +57,13 @@ export async function generateAutomaticDisputeLetter(
         bureau
       },
       {
-        name: userInfo?.name || '[YOUR NAME]',
-        address: userInfo?.address,
-        city: userInfo?.city,
-        state: userInfo?.state,
-        zip: userInfo?.zip
-      }
+        name: userInfo?.name || getUserNameFromStorage() || '[YOUR NAME]',
+        address: userInfo?.address || getUserAddressFromStorage(),
+        city: userInfo?.city || getUserCityFromStorage(),
+        state: userInfo?.state || getUserStateFromStorage(),
+        zip: userInfo?.zip || getUserZipFromStorage()
+      },
+      creditReportData
     );
     
     console.log("Generated letter content length:", letterContent?.length || 0);
@@ -63,4 +72,27 @@ export async function generateAutomaticDisputeLetter(
     console.error("Error generating automatic dispute letter:", error);
     return "Error generating dispute letter. Please try again.";
   }
+}
+
+// Helper functions to get user info from storage
+function getUserNameFromStorage(): string | undefined {
+  return localStorage.getItem('userName') || 
+         sessionStorage.getItem('userName') || 
+         JSON.parse(localStorage.getItem('userProfile') || '{}')?.full_name;
+}
+
+function getUserAddressFromStorage(): string | undefined {
+  return localStorage.getItem('userAddress') || sessionStorage.getItem('userAddress');
+}
+
+function getUserCityFromStorage(): string | undefined {
+  return localStorage.getItem('userCity') || sessionStorage.getItem('userCity');
+}
+
+function getUserStateFromStorage(): string | undefined {
+  return localStorage.getItem('userState') || sessionStorage.getItem('userState');
+}
+
+function getUserZipFromStorage(): string | undefined {
+  return localStorage.getItem('userZip') || sessionStorage.getItem('userZip');
 }

@@ -22,7 +22,7 @@ const LogoutHandler = () => {
     if (location.search.includes('logout=true') || document.body.classList.contains('logout-in-progress') || document.body.classList.contains('logging-out')) {
       console.log("CRITICAL: Logout detected via URL parameter or body class");
       setTimeout(() => {
-        window.location.replace('/');
+        window.location.href = '/';
       }, 100);
     }
   }, [location]);
@@ -44,6 +44,7 @@ const App: React.FC = () => {
     // Listen for logout-specific events
     const handleBeforeUnload = () => {
       if (document.body.classList.contains('logout-in-progress') || document.body.classList.contains('logging-out')) {
+        console.log("CRITICAL: Clearing storage on beforeunload during logout");
         sessionStorage.clear();
         localStorage.removeItem('userProfile');
         localStorage.removeItem('userName');
@@ -51,6 +52,17 @@ const App: React.FC = () => {
     };
     
     window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // Check if we need to clear auth on initial load
+    const shouldClearAuth = localStorage.getItem('clearAuthOnLoad') === 'true';
+    if (shouldClearAuth) {
+      console.log("CRITICAL: Clearing auth on load as requested");
+      localStorage.removeItem('clearAuthOnLoad');
+      localStorage.removeItem('sb-frfeyttlztydgwahjjsw-auth-token');
+      localStorage.removeItem('hasAuthSession');
+      localStorage.removeItem('lastAuthTime');
+      localStorage.removeItem('supabase.auth.token');
+    }
     
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
