@@ -4,7 +4,7 @@
  * Handles loading, storing, and retrieving letter templates
  */
 
-import { collectionAccountDisputeTemplate } from './templates';
+import { collectionAccountDisputeTemplate } from './templates/collection_account_disputes';
 import { supabase } from '@/lib/supabase/client';
 
 // Define types

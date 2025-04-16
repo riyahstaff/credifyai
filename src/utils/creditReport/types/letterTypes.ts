@@ -51,3 +51,14 @@ export interface DisputeLetterGenerationResult {
   message?: string;
   errorCode?: string;
 }
+
+// Add a UserInfo interface with required name property
+export interface UserInfo {
+  name: string; // Now this is required
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  email?: string;
+  phone?: string;
+}

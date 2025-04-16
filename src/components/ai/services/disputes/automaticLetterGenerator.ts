@@ -1,5 +1,6 @@
 
 import { CreditReportData, UserInfo } from '@/utils/creditReport/types';
+import { UserInfo as LetterUserInfo } from '@/utils/creditReport/types/letterTypes';
 import { generateEnhancedDisputeLetter } from '@/utils/creditReport/disputeLetters';
 
 /**
@@ -47,6 +48,15 @@ export async function generateAutomaticDisputeLetter(
     
     console.log(`Using bureau: ${bureau} for letter generation`);
     
+    // Prepare user info in the format required by generateEnhancedDisputeLetter
+    const letterUserInfo: LetterUserInfo = {
+      name: userInfo?.name || getUserNameFromStorage() || '[YOUR NAME]',
+      address: userInfo?.address || getUserAddressFromStorage(),
+      city: userInfo?.city || getUserCityFromStorage(),
+      state: userInfo?.state || getUserStateFromStorage(),
+      zip: userInfo?.zip || getUserZipFromStorage()
+    };
+    
     // Use enhanced dispute letter generator
     const letterContent = await generateEnhancedDisputeLetter(
       'General Dispute',
@@ -56,13 +66,7 @@ export async function generateAutomaticDisputeLetter(
         errorDescription: 'This information appears to be inaccurate on my credit report.',
         bureau
       },
-      {
-        name: userInfo?.name || getUserNameFromStorage() || '[YOUR NAME]',
-        address: userInfo?.address || getUserAddressFromStorage(),
-        city: userInfo?.city || getUserCityFromStorage(),
-        state: userInfo?.state || getUserStateFromStorage(),
-        zip: userInfo?.zip || getUserZipFromStorage()
-      },
+      letterUserInfo,
       creditReportData
     );
     

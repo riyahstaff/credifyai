@@ -4,7 +4,8 @@
  * Contains all functionality related to dispute letter generation
  */
 
-import { CreditReportData, CreditReportAccount, UserInfo, IdentifiedIssue } from '../types';
+import { CreditReportData, CreditReportAccount, IdentifiedIssue } from '../types';
+import { UserInfo } from '../types/letterTypes';
 import { generateLetterContent } from './letterContent';
 import { getLetterTemplate } from './templates';
 
@@ -156,7 +157,7 @@ export async function generateLettersForIssues(
           errorDescription: issue.description || 'This information appears to be inaccurate.',
           bureau: bureau
         },
-        userDetails,
+        userDetails, // This now matches the required type with name as non-optional
         reportData
       );
       
