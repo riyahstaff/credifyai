@@ -52,20 +52,59 @@ export const useReportAnalysis = (
                 console.log("Analysis backup timeout reached - forcing completion");
                 onAnalysisComplete();
               }
-            }, 25000); // 25 second backup timeout
+            }, 15000); // Reduced from 25s to 15s for faster timeout
             
-            // Updated to pass the props object that handleAnalysisComplete expects
-            await handleAnalysisComplete({
-              uploadedFile,
-              setReportData,
-              setIssues,
-              setLetterGenerated,
-              setAnalysisError,
-              setAnalyzing,
-              setAnalyzed,
-              toast: toastObject,
-              testMode: false // Always use real mode, no test mode with per-letter payments
-            });
+            // Try to handle the analysis
+            try {
+              // Updated to pass the props object that handleAnalysisComplete expects
+              await handleAnalysisComplete({
+                uploadedFile,
+                setReportData,
+                setIssues,
+                setLetterGenerated,
+                setAnalysisError,
+                setAnalyzing,
+                setAnalyzed,
+                toast: toastObject,
+                testMode: false // Always use real mode, no test mode with per-letter payments
+              });
+            } catch (analysisError) {
+              console.warn("Error in primary analysis method, using local fallback:", analysisError);
+              
+              // Import and use local parser as fallback if external API fails
+              const { parseReportContent } = await import('@/utils/creditReport/parser');
+              const { extractTextFromPDF } = await import('@/utils/creditReport/extractors/pdfExtractor');
+              const { identifyIssues } = await import('@/utils/reportAnalysis/issueIdentification');
+              
+              // Extract text from file
+              let textContent = '';
+              if (uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf')) {
+                textContent = await extractTextFromPDF(uploadedFile);
+              } else {
+                textContent = await uploadedFile.text();
+              }
+              
+              // Parse content
+              const isPdf = uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf');
+              const reportData = parseReportContent(textContent, isPdf);
+              
+              // Find issues
+              const issues = identifyIssues(reportData);
+              
+              // Update state with results
+              setReportData(reportData);
+              setIssues(issues);
+              
+              // Display fallback notice
+              toast({
+                title: "Using Local Analysis",
+                description: "External API unavailable. Using local analysis instead.",
+                variant: "default"
+              });
+              
+              // Complete the analysis
+              onAnalysisComplete();
+            }
             
             clearTimeout(analysisBackupTimeout);
             
