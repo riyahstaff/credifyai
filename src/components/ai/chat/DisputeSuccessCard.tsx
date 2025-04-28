@@ -9,13 +9,13 @@ interface DisputeSuccessCardProps {
 const DisputeSuccessCard: React.FC<DisputeSuccessCardProps> = ({ onDownload }) => {
   return (
     <div className="flex justify-center">
-      <div className="bg-credify-teal/10 text-credify-teal border border-credify-teal/20 rounded-xl p-3 flex flex-col items-center">
+      <div className="bg-secondary/10 text-foreground border border-border rounded-xl p-3 flex flex-col items-center">
         <div className="flex items-center gap-2 mb-2">
-          <Check size={16} className="text-credify-teal" />
+          <Check size={16} className="text-primary" />
           <span className="font-medium">Dispute Letter Generated</span>
         </div>
         <button 
-          className="bg-credify-teal text-white py-1.5 px-3 rounded-lg text-sm flex items-center gap-1.5"
+          className="bg-primary text-primary-foreground py-1.5 px-3 rounded-lg text-sm flex items-center gap-1.5 hover:bg-primary/90 transition-colors"
           onClick={onDownload}
         >
           <Download size={14} />
