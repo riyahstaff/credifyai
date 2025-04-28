@@ -1,6 +1,6 @@
+
 import { CreditReportAccount, CreditReportData, IdentifiedIssue } from "@/utils/creditReport/types";
 import { generateLettersForIssues } from "@/utils/creditReport/disputeLetters";
-import { useToast } from "@/hooks/use-toast";
 
 /**
  * Generates dispute letters based on identified issues in a credit report
@@ -22,12 +22,12 @@ export const generateDisputeLetters = async (
       console.log(`Successfully generated ${letters.length} letters`);
       return letters;
     } else {
-      console.warn("No letters were generated, creating fallback letter");
-      return [createFallbackLetter()];
+      console.warn("No letters were generated, creating empty letter array");
+      return [];
     }
   } catch (error) {
     console.error("Error generating dispute letters:", error);
-    return [createFallbackLetter()];
+    return [];
   }
 };
 
@@ -77,29 +77,6 @@ function getUserInfoFromStorage(): { name: string; address?: string; city?: stri
 }
 
 /**
- * Create a fallback letter when letter generation fails
- */
-export function createFallbackLetter(): any {
-  // Get user information from storage
-  const userInfo = getUserInfoFromStorage();
-  
-  return {
-    id: Date.now(),
-    title: "Credit Report Dispute",
-    bureau: "Credit Bureau",
-    accountName: "Account in Question",
-    accountNumber: "",
-    content: "Dear Credit Bureau,\n\nI am writing to dispute information in my credit report. After reviewing my credit report, I have identified information that I believe to be inaccurate.\n\nAs per my rights under the Fair Credit Reporting Act, I request that you investigate this matter and correct the disputed information. If you cannot verify this information, please remove it from my credit report.\n\nSincerely,\n" + userInfo.name,
-    letterContent: "Dear Credit Bureau,\n\nI am writing to dispute information in my credit report. After reviewing my credit report, I have identified information that I believe to be inaccurate.\n\nAs per my rights under the Fair Credit Reporting Act, I request that you investigate this matter and correct the disputed information. If you cannot verify this information, please remove it from my credit report.\n\nSincerely,\n" + userInfo.name,
-    createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    status: "ready",
-    errorType: "General Dispute",
-    recipient: "Credit Bureau",
-    bureaus: ["Credit Bureau"]
-  };
-}
-
-/**
  * Create a generic dispute letter when no specific issues are found
  */
 export function createGenericLetter(reportData: CreditReportData): any {
@@ -126,42 +103,4 @@ export function createGenericLetter(reportData: CreditReportData): any {
     recipient: bureau,
     bureaus: [bureau]
   };
-}
-
-/**
- * Create a letter from an identified issue
- */
-async function createLetterFromIssue(
-  issue: IdentifiedIssue, 
-  account?: CreditReportAccount,
-  reportData?: CreditReportData
-): Promise<any> {
-  try {
-    // Determine the bureau from the report data
-    const bureau = reportData?.primaryBureau || "Experian";
-    
-    // Get user information from storage
-    const userInfo = getUserInfoFromStorage();
-    
-    // Create the letter object
-    const letter = {
-      id: Date.now(),
-      title: issue.title || "Credit Report Dispute",
-      bureau: bureau,
-      accountName: account?.accountName || "Multiple Accounts",
-      accountNumber: account?.accountNumber || "",
-      content: issue.description || "",
-      letterContent: issue.description || "",
-      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      status: "ready",
-      errorType: issue.type || "Data Inaccuracy",
-      recipient: bureau,
-      bureaus: [bureau]
-    };
-    
-    return letter;
-  } catch (error) {
-    console.error("Error creating letter from issue:", error);
-    return null;
-  }
 }
