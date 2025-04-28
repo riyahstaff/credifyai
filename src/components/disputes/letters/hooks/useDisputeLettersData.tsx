@@ -48,7 +48,7 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
     }
   }, []);
   
-  // Force exit loading state after 10 seconds - this is our failsafe
+  // Force exit loading state after 5 seconds - this is our failsafe
   useEffect(() => {
     if (isLoading) {
       const timeoutId = setTimeout(() => {
@@ -58,10 +58,10 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
         if (letters.length === 0) {
           toast({
             title: "Loading timeout reached",
-            description: "We couldn't load your dispute letters. Please try refreshing the page or creating a new letter.",
+            description: "We couldn't load your dispute letters. Please try refreshing the page.",
           });
         }
-      }, 10000); // 10 second timeout
+      }, 5000); // 5 second timeout
       
       return () => clearTimeout(timeoutId);
     }
@@ -107,11 +107,10 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
                 setSelectedLetter(formattedLetters[0]);
               }
               
-              // Toast notification about loaded letters
               toast({
                 title: testMode ? "Test Letters Loaded" : "Dispute Letters Loaded",
-                description: `${formattedLetters.length} dispute ${formattedLetters.length === 1 ? 'letter has' : 'letters have'} been loaded${testMode ? ' in test mode' : ''}.`,
-                duration: 5000,
+                description: `${formattedLetters.length} dispute ${formattedLetters.length === 1 ? 'letter has' : 'letters have'} been loaded.`,
+                duration: 3000,
               });
               
               setIsLoading(false);
@@ -147,11 +146,10 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
             setLetters([formattedLetter]);
             setSelectedLetter(formattedLetter);
             
-            // Toast notification
             toast({
               title: testMode ? "Test Letter Loaded" : "Dispute Letter Loaded",
               description: "Your dispute letter has been loaded from session storage.",
-              duration: 5000,
+              duration: 3000,
             });
             
             setIsLoading(false);
@@ -162,6 +160,7 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
         }
         
         // If no letters found, show empty state
+        console.log("No letters found in session storage");
         setLetters([]);
         setIsLoading(false);
         
@@ -179,7 +178,7 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
     };
     
     loadLetters();
-  }, [toast, testMode, location.pathname]);
+  }, [toast, testMode, location.pathname, selectedLetter]);
   
   // Function to add a new letter
   const addLetter = (newLetter: Letter) => {
@@ -210,7 +209,6 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
   // Function to save a letter (stub)
   const saveLetter = async (letter: Letter): Promise<boolean> => {
     // For now this just updates the local state
-    // In a real implementation, this would save to the backend
     try {
       const updatedLetters = letters.map(l => 
         l.id === letter.id ? { ...l, ...letter } : l

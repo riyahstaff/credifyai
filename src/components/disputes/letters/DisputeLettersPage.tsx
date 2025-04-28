@@ -34,53 +34,8 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
     profile
   } = useDisputeLettersData(testMode);
   
-  // States for letter generation and loading management
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [letterLoadAttempts, setLetterLoadAttempts] = useState(0);
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-  const [forceReload, setForceReload] = useState(false);
-  
-  // Handle loading timeout - show message if taking too long
-  useEffect(() => {
-    // If still loading after 5 seconds, show timeout message
-    const timeoutId = setTimeout(() => {
-      if (isLoading) {
-        setLoadingTimeout(true);
-        console.log("Loading timeout reached, showing error options");
-        
-        // Force transition from loading to empty state if still loading after 10 seconds
-        const forceTransitionTimeout = setTimeout(() => {
-          if (isLoading) {
-            console.log("Forcing transition from loading to empty state");
-            setForceReload(true);
-            
-            // Show toast notification
-            toast({
-              title: "Loading Issue Detected",
-              description: "We've reset the loading state. Please try creating a new letter.",
-            });
-          }
-        }, 5000); // Additional 5 seconds before forcing state transition
-        
-        return () => clearTimeout(forceTransitionTimeout);
-      }
-    }, 5000); // Initial 5 seconds before showing timeout message
-    
-    return () => clearTimeout(timeoutId);
-  }, [isLoading, toast]);
-  
-  // Handler for generating new dispute letters
-  const handleGenerateDispute = async (disputeData: any) => {
-    setIsGenerating(true);
-    try {
-      // Add the letter once generated
-      addLetter(disputeData);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-  
   const [navHeight, setNavHeight] = useState<number>(0);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   
   // Effect to measure navbar height
   useEffect(() => {
@@ -90,8 +45,30 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
     }
   }, []);
   
+  // Handle loading timeout - show message if taking too long
+  useEffect(() => {
+    // If still loading after 5 seconds, show timeout message
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        setLoadingTimeout(true);
+        console.log("Loading timeout reached, showing error options");
+      }
+    }, 5000);
+    
+    // Clear timeout when loading finishes or component unmounts
+    return () => clearTimeout(timeoutId);
+  }, [isLoading]);
+  
   // Create letter from issues found in the credit report
   const handleCreateLetterFromIssues = () => {
+    // Add debug logging to track navigation
+    console.log("Navigating to upload report page");
+    sessionStorage.removeItem('navigationInProgress');
+    toast({
+      title: "Creating New Letter",
+      description: "Redirecting to credit report upload...",
+      duration: 3000,
+    });
     navigate('/upload-report' + (testMode ? '?testMode=true' : ''));
   };
   
@@ -104,16 +81,13 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
     sessionStorage.removeItem('forceLettersReload');
     sessionStorage.removeItem('navigationInProgress');
     
-    // Show retry toast
     toast({
       title: "Retrying",
       description: "Resetting data and trying again...",
     });
     
     // Redirect to upload report page to start fresh
-    setTimeout(() => {
-      navigate('/upload-report');
-    }, 1000);
+    navigate('/upload-report');
   };
 
   // Force reload the page
@@ -172,7 +146,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
             </Alert>
           )}
           
-          {(forceReload || (!isLoading && letterLoadAttempts >= 3 && letters.length === 0)) && (
+          {!isLoading && letters.length === 0 && (
             <Alert className="mb-8 border-amber-300 bg-amber-50/50 dark:bg-amber-900/30 dark:border-amber-800/50">
               <FileText className="h-5 w-5 text-amber-600 dark:text-amber-500" />
               <AlertTitle className="text-amber-800 dark:text-amber-400 font-semibold">
@@ -193,21 +167,17 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
             </Alert>
           )}
           
-          {isLoading && !forceReload && (
+          {isLoading && !loadingTimeout && (
             <Alert className="mb-8 border-primary/30 bg-primary/5">
               <AlertTitle className="text-foreground font-semibold">
                 Loading Letters
               </AlertTitle>
               <AlertDescription className="text-foreground/80">
                 Please wait while we load your dispute letters...
-                {loadingTimeout && 
-                  " This is taking longer than expected. You can continue waiting or try the options above."}
               </AlertDescription>
-              {!loadingTimeout && (
-                <div className="w-full flex justify-center mt-4">
-                  <div className="w-8 h-8 border-4 border-t-primary border-primary/20 rounded-full animate-spin"></div>
-                </div>
-              )}
+              <div className="w-full flex justify-center mt-4">
+                <div className="w-8 h-8 border-4 border-t-primary border-primary/20 rounded-full animate-spin"></div>
+              </div>
             </Alert>
           )}
           
@@ -217,7 +187,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
                 letters={letters}
                 selectedLetter={selectedLetter}
                 onSelectLetter={handleSelectLetter}
-                isLoading={isLoading && !forceReload}
+                isLoading={isLoading}
                 onCreateLetter={handleCreateLetterFromIssues}
                 testMode={testMode}
                 userProfile={profile as Profile}
@@ -227,7 +197,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
             <div className="lg:col-span-2">
               <DisputeLetterViewer 
                 letter={selectedLetter}
-                isLoading={isLoading && !forceReload}
+                isLoading={isLoading}
                 testMode={testMode}
                 userProfile={profile as Profile}
               />

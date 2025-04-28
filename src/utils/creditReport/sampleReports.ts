@@ -19,7 +19,6 @@ export const processCreditReport = async (file: File): Promise<CreditReportData>
     // Extract text from the file
     const text = await extractTextFromFile(file);
     console.log(`Extracted ${text.length} characters from file`);
-    console.log("Text sample:", text.substring(0, 200));
     
     // Parse the text content
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
@@ -31,7 +30,7 @@ export const processCreditReport = async (file: File): Promise<CreditReportData>
     // Log extraction results
     console.log("Credit report processing complete with results:", {
       accounts: reportData.accounts.length,
-      inquiries: reportData.inquiries.length,
+      inquiries: reportData.inquiries ? reportData.inquiries.length : 0,
       bureau: reportData.primaryBureau || "Unknown",
       personalInfo: reportData.personalInfo ? "Present" : "Missing"
     });

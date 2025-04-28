@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { Letter } from './hooks/useDisputeLettersData';
+import { Download, Send, Printer, Copy, CheckCircle, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Download, Mail, Printer, Edit, Check } from 'lucide-react';
+import { Letter } from './hooks/useDisputeLettersData';
 import { Profile } from '@/lib/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import DisputePreview from '../DisputePreview';
 
 interface DisputeLetterViewerProps {
   letter: Letter | null;
@@ -13,218 +14,231 @@ interface DisputeLetterViewerProps {
   userProfile?: Profile | null;
 }
 
-const DisputeLetterViewer: React.FC<DisputeLetterViewerProps> = ({ 
-  letter, 
+const DisputeLetterViewer: React.FC<DisputeLetterViewerProps> = ({
+  letter,
   isLoading,
   testMode = false,
   userProfile
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [letterContent, setLetterContent] = useState('');
-  const [activeTab, setActiveTab] = useState('preview');
+  const { toast } = useToast();
+  const [showPreview, setShowPreview] = useState(false);
+  const [copied, setCopied] = useState(false);
   
-  const userName = userProfile?.full_name?.split(' ')[0] || 'User';
-
-  // Initialize the editor with letter content when a letter is selected
-  React.useEffect(() => {
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="bg-card text-card-foreground border border-border rounded-lg shadow-sm p-6 h-full min-h-[500px] flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-t-primary border-primary/30 rounded-full animate-spin mb-4"></div>
+        <p className="text-muted-foreground">Loading letter content...</p>
+      </div>
+    );
+  }
+  
+  // Empty state
+  if (!letter) {
+    return (
+      <div className="bg-card text-card-foreground border border-border rounded-lg shadow-sm p-6 h-full min-h-[500px] flex flex-col items-center justify-center">
+        <div className="w-20 h-20 border border-dashed border-border rounded-full flex items-center justify-center mb-4">
+          <RotateCw size={24} className="text-muted-foreground" />
+        </div>
+        <h3 className="text-lg font-medium mb-2">No Letter Selected</h3>
+        <p className="text-muted-foreground text-center max-w-md">
+          Select a letter from the list on the left or create a new dispute letter.
+        </p>
+      </div>
+    );
+  }
+  
+  // Get bureau for the selected letter
+  const bureau = letter.bureaus && letter.bureaus.length > 0 
+    ? letter.bureaus[0] 
+    : 'Credit Bureau';
+    
+  // Handle copy to clipboard
+  const handleCopy = () => {
     if (letter) {
-      setLetterContent(letter.content || '');
+      navigator.clipboard.writeText(letter.content);
+      setCopied(true);
+      toast({
+        title: "Copied to clipboard",
+        description: "Letter content has been copied to your clipboard."
+      });
+      
+      setTimeout(() => setCopied(false), 2000);
     }
-  }, [letter]);
-
-  // Generate HTML representation with wrapping and formatting
-  const formattedContent = React.useMemo(() => {
-    if (!letter) return '';
-    
-    // Replace line breaks with HTML breaks
-    const content = letter.content || '';
-    return content
-      .replace(/\n/g, '<br/>')
-      .replace(/\[YOUR NAME\]/g, userProfile?.full_name || '[YOUR NAME]')
-      .replace(/\[YOUR ADDRESS\]/g, '[YOUR ADDRESS]')
-      .replace(/\[CITY\], \[STATE\] \[ZIP\]/g, '[CITY], [STATE] [ZIP]');
-  }, [letter, userProfile]);
-
-  const handleLetterDownload = () => {
-    if (!letter) return;
-    
-    const letterText = letter.content || '';
-    const fileName = `dispute-letter-${letter.bureaus[0] || 'bureau'}-${new Date().toISOString().slice(0, 10)}.txt`;
-    
-    const blob = new Blob([letterText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
-
-  const handlePrint = () => {
+  
+  // Handle download
+  const handleDownload = () => {
     if (!letter) return;
     
-    const printContent = `
+    const fileName = `${bureau.toLowerCase()}_dispute_${letter.accountName || 'general'}.txt`.replace(/\s+/g, '_');
+    
+    const element = document.createElement('a');
+    const file = new Blob([letter.content], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = fileName;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    
+    toast({
+      title: "Letter Downloaded",
+      description: `Your dispute letter has been downloaded as ${fileName}.`
+    });
+  };
+  
+  // Handle print
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({
+        title: "Print Error",
+        description: "Could not open print window. Please check if pop-ups are blocked.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    printWindow.document.write(`
       <html>
         <head>
-          <title>Dispute Letter - ${letter.bureaus[0] || 'Credit Bureau'}</title>
+          <title>${letter.title || 'Dispute Letter'} - ${bureau}</title>
           <style>
-            body {
+            body { 
               font-family: Arial, sans-serif;
               line-height: 1.5;
-              margin: 1.5in 1in;
-            }
-            .letter {
-              max-width: 8.5in;
+              padding: 1in;
               white-space: pre-wrap;
             }
           </style>
         </head>
         <body>
-          <div class="letter">
-            ${formattedContent}
-          </div>
+          <pre>${letter.content}</pre>
         </body>
       </html>
-    `;
+    `);
     
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.focus();
-      
-      // Wait for content to load before printing
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Add slight delay before printing
+    setTimeout(() => {
+      printWindow.print();
+      // Close window after print dialog is closed (optional)
       setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 250);
-    }
+        if (!printWindow.closed) {
+          printWindow.close();
+        }
+      }, 1000);
+    }, 500);
   };
-
-  if (isLoading) {
-    return (
-      <div className="bg-white dark:bg-credify-navy-light/10 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700/50 p-6 h-full flex flex-col items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 text-credify-teal animate-spin mb-2" />
-        <p className="text-credify-navy-light dark:text-white/70">Loading letters...</p>
-      </div>
-    );
-  }
-
-  if (!letter) {
-    return (
-      <div className="bg-white dark:bg-credify-navy-light/10 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700/50 p-6 h-full flex flex-col items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="bg-gray-100 dark:bg-gray-800/50 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
-            <Mail className="h-8 w-8 text-gray-400 dark:text-gray-500" />
-          </div>
-          <h3 className="text-lg font-medium text-credify-navy dark:text-white mb-2">
-            Hello {userName}, no letter selected
-          </h3>
-          <p className="text-credify-navy-light dark:text-white/70 max-w-md mx-auto">
-            Select a letter from the list to view its contents, or create a new dispute letter by uploading your credit report.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
+  
+  // Handle sending letter
+  const handleSendLetter = () => {
+    toast({
+      title: "Letter Submitted",
+      description: `Your dispute letter to ${bureau} has been prepared for sending.`
+    });
+    
+    setShowPreview(true);
+  };
+  
   return (
-    <div className="bg-white dark:bg-credify-navy-light/10 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700/50 h-full flex flex-col">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700/50 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="font-medium text-credify-navy dark:text-white">
-            {letter.title || 'Dispute Letter'}
-          </h3>
-          <p className="text-sm text-credify-navy-light dark:text-white/60">
-            {letter.bureaus?.map((bureau) => bureau).join(', ') || 'Credit Bureau'} - {letter.createdAt || 'No date'}
-          </p>
+    <>
+      <div className="bg-card text-card-foreground border border-border rounded-lg shadow-sm flex flex-col h-full min-h-[500px]">
+        {/* Letter Header */}
+        <div className="border-b border-border p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-medium">{letter.title || 'Dispute Letter'}</h3>
+            
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleCopy}
+                className={`rounded-full ${copied ? 'text-primary' : ''}`}
+                title="Copy to clipboard"
+              >
+                {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center text-sm text-muted-foreground">
+            <div>
+              <span>To: {bureau}</span>
+              {letter.accountName && (
+                <span className="ml-2">• {letter.accountName}</span>
+              )}
+            </div>
+            <div>{letter.createdAt || 'No date'}</div>
+          </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          {isEditing ? (
+        {/* Letter Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="whitespace-pre-wrap font-mono text-sm bg-muted/20 p-5 rounded-md min-h-[400px]">
+            {letter.content}
+          </div>
+        </div>
+        
+        {/* Letter Actions */}
+        <div className="border-t border-border p-4">
+          <div className="flex flex-wrap gap-3 justify-end">
             <Button
-              variant="outline" 
-              size="sm"
-              className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800/50"
-              onClick={() => setIsEditing(false)}
+              variant="outline"
+              onClick={handleCopy}
+              className="flex items-center gap-1.5"
             >
-              <Check size={14} className="mr-1" />
-              Done
+              {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
+              <span>Copy</span>
             </Button>
-          ) : (
-            <>
-              <Button
-                variant="outline" 
-                size="sm"
-                onClick={() => setIsEditing(true)}
-              >
-                <Edit size={14} className="mr-1" />
-                Edit
-              </Button>
-              
-              <Button
-                variant="outline" 
-                size="sm"
-                onClick={handlePrint}
-              >
-                <Printer size={14} className="mr-1" />
-                Print
-              </Button>
-              
-              <Button
-                variant="outline" 
-                size="sm"
-                onClick={handleLetterDownload}
-              >
-                <Download size={14} className="mr-1" />
-                Download
-              </Button>
-            </>
-          )}
+            
+            <Button 
+              variant="outline" 
+              onClick={handlePrint}
+              className="flex items-center gap-1.5"
+            >
+              <Printer size={16} />
+              <span>Print</span>
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={handleDownload}
+              className="flex items-center gap-1.5"
+            >
+              <Download size={16} />
+              <span>Download</span>
+            </Button>
+            
+            <Button 
+              onClick={handleSendLetter}
+              className="flex items-center gap-1.5"
+            >
+              <Send size={16} />
+              <span>Send to Bureau</span>
+            </Button>
+          </div>
         </div>
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <div className="px-4 border-b border-gray-200 dark:border-gray-700/50">
-          <TabsList className="bg-transparent border-b-0">
-            <TabsTrigger value="preview" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-credify-teal data-[state=active]:text-credify-teal rounded-none">
-              Preview
-            </TabsTrigger>
-            <TabsTrigger value="source" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-credify-teal data-[state=active]:text-credify-teal rounded-none">
-              Raw Text
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        
-        <TabsContent value="preview" className="flex-1 p-6 overflow-auto m-0 border-0">
-          <div className="max-w-3xl mx-auto">
-            <div 
-              className="whitespace-pre-line text-credify-navy dark:text-white/90 font-serif text-sm leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: formattedContent }}
-            />
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="source" className="flex-1 p-0 m-0 border-0">
-          {isEditing ? (
-            <textarea
-              className="w-full h-full p-6 text-sm font-mono bg-gray-50 dark:bg-gray-900/50 text-credify-navy dark:text-white/90 border-none focus:outline-none focus:ring-0 resize-none"
-              value={letterContent}
-              onChange={(e) => setLetterContent(e.target.value)}
-              spellCheck={false}
-            />
-          ) : (
-            <pre className="w-full h-full p-6 text-sm font-mono bg-gray-50 dark:bg-gray-900/50 text-credify-navy dark:text-white/90 overflow-auto">
-              {letter.content || ''}
-            </pre>
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
+      {showPreview && (
+        <DisputePreview 
+          letterContent={letter.content} 
+          onClose={() => setShowPreview(false)}
+          onSend={() => {
+            toast({
+              title: "Letter Sent",
+              description: `Your dispute letter has been sent to ${bureau}.`,
+            });
+            setShowPreview(false);
+          }}
+          onDownload={handleDownload}
+        />
+      )}
+    </>
   );
 };
 

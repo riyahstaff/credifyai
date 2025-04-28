@@ -14,20 +14,48 @@ export const generateDisputeLetters = async (
   try {
     // Get user information from localStorage
     const userInfo = getUserInfoFromStorage();
+    console.log("User info retrieved:", userInfo.name);
     
     // Use the enhanced letter generation function
     const letters = await generateLettersForIssues(issues, reportData, userInfo);
     
     if (letters && letters.length > 0) {
+      // Store the letters in session storage for the dispute letters page
+      try {
+        sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(letters));
+        console.log(`Stored ${letters.length} generated letters in session storage`);
+      } catch (error) {
+        console.error("Failed to store generated letters in session:", error);
+      }
+      
       console.log(`Successfully generated ${letters.length} letters`);
       return letters;
     } else {
-      console.warn("No letters were generated, creating empty letter array");
-      return [];
+      console.warn("No letters were generated, creating generic letter");
+      const genericLetter = createGenericLetter(reportData);
+      
+      // Store the generic letter
+      try {
+        sessionStorage.setItem('generatedDisputeLetters', JSON.stringify([genericLetter]));
+        console.log("Stored generic letter in session storage");
+      } catch (error) {
+        console.error("Failed to store generic letter in session:", error);
+      }
+      
+      return [genericLetter];
     }
   } catch (error) {
     console.error("Error generating dispute letters:", error);
-    return [];
+    
+    // Create and store a fallback letter
+    const fallbackLetter = createGenericLetter(reportData);
+    try {
+      sessionStorage.setItem('generatedDisputeLetters', JSON.stringify([fallbackLetter]));
+    } catch (storageError) {
+      console.error("Failed to store fallback letter:", storageError);
+    }
+    
+    return [fallbackLetter];
   }
 };
 
@@ -36,6 +64,8 @@ export const generateDisputeLetters = async (
  */
 function getUserInfoFromStorage(): { name: string; address?: string; city?: string; state?: string; zip?: string; } {
   try {
+    console.log("Getting user info from storage");
+    
     // Get user name from various sources
     let userName = localStorage.getItem('userName') || 
                   sessionStorage.getItem('userName') ||
@@ -87,20 +117,62 @@ export function createGenericLetter(reportData: CreditReportData): any {
   const bureau = reportData?.primaryBureau || 
                (reportData?.bureaus?.experian ? "Experian" : 
                 reportData?.bureaus?.equifax ? "Equifax" : 
-                reportData?.bureaus?.transunion ? "TransUnion" : "Experian");
+                reportData?.bureaus?.transunion ? "TransUnion" : "Credit Bureau");
+  
+  const letterId = Date.now();
+  const letterDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  
+  const letterContent = `${userInfo.name}
+${userInfo.address ? userInfo.address + '\n' : ''}${userInfo.city ? userInfo.city + ', ' : ''}${userInfo.state || ''} ${userInfo.zip || ''}
+
+${letterDate}
+
+${bureau}
+${getBureauAddress(bureau)}
+
+RE: Dispute of Inaccurate Information in Credit Report
+
+To Whom It May Concern:
+
+I am writing to dispute information in my credit report that I believe to be inaccurate. After reviewing my credit report, I have identified several discrepancies that require investigation.
+
+Please conduct a thorough investigation of all items I am disputing, as required by the Fair Credit Reporting Act. If you cannot verify this information, please remove it from my credit report.
+
+I understand that according to the Fair Credit Reporting Act, you are required to forward all relevant information to the information provider and to respond to my dispute within 30 days of receipt.
+
+Thank you for your prompt attention to this matter.
+
+Sincerely,
+
+${userInfo.name}`;
   
   return {
-    id: Date.now(),
+    id: letterId,
     title: "General Credit Report Dispute",
     bureau: bureau,
+    recipient: bureau,
     accountName: "Multiple Accounts",
     accountNumber: "",
-    content: `Dear ${bureau},\n\nI am writing to dispute information in my credit report that I believe is inaccurate. After reviewing my credit report, I have identified several discrepancies that require investigation.\n\nPlease conduct a thorough investigation of all items I am disputing, as required by the Fair Credit Reporting Act. If you cannot verify this information, please remove it from my credit report.\n\nSincerely,\n${userInfo.name}`,
-    letterContent: `Dear ${bureau},\n\nI am writing to dispute information in my credit report that I believe to be inaccurate. After reviewing my credit report, I have identified several discrepancies that require investigation.\n\nPlease conduct a thorough investigation of all items I am disputing, as required by the Fair Credit Reporting Act. If you cannot verify this information, please remove it from my credit report.\n\nSincerely,\n${userInfo.name}`,
-    createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    content: letterContent,
+    bureaus: [bureau],
+    createdAt: letterDate,
     status: "ready",
-    errorType: "Data Inaccuracy",
-    recipient: bureau,
-    bureaus: [bureau]
+    errorType: "Data Inaccuracy"
   };
+}
+
+/**
+ * Get the address for a credit bureau
+ */
+function getBureauAddress(bureau: string): string {
+  switch (bureau.toLowerCase()) {
+    case 'experian':
+      return 'Experian\nP.O. Box 4500\nAllen, TX 75013';
+    case 'equifax':
+      return 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374';
+    case 'transunion':
+      return 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016';
+    default:
+      return '[BUREAU ADDRESS]';
+  }
 }
