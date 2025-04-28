@@ -39,50 +39,20 @@ export const useReportAnalysis = (
         toasts: []
       };
       
-      // Monitor analysis progress with web worker if possible
-      let analysisMonitor: number | null = null;
-      
-      // Set up a backup timeout to force complete if the analysis gets stuck
-      const analysisTimeout = setTimeout(() => {
-        console.log("Analysis timeout reached - forcing completion");
-        if (!analysisCompleted.current) {
-          console.log("Analysis did not complete in time - triggering manual completion");
-          onAnalysisComplete();
-          
-          // Also set navigation flags as a backup
-          sessionStorage.setItem('shouldNavigateToLetters', 'true');
-          sessionStorage.setItem('forceLetterGeneration', 'true');
-          sessionStorage.setItem('reportReadyForLetters', 'true');
-          
-          // Try to add a fake issue if none were found
-          const reportData = JSON.parse(sessionStorage.getItem('creditReportData') || '{}');
-          if (reportData) {
-            const fakeIssue = {
-              id: 'auto-generated',
-              title: 'General Credit Report Review',
-              description: 'A general review of your credit report.',
-              severity: 'medium',
-              type: 'General Review',
-              account: reportData.accounts && reportData.accounts.length > 0 ? reportData.accounts[0] : null
-            };
-            
-            sessionStorage.setItem('reportIssues', JSON.stringify([fakeIssue]));
-          }
-        }
-      }, 45000); // 45 second timeout
-      
       try {
-        // Periodically yield control back to main thread to prevent unresponsive dialog
-        analysisMonitor = window.setInterval(async () => {
-          await yieldToMain();
-          console.log("Analysis monitor yielding control to main thread...");
-        }, 2000); // Check every 2 seconds
-        
         // Use setTimeout to allow the browser to update UI before starting analysis
         setTimeout(async () => {
           try {
-            // Yield control once more before starting CPU-intensive task
+            // Yield control once before starting CPU-intensive task
             await yieldToMain();
+            
+            // Set a backup timeout to force completion if the analysis gets stuck
+            const analysisBackupTimeout = setTimeout(() => {
+              if (!analysisCompleted.current) {
+                console.log("Analysis backup timeout reached - forcing completion");
+                onAnalysisComplete();
+              }
+            }, 25000); // 25 second backup timeout
             
             // Updated to pass the props object that handleAnalysisComplete expects
             await handleAnalysisComplete({
@@ -97,14 +67,11 @@ export const useReportAnalysis = (
               testMode: false // Always use real mode, no test mode with per-letter payments
             });
             
+            clearTimeout(analysisBackupTimeout);
+            
             // Store flag for letter generation after analysis
             sessionStorage.setItem('reportAnalyzed', 'true');
             sessionStorage.setItem('reportReadyForLetters', 'true');
-            sessionStorage.setItem('forceLetterGeneration', 'true');
-            sessionStorage.setItem('shouldNavigateToLetters', 'true');
-            
-            // Debug: Log current state of analysis
-            console.log("Analysis initiated successfully");
           } catch (err) {
             console.error("Error in analysis:", err);
             setAnalysisError(err instanceof Error ? err.message : "Unknown error occurred");
@@ -117,19 +84,8 @@ export const useReportAnalysis = (
             });
           }
         }, 100);
-        
-        return () => {
-          clearTimeout(analysisTimeout);
-          if (analysisMonitor !== null) {
-            clearInterval(analysisMonitor);
-          }
-        };
       } catch (error) {
         console.error("Error initiating analysis:", error);
-        clearTimeout(analysisTimeout);
-        if (analysisMonitor !== null) {
-          clearInterval(analysisMonitor);
-        }
         setAnalysisError(error instanceof Error ? error.message : "Unknown error occurred");
         setAnalyzing(false);
         
@@ -161,19 +117,6 @@ export const useReportAnalysis = (
     // Set flag for automatic letter generation
     sessionStorage.setItem('analysisComplete', 'true');
     sessionStorage.setItem('reportReadyForLetters', 'true');
-    sessionStorage.setItem('forceLetterGeneration', 'true');
-    sessionStorage.setItem('shouldNavigateToLetters', 'true');
-    
-    // Fire navigation event to dispute letters page
-    const event = new CustomEvent('navigateToLetters', { 
-      detail: { navigateTo: 'letters' } 
-    });
-    window.dispatchEvent(event);
-    
-    // Directly trigger navigation after a short delay
-    setTimeout(() => {
-      window.location.href = '/dispute-letters';
-    }, 1500);
   }, [setAnalyzed, setAnalyzing, analysisCompleted]);
 
   return {

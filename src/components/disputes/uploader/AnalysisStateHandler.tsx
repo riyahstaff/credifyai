@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { CreditReportData, CreditReportAccount, IdentifiedIssue } from '@/utils/creditReport/types';
 import AnalyzingReport from './AnalyzingReport';
@@ -48,8 +47,8 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
   const navigate = useNavigate();
   const { toast } = useToast();
   const [attemptedLetterGeneration, setAttemptedLetterGeneration] = useState(false);
+  const [isManuallyCompletingAnalysis, setIsManuallyCompletingAnalysis] = useState(false);
   
-  // Log important state changes for debugging
   useEffect(() => {
     console.log("AnalysisStateHandler state:", { 
       fileUploaded, 
@@ -62,7 +61,21 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     });
   }, [fileUploaded, analyzing, analyzed, letterGenerated, issues, testMode, analysisError]);
   
-  // Auto-generate letter when analysis is complete
+  const handleManualComplete = () => {
+    setIsManuallyCompletingAnalysis(true);
+    console.log("Manual analysis completion triggered by user");
+    
+    toast({
+      title: "Completing Analysis",
+      description: "Finalizing the analysis of your credit report...",
+      duration: 3000,
+    });
+    
+    setTimeout(() => {
+      onAnalysisComplete();
+    }, 1000);
+  };
+  
   useEffect(() => {
     const autoGenerateLetter = async () => {
       if (analyzed && reportData && !letterGenerated && !attemptedLetterGeneration) {
@@ -70,37 +83,14 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
         setAttemptedLetterGeneration(true);
         
         try {
-          // Wait a moment for the UI to update
           setTimeout(async () => {
-            // Generate a letter using the first account or general dispute
             const targetAccount = reportData.accounts && reportData.accounts.length > 0 
               ? reportData.accounts[0] 
               : null;
             
             console.log("Generating letter for account:", targetAccount?.accountName || "General Dispute");
             
-            // Try to generate letter directly
-            const letterContent = await generateAutomaticDisputeLetter(
-              reportData,
-              targetAccount?.accountName,
-              reportData.personalInfo
-            );
-            
-            if (letterContent && letterContent.length > 100) {
-              console.log("Letter generated successfully with content length:", letterContent.length);
-              
-              // Set navigation flag directly
-              sessionStorage.setItem('shouldNavigateToLetters', 'true');
-              
-              // Wait a moment and then navigate
-              setTimeout(() => {
-                console.log("Navigating to dispute letters page after letter generation");
-                navigate('/dispute-letters');
-              }, 1000);
-            } else {
-              console.log("Letter generation did not produce valid content, falling back to onGenerateDispute");
-              onGenerateDispute(targetAccount);
-            }
+            onGenerateDispute(targetAccount);
           }, 500);
         } catch (error) {
           console.error("Error in auto letter generation:", error);
@@ -114,17 +104,14 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     };
     
     autoGenerateLetter();
-  }, [analyzed, reportData, letterGenerated, attemptedLetterGeneration, navigate, onGenerateDispute, toast]);
+  }, [analyzed, reportData, letterGenerated, attemptedLetterGeneration, onGenerateDispute, toast]);
   
-  // Effect to navigate to letters page when letter is generated
   useEffect(() => {
     if (letterGenerated) {
       console.log("Letter has been generated, navigating to dispute-letters page");
       
-      // Set flag in session storage
       sessionStorage.setItem('shouldNavigateToLetters', 'true');
       
-      // Wait a moment and then navigate
       const timer = setTimeout(() => {
         console.log("Executing navigation to dispute-letters page");
         navigate('/dispute-letters');
@@ -134,15 +121,31 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
     }
   }, [letterGenerated, navigate]);
   
-  // Check the state and render appropriate component
   if (analyzing) {
-    return <AnalyzingReport 
-      onAnalysisComplete={onAnalysisComplete} 
-      testMode={testMode}
-    />;
+    return (
+      <>
+        <AnalyzingReport 
+          onAnalysisComplete={onAnalysisComplete} 
+          testMode={testMode}
+          timeout={10000}
+        />
+        
+        <div className="mt-4 text-center">
+          <button
+            onClick={handleManualComplete}
+            disabled={isManuallyCompletingAnalysis}
+            className="text-sm text-blue-600 hover:text-blue-800 underline"
+          >
+            {isManuallyCompletingAnalysis ? "Completing..." : "Analysis taking too long? Click to continue"}
+          </button>
+          <p className="text-xs text-gray-500 mt-1">
+            This will proceed with the analysis results we've collected so far.
+          </p>
+        </div>
+      </>
+    );
   }
   
-  // If analysis is complete but we have an error, show error state
   if (analyzed && analysisError) {
     return (
       <div className="space-y-4">

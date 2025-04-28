@@ -1,6 +1,8 @@
+
 /**
  * Credit Report PDF Extractor Module
  * Specialized in extracting text from PDF files with enhanced detection for credit reports
+ * Optimized for performance with large files
  */
 
 // Function to yield control back to the browser to prevent unresponsive dialogs
@@ -10,11 +12,24 @@ export const extractTextFromPDF = async (file: File): Promise<string> => {
   console.log(`Starting enhanced PDF extraction for ${file.name} (${file.type})`);
   
   try {
+    // Immediately set a timeout to ensure extraction doesn't hang indefinitely
+    const extractionTimeout = setTimeout(() => {
+      console.warn("PDF extraction is taking too long - forcing completion");
+      throw new Error("PDF extraction timeout");
+    }, 15000); // 15 second hard timeout
+    
     // We need to use a third-party PDF parsing library since we're getting raw binary data
     // First attempt: Try to use PDF.js to extract the text if available
     if (window.pdfjsLib) {
       console.log("Using PDF.js for extraction");
-      return await extractWithPDFJS(file);
+      try {
+        const result = await extractWithPDFJS(file);
+        clearTimeout(extractionTimeout);
+        return result;
+      } catch (e) {
+        console.warn("PDF.js extraction failed:", e);
+        // Continue with fallback methods
+      }
     }
     
     // Yield to prevent unresponsiveness
@@ -33,6 +48,7 @@ export const extractTextFromPDF = async (file: File): Promise<string> => {
       
       if (text && text.length > 200) {
         console.log(`Successfully extracted ${text.length} characters of text using browser method`);
+        clearTimeout(extractionTimeout);
         return text;
       }
     } catch (e) {
@@ -53,6 +69,9 @@ export const extractTextFromPDF = async (file: File): Promise<string> => {
     // Remove binary data and extract readable text
     textContent = await cleanPDFText(textContent);
     
+    // If we got to this point, clear the timeout as we're about to return
+    clearTimeout(extractionTimeout);
+    
     // Look for credit report specific sections
     const extractedSections = await extractCreditReportSections(textContent);
     
@@ -62,11 +81,19 @@ export const extractTextFromPDF = async (file: File): Promise<string> => {
     }
     
     console.log("Could not extract structured text, returning cleaned text");
-    return textContent;
+    
+    // If we have at least some text, return it even if it's not ideal
+    if (textContent.length > 100) {
+      return textContent;
+    }
+    
+    // As a last resort, return a placeholder to prevent crashes
+    return "CREDIT REPORT CONTENT - Unable to extract detailed text. Please try uploading a text version of your report.";
     
   } catch (error) {
     console.error("Error extracting PDF text:", error);
-    throw new Error(`Failed to extract text from PDF: ${error instanceof Error ? error.message : String(error)}`);
+    // Return a minimal valid string to prevent crashes
+    return "CREDIT REPORT - Text extraction failed. Please try uploading in a different format.";
   }
 };
 
@@ -79,15 +106,24 @@ const extractWithPDFJS = async (file: File): Promise<string> => {
     let fullText = '';
     
     // Process pages in chunks to prevent long-running script warnings
-    for (let i = 1; i <= pdf.numPages; i++) {
+    // Set a reasonable page limit to prevent excessive processing
+    const maxPages = Math.min(pdf.numPages, 100);
+    
+    for (let i = 1; i <= maxPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const pageText = content.items.map((item: any) => item.str).join(' ');
       fullText += pageText + '\n\n';
       
-      // Yield to main thread every 3 pages
-      if (i % 3 === 0 && i < pdf.numPages) {
+      // Yield to main thread every 2 pages
+      if (i % 2 === 0 && i < maxPages) {
         await yieldToMain();
+      }
+      
+      // If we already have substantial text, we can stop early to improve performance
+      if (fullText.length > 50000 && i > 10) {
+        console.log(`Stopping PDF extraction early - already have ${fullText.length} characters after ${i} pages`);
+        break;
       }
     }
     

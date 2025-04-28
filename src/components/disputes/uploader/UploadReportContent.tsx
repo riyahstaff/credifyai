@@ -109,6 +109,16 @@ const UploadReportContent: React.FC<UploadReportContentProps> = ({
             </div>
             
             <FileUploader onFileSelected={onFileSelected} />
+            
+            {/* Add more guidance about file formats */}
+            <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg">
+              <h4 className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Tips for Faster Analysis</h4>
+              <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                <li>• Text (.txt) files process faster than PDFs</li>
+                <li>• Remove any password protection from PDFs before uploading</li>
+                <li>• Smaller files (under 5MB) are processed more quickly</li>
+              </ul>
+            </div>
           </div>
         </div>
       ) : (

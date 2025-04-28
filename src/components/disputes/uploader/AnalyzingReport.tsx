@@ -10,7 +10,7 @@ interface AnalyzingReportProps {
 
 const AnalyzingReport: React.FC<AnalyzingReportProps> = ({ 
   onAnalysisComplete,
-  timeout = 8000,  // Reduced default timeout to 8 seconds
+  timeout = 5000,  // Reduced default timeout to 5 seconds (from 8s)
   testMode = false
 }) => {
   const [progress, setProgress] = useState(10);
@@ -28,15 +28,14 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         // Faster progress for better user experience
-        // Even faster in test mode
-        const increment = testMode ? 15 : (prev < 50 ? 8 : prev < 80 ? 5 : 2);
-        const newProgress = Math.min(prev + increment, 90);
+        const increment = testMode ? 15 : (prev < 50 ? 10 : prev < 80 ? 7 : 3);
+        const newProgress = Math.min(prev + increment, 95);
         return newProgress;
       });
       
       // Update time elapsed
       setTimeElapsed(prev => prev + 500);
-    }, testMode ? 300 : 500); // Faster updates in test mode
+    }, testMode ? 300 : 400); // Faster updates overall
     
     // Update stages based on progress
     const stageInterval = setInterval(() => {
@@ -47,18 +46,17 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
         if (progress < 80) return 'Generating recommendations';
         return 'Finalizing analysis';
       });
-    }, testMode ? 800 : 1500); // Faster stage updates in test mode
+    }, testMode ? 800 : 1000); // Faster stage updates
     
-    // Show warning after 50% of timeout (but not in test mode)
+    // Show warning after just 40% of timeout
     const warningTimeout = setTimeout(() => {
       if (progress < 80 && !isCompleted && !testMode) {
         setShowTimeoutWarning(true);
         console.log("Showing analysis timeout warning to user");
       }
-    }, actualTimeout * 0.5);
+    }, actualTimeout * 0.4);
     
-    // Mark as complete after timeout
-    // This ensures the analysis eventually "completes" even if there's a problem
+    // Force completion after timeout
     const timeoutId = setTimeout(() => {
       console.log("Analysis completion triggered by timeout");
       clearInterval(progressInterval);
@@ -71,7 +69,7 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
       setTimeout(() => {
         console.log("Calling onAnalysisComplete from timeout handler");
         onAnalysisComplete();
-      }, 1000);
+      }, 800);
     }, actualTimeout);
     
     return () => {
@@ -85,10 +83,6 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
   // Effect for logging
   useEffect(() => {
     console.log(`Analysis progress: ${progress}%, Stage: ${stage}, Time elapsed: ${timeElapsed}ms, Test mode: ${testMode}`);
-    
-    // Debug test mode subscription when analyzing
-    console.log("Test subscription status while analyzing:", 
-      sessionStorage.getItem('testModeSubscription') || 'not set');
   }, [progress, stage, timeElapsed, testMode]);
   
   return (
@@ -128,6 +122,20 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
         </div>
       </div>
       
+      {showTimeoutWarning && !isCompleted && !testMode && (
+        <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg animate-pulse">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="text-amber-500 mt-0.5 flex-shrink-0" size={16} />
+            <div>
+              <h4 className="font-medium text-amber-800 dark:text-amber-300 text-sm">Processing large report</h4>
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                Your report is being processed. Analysis will complete in a few seconds. No need to refresh the page.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {testMode && (
         <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <div className="flex items-start gap-3">
@@ -141,19 +149,14 @@ const AnalyzingReport: React.FC<AnalyzingReportProps> = ({
         </div>
       )}
       
-      {showTimeoutWarning && !testMode && (
-        <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="text-amber-500 mt-0.5" size={18} />
-            <div>
-              <h4 className="font-medium text-amber-800 dark:text-amber-300">Processing is taking longer than expected</h4>
-              <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                Your report is being processed but is taking longer than usual. The analysis will complete automatically in a few seconds.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700/30 rounded-lg">
+        <h4 className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Analysis Tips</h4>
+        <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+          <li>• Large PDF files may take longer to analyze</li>
+          <li>• Analysis will automatically complete even if it's taking a while</li>
+          <li>• For faster analysis, try uploading a text file version if available</li>
+        </ul>
+      </div>
     </div>
   );
 };
