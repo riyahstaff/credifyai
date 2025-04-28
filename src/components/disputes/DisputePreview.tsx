@@ -41,8 +41,8 @@ const DisputePreview: React.FC<DisputePreviewProps> = ({
   };
   
   return (
-    <div className="fixed inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-card text-card-foreground rounded-xl shadow-lg max-w-3xl w-full max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-background border border-border text-foreground rounded-xl shadow-lg max-w-3xl w-full max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-primary/10">
