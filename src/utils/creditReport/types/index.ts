@@ -3,7 +3,7 @@
 export * from './letterTypes';
 
 // Explicitly re-export types from creditReportTypes to avoid naming conflicts
-export {
+export type {
   CreditReportAccount,
   CreditReportInquiry,
   CreditReportData,
@@ -18,7 +18,7 @@ export {
 } from './creditReportTypes';
 
 // Explicitly re-export types from analysisTypes to avoid naming conflicts
-export {
+export type {
   AnalysisProcessorProps,
   AnalysisHandlerProps,
   IssueItem,
@@ -27,3 +27,4 @@ export {
   IssueAnalysisResult,
   AccountIssue
 } from './analysisTypes';
+
