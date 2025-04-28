@@ -7,6 +7,7 @@ import UploadConfirmation from './UploadConfirmation';
 import ReportPreview from './ReportPreview';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { generateAutomaticDisputeLetter } from '@/components/ai/services/disputes/automaticLetterGenerator';
 
 interface AnalysisStateHandlerProps {
   fileUploaded: boolean;
@@ -46,6 +47,7 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
   const [showReportPreview, setShowReportPreview] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [attemptedLetterGeneration, setAttemptedLetterGeneration] = useState(false);
   
   // Log important state changes for debugging
   useEffect(() => {
@@ -58,15 +60,79 @@ const AnalysisStateHandler: React.FC<AnalysisStateHandlerProps> = ({
       testMode,
       hasAnalysisError: !!analysisError
     });
+  }, [fileUploaded, analyzing, analyzed, letterGenerated, issues, testMode, analysisError]);
+  
+  // Auto-generate letter when analysis is complete
+  useEffect(() => {
+    const autoGenerateLetter = async () => {
+      if (analyzed && reportData && !letterGenerated && !attemptedLetterGeneration) {
+        console.log("Analysis complete, attempting to auto-generate dispute letter");
+        setAttemptedLetterGeneration(true);
+        
+        try {
+          // Wait a moment for the UI to update
+          setTimeout(async () => {
+            // Generate a letter using the first account or general dispute
+            const targetAccount = reportData.accounts && reportData.accounts.length > 0 
+              ? reportData.accounts[0] 
+              : null;
+            
+            console.log("Generating letter for account:", targetAccount?.accountName || "General Dispute");
+            
+            // Try to generate letter directly
+            const letterContent = await generateAutomaticDisputeLetter(
+              reportData,
+              targetAccount?.accountName,
+              reportData.personalInfo
+            );
+            
+            if (letterContent && letterContent.length > 100) {
+              console.log("Letter generated successfully with content length:", letterContent.length);
+              
+              // Set navigation flag directly
+              sessionStorage.setItem('shouldNavigateToLetters', 'true');
+              
+              // Wait a moment and then navigate
+              setTimeout(() => {
+                console.log("Navigating to dispute letters page after letter generation");
+                navigate('/dispute-letters');
+              }, 1000);
+            } else {
+              console.log("Letter generation did not produce valid content, falling back to onGenerateDispute");
+              onGenerateDispute(targetAccount);
+            }
+          }, 500);
+        } catch (error) {
+          console.error("Error in auto letter generation:", error);
+          toast({
+            title: "Letter Generation Issue",
+            description: "There was a problem automatically generating your dispute letter. Please try manually.",
+            variant: "destructive"
+          });
+        }
+      }
+    };
     
-    // If analysis is complete and letters are generated, navigate to the letters page
-    if (analyzed && letterGenerated && sessionStorage.getItem('pendingDisputeLetter')) {
-      console.log("Analysis complete with letters generated, redirecting to dispute-letters page");
-      setTimeout(() => {
+    autoGenerateLetter();
+  }, [analyzed, reportData, letterGenerated, attemptedLetterGeneration, navigate, onGenerateDispute, toast]);
+  
+  // Effect to navigate to letters page when letter is generated
+  useEffect(() => {
+    if (letterGenerated) {
+      console.log("Letter has been generated, navigating to dispute-letters page");
+      
+      // Set flag in session storage
+      sessionStorage.setItem('shouldNavigateToLetters', 'true');
+      
+      // Wait a moment and then navigate
+      const timer = setTimeout(() => {
+        console.log("Executing navigation to dispute-letters page");
         navigate('/dispute-letters');
       }, 1000);
+      
+      return () => clearTimeout(timer);
     }
-  }, [fileUploaded, analyzing, analyzed, letterGenerated, issues, testMode, navigate, analysisError]);
+  }, [letterGenerated, navigate]);
   
   // Check the state and render appropriate component
   if (analyzing) {

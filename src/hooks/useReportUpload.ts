@@ -1,9 +1,11 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { CreditReportData, CreditReportAccount, IdentifiedIssue } from '@/utils/creditReport/types';
 import { useReportAnalysis } from './report-upload/useReportAnalysis';
 import { useToast } from './use-toast';
 import { useReportStorage } from './report-upload/useReportStorage';
+import { useReportNavigation } from './report-upload/useReportNavigation';
+import { generateAutomaticDisputeLetter } from '@/components/ai/services/disputes/automaticLetterGenerator';
 
 export const useReportUpload = () => {
   const { toast } = useToast();
@@ -24,6 +26,9 @@ export const useReportUpload = () => {
   // Import report storage hooks
   const { storeForDispute, checkPendingLetters, clearStoredReport } = useReportStorage();
   
+  // Import navigation hook
+  const { triggerNavigation } = useReportNavigation();
+  
   // Use report analysis hooks
   const { startAnalysis, onAnalysisComplete } = useReportAnalysis(
     uploadedFile,
@@ -37,7 +42,7 @@ export const useReportUpload = () => {
   );
   
   // Reset the upload state
-  const resetUpload = () => {
+  const resetUpload = useCallback(() => {
     setFileUploaded(false);
     setAnalyzing(false);
     setAnalyzed(false);
@@ -50,10 +55,10 @@ export const useReportUpload = () => {
     setLetterGenerated(false);
     analysisCompleted.current = false;
     clearStoredReport(); // Clear any stored report data
-  };
+  }, [clearStoredReport]);
   
   // Handle file upload
-  const handleFile = (file: File) => {
+  const handleFile = useCallback((file: File) => {
     console.log("File selected:", file.name, "size:", file.size);
     
     // Reset any existing state
@@ -72,10 +77,18 @@ export const useReportUpload = () => {
       title: "File uploaded",
       description: `${file.name} uploaded successfully. Click "Analyze Report" to continue.`,
     });
-  };
+  }, [resetUpload, toast]);
+  
+  // Effect to check if we should automatically generate a letter after analysis
+  useEffect(() => {
+    if (analyzed && reportData && issues.length > 0 && !letterGenerated) {
+      console.log("Report analyzed successfully with issues, generating letter automatically");
+      handleGenerateDispute();
+    }
+  }, [analyzed, reportData, issues, letterGenerated]);
   
   // Generate dispute letter from the report data
-  const handleGenerateDispute = async (account: CreditReportAccount | null = null) => {
+  const handleGenerateDispute = useCallback(async (account: CreditReportAccount | null = null) => {
     console.log("Generating dispute for account:", account);
     
     if (reportData) {
@@ -90,22 +103,55 @@ export const useReportUpload = () => {
       const stored = storeForDispute(reportData, targetAccount);
       
       if (stored) {
-        setLetterGenerated(true);
-        toast({
-          title: "Dispute letter generated",
-          description: "Your dispute letter has been generated. You'll be redirected to review it.",
-        });
+        console.log("Report data stored successfully, generating letter...");
         
-        // Important: Store flag to trigger navigation
-        sessionStorage.setItem('shouldNavigateToLetters', 'true');
-        
-        // Trigger event for automatic navigation
-        console.log("ANALYSIS_COMPLETE_READY_FOR_NAVIGATION");
-        return true;
+        try {
+          // Generate automatic dispute letter
+          const letterContent = await generateAutomaticDisputeLetter(
+            reportData,
+            targetAccount?.accountName,
+            reportData.personalInfo
+          );
+          
+          if (letterContent && letterContent.length > 100) {
+            console.log("Letter generated successfully with length:", letterContent.length);
+            setLetterGenerated(true);
+            
+            toast({
+              title: "Dispute letter generated",
+              description: "Your dispute letter has been generated. You'll be redirected to review it.",
+            });
+            
+            // Trigger navigation to letters page
+            triggerNavigation();
+            
+            return true;
+          } else {
+            console.error("Letter generation failed or produced insufficient content");
+            
+            toast({
+              title: "Letter generation issue",
+              description: "There was a problem with the letter content. Please try again or create a manual letter.",
+              variant: "destructive",
+            });
+            
+            return false;
+          }
+        } catch (error) {
+          console.error("Error in automatic letter generation:", error);
+          
+          toast({
+            title: "Error generating letter",
+            description: "There was a problem generating your dispute letter. Please try again.",
+            variant: "destructive",
+          });
+          
+          return false;
+        }
       } else {
         toast({
           title: "Error generating letter",
-          description: "There was a problem generating your dispute letter. Please try again.",
+          description: "There was a problem storing your report data. Please try again.",
           variant: "destructive",
         });
         return false;
@@ -118,7 +164,7 @@ export const useReportUpload = () => {
       });
       return false;
     }
-  };
+  }, [reportData, storeForDispute, toast, triggerNavigation]);
   
   return {
     fileUploaded,

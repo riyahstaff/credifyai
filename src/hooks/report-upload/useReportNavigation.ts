@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 /**
@@ -47,15 +47,17 @@ export const useReportNavigation = () => {
     };
   }, [navigate]);
   
-  return {
-    triggerNavigation: () => {
-      sessionStorage.setItem('shouldNavigateToLetters', 'true');
-      
-      // Also dispatch event in case listener is active
-      const event = new CustomEvent('navigateToLetters', { 
-        detail: { navigateTo: 'letters' } 
-      });
-      window.dispatchEvent(event);
-    }
-  };
+  // Expose a function to directly trigger navigation
+  const triggerNavigation = useCallback(() => {
+    console.log("Manually triggering navigation to dispute letters page");
+    sessionStorage.setItem('shouldNavigateToLetters', 'true');
+    
+    // Also dispatch event in case listener is active
+    const event = new CustomEvent('navigateToLetters', { 
+      detail: { navigateTo: 'letters' } 
+    });
+    window.dispatchEvent(event);
+  }, []);
+  
+  return { triggerNavigation };
 };
