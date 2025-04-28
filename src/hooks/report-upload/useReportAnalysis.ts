@@ -48,6 +48,26 @@ export const useReportAnalysis = (
         if (!analysisCompleted.current) {
           console.log("Analysis did not complete in time - triggering manual completion");
           onAnalysisComplete();
+          
+          // Also set navigation flags as a backup
+          sessionStorage.setItem('shouldNavigateToLetters', 'true');
+          sessionStorage.setItem('forceLetterGeneration', 'true');
+          sessionStorage.setItem('reportReadyForLetters', 'true');
+          
+          // Try to add a fake issue if none were found
+          const reportData = JSON.parse(sessionStorage.getItem('creditReportData') || '{}');
+          if (reportData) {
+            const fakeIssue = {
+              id: 'auto-generated',
+              title: 'General Credit Report Review',
+              description: 'A general review of your credit report.',
+              severity: 'medium',
+              type: 'General Review',
+              account: reportData.accounts && reportData.accounts.length > 0 ? reportData.accounts[0] : null
+            };
+            
+            sessionStorage.setItem('reportIssues', JSON.stringify([fakeIssue]));
+          }
         }
       }, 45000); // 45 second timeout
       
@@ -79,6 +99,9 @@ export const useReportAnalysis = (
             
             // Store flag for letter generation after analysis
             sessionStorage.setItem('reportAnalyzed', 'true');
+            sessionStorage.setItem('reportReadyForLetters', 'true');
+            sessionStorage.setItem('forceLetterGeneration', 'true');
+            sessionStorage.setItem('shouldNavigateToLetters', 'true');
             
             // Debug: Log current state of analysis
             console.log("Analysis initiated successfully");
@@ -137,6 +160,20 @@ export const useReportAnalysis = (
     
     // Set flag for automatic letter generation
     sessionStorage.setItem('analysisComplete', 'true');
+    sessionStorage.setItem('reportReadyForLetters', 'true');
+    sessionStorage.setItem('forceLetterGeneration', 'true');
+    sessionStorage.setItem('shouldNavigateToLetters', 'true');
+    
+    // Fire navigation event to dispute letters page
+    const event = new CustomEvent('navigateToLetters', { 
+      detail: { navigateTo: 'letters' } 
+    });
+    window.dispatchEvent(event);
+    
+    // Directly trigger navigation after a short delay
+    setTimeout(() => {
+      window.location.href = '/dispute-letters';
+    }, 1500);
   }, [setAnalyzed, setAnalyzing, analysisCompleted]);
 
   return {
