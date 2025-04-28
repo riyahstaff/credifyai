@@ -122,6 +122,18 @@ export function createGenericLetter(reportData: CreditReportData): any {
   const letterId = Date.now();
   const letterDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   
+  // Find an account to use in the letter - prefer problematic accounts
+  let accountName = "Multiple Accounts";
+  let accountNumber = "";
+  
+  if (reportData.accounts && reportData.accounts.length > 0) {
+    // Try to find a problematic account first
+    const problematicAccount = findProblematicAccount(reportData.accounts);
+    accountName = problematicAccount.accountName;
+    accountNumber = problematicAccount.accountNumber || "";
+    console.log(`Using account for letter: ${accountName}, number: ${accountNumber || 'not available'}`);
+  }
+  
   const letterContent = `${userInfo.name}
 ${userInfo.address ? userInfo.address + '\n' : ''}${userInfo.city ? userInfo.city + ', ' : ''}${userInfo.state || ''} ${userInfo.zip || ''}
 
@@ -136,9 +148,14 @@ To Whom It May Concern:
 
 I am writing to dispute information in my credit report that I believe to be inaccurate. After reviewing my credit report, I have identified several discrepancies that require investigation.
 
+Account Name: ${accountName}
+Account Number: ${accountNumber}
+
 Please conduct a thorough investigation of all items I am disputing, as required by the Fair Credit Reporting Act. If you cannot verify this information, please remove it from my credit report.
 
 I understand that according to the Fair Credit Reporting Act, you are required to forward all relevant information to the information provider and to respond to my dispute within 30 days of receipt.
+
+In accordance with Metro 2 reporting guidelines, I request that you properly code this account as "disputed by consumer" (compliance code XB) during your investigation.
 
 Thank you for your prompt attention to this matter.
 
@@ -148,11 +165,11 @@ ${userInfo.name}`;
   
   return {
     id: letterId,
-    title: "General Credit Report Dispute",
+    title: "Credit Report Dispute",
     bureau: bureau,
     recipient: bureau,
-    accountName: "Multiple Accounts",
-    accountNumber: "",
+    accountName: accountName,
+    accountNumber: accountNumber,
     content: letterContent,
     bureaus: [bureau],
     createdAt: letterDate,
@@ -175,4 +192,54 @@ function getBureauAddress(bureau: string): string {
     default:
       return '[BUREAU ADDRESS]';
   }
+}
+
+/**
+ * Find an account with potential issues for disputing
+ */
+function findProblematicAccount(accounts: CreditReportAccount[]): CreditReportAccount {
+  // First try to find accounts with negative statuses
+  const negativeStatusAccount = accounts.find(account => {
+    const status = (account.paymentStatus || account.status || '').toLowerCase();
+    return status.includes('late') || 
+           status.includes('past due') || 
+           status.includes('delinq') || 
+           status.includes('charge') || 
+           status.includes('collection');
+  });
+  
+  if (negativeStatusAccount) {
+    return negativeStatusAccount;
+  }
+  
+  // Next look for collection agencies or debt buyers
+  const collectionAccount = accounts.find(account => {
+    const name = (account.accountName || '').toLowerCase();
+    return name.includes('collect') || 
+           name.includes('recovery') || 
+           name.includes('asset') || 
+           name.includes('portfolio') ||
+           name.includes('lvnv') ||
+           name.includes('midland');
+  });
+  
+  if (collectionAccount) {
+    return collectionAccount;
+  }
+  
+  // Next look for accounts with high balances
+  const accountsWithBalance = accounts
+    .filter(a => a.balance || a.currentBalance)
+    .sort((a, b) => {
+      const balA = parseFloat(String(a.balance || a.currentBalance || 0));
+      const balB = parseFloat(String(b.balance || b.currentBalance || 0));
+      return balB - balA; // Descending order
+    });
+    
+  if (accountsWithBalance.length > 0) {
+    return accountsWithBalance[0];
+  }
+  
+  // Just return the first account if nothing else is found
+  return accounts[0];
 }
