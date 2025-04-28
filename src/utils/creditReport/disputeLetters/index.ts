@@ -69,11 +69,13 @@ export async function generateLettersForIssues(
       
       console.log(`Generating letter for issue type: ${issue.type}`);
       
-      // Get the relevant bureau
-      const bureau = issue.bureau || reportData?.primaryBureau || "Credit Bureau";
+      // Use issue.bureau if it exists, otherwise use the primary bureau from report data
+      // This fixes the first TypeScript error
+      const bureau = (issue as any).bureau || reportData?.primaryBureau || "Credit Bureau";
       
-      // Get account information
-      const account = issue.account || findAccountInReportData(issue.account?.id, reportData);
+      // Get account information - modify how we access the account ID
+      // This fixes the second TypeScript error
+      const account = issue.account || findAccountInReportData((issue.account as any)?.accountNumber, reportData);
       
       // Get the appropriate template for this issue
       const templateContent = await getTemplateForIssueType(issue.type);
@@ -93,8 +95,8 @@ export async function generateLettersForIssues(
       // Get bureau address
       const bureauAddress = getBureauAddress(bureau);
       
-      // Format account details
-      const accountName = account?.accountName || issue.account?.accountName || "Account in question";
+      // Format account details - safely access properties
+      const accountName = account?.accountName || (issue.account as any)?.accountName || "Account in question";
       const accountNumber = account?.accountNumber || '';
       
       // Replace placeholders in the template
