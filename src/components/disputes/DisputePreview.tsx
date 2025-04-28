@@ -42,8 +42,8 @@ const DisputePreview: React.FC<DisputePreviewProps> = ({
   
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-background border border-border text-foreground rounded-xl shadow-lg max-w-3xl w-full max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="bg-card text-card-foreground border border-input rounded-xl shadow-lg max-w-3xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-input">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-primary/10">
               <FileText className="text-primary" size={20} />
@@ -68,14 +68,14 @@ const DisputePreview: React.FC<DisputePreviewProps> = ({
         </div>
         
         <div className="flex-1 overflow-y-auto p-6 bg-muted/20">
-          <div className="bg-background p-6 rounded-lg shadow-sm border border-border">
+          <div className="bg-card p-6 rounded-lg shadow-sm border border-input">
             <pre className="font-sans whitespace-pre-wrap text-foreground">
               {letterContent}
             </pre>
           </div>
         </div>
         
-        <div className="p-4 border-t border-border flex items-center justify-between">
+        <div className="p-4 border-t border-input flex items-center justify-between">
           <button
             onClick={onClose}
             className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors flex items-center gap-1.5"
@@ -87,7 +87,7 @@ const DisputePreview: React.FC<DisputePreviewProps> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={onDownload}
-              className="px-4 py-2 text-foreground border border-border hover:bg-muted/50 rounded-lg transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 text-foreground border border-input hover:bg-muted/50 rounded-lg transition-colors flex items-center gap-1.5"
             >
               <Download size={16} />
               <span>Download</span>

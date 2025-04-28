@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -36,19 +35,36 @@ export function useDisputeLettersData(testMode: boolean = false) {
   const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadingTimeoutId, setLoadingTimeoutId] = useState<NodeJS.Timeout | null>(null);
   
   // Effect to load letters on mount
   useEffect(() => {
     // Prevent double-loading or infinite loops
     if (loadAttempt > 3) {
+      console.log("Too many load attempts, stopping attempts to load letters");
       setIsLoading(false);
       return;
     }
     
+    // Set a timeout to prevent infinite loading state
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        console.log("Loading timeout reached in hook, transitioning to non-loading state");
+        setIsLoading(false);
+        
+        toast({
+          title: "Loading Timeout",
+          description: "Unable to load letters after multiple attempts. Please try creating a new letter.",
+          variant: "destructive",
+        });
+      }
+    }, 15000); // 15 seconds timeout
+    
+    setLoadingTimeoutId(timeoutId);
+    
     const loadLetters = async () => {
       try {
-        setIsLoading(true);
-        console.log("Loading letters from storage, user:", user?.id, "profile:", profile?.id);
+        console.log("Loading letters from storage, user:", user?.id, "profile:", profile?.id, "attempt:", loadAttempt);
         
         // Check if we should reload based on the forceLettersReload flag
         const forceReload = sessionStorage.getItem('forceLettersReload');
@@ -123,22 +139,57 @@ export function useDisputeLettersData(testMode: boolean = false) {
         if (loadedLetters.length > 0 && !selectedLetter) {
           setSelectedLetter(loadedLetters[0]);
         }
+        
+        // If no letters found after 2 attempts, try creating a sample letter for demo
+        if (loadedLetters.length === 0 && loadAttempt >= 2 && testMode) {
+          console.log("No letters found after multiple attempts, creating sample letter for demo");
+          const sampleLetter: Letter = {
+            id: Date.now(),
+            title: "Sample Dispute Letter",
+            bureau: "Experian",
+            accountName: "Sample Account",
+            accountNumber: "1234567890",
+            content: "This is a sample dispute letter for demonstration purposes.",
+            createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            status: "draft",
+            errorType: "Sample",
+            recipient: "Experian",
+            bureaus: ["Experian"]
+          };
+          
+          setLetters([sampleLetter]);
+          setSelectedLetter(sampleLetter);
+          await addLetterToStorage(sampleLetter);
+        }
       } catch (error) {
         console.error("Error loading letters:", error);
-        toast({
-          title: "Error Loading Letters",
-          description: "Failed to load dispute letters. Please try again.",
-          variant: "destructive",
-        });
         
-        // Increment attempt counter and try again if we still have attempts left
-        setLoadAttempt(prev => prev + 1);
+        if (loadAttempt < 3) {
+          // Increment attempt counter and try again if we still have attempts left
+          setLoadAttempt(prev => prev + 1);
+        } else {
+          toast({
+            title: "Error Loading Letters",
+            description: "Failed to load dispute letters after multiple attempts. Please try creating a new letter.",
+            variant: "destructive",
+          });
+        }
       } finally {
         setIsLoading(false);
       }
     };
     
     loadLetters();
+    
+    // Clear timeout on unmount
+    return () => {
+      if (loadingTimeoutId) {
+        clearTimeout(loadingTimeoutId);
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [user, profile, toast, testMode, loadAttempt, selectedLetter]);
 
   // Function to add a new letter
