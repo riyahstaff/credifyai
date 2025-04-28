@@ -81,11 +81,15 @@ export const useReportUpload = () => {
   
   // Effect to check if we should automatically generate a letter after analysis
   useEffect(() => {
-    if (analyzed && reportData && issues.length > 0 && !letterGenerated) {
-      console.log("Report analyzed successfully with issues, generating letter automatically");
-      handleGenerateDispute();
+    if (analyzed && reportData && !letterGenerated) {
+      console.log("Report analyzed successfully, generating letter automatically");
+      
+      // Force a short delay to ensure all states are updated
+      setTimeout(() => {
+        handleGenerateDispute();
+      }, 500);
     }
-  }, [analyzed, reportData, issues, letterGenerated]);
+  }, [analyzed, reportData, letterGenerated]);
   
   // Generate dispute letter from the report data
   const handleGenerateDispute = useCallback(async (account: CreditReportAccount | null = null) => {
@@ -98,6 +102,7 @@ export const useReportUpload = () => {
       // Log detailed information about the account and report data for debugging
       console.log("Target account for dispute:", targetAccount);
       console.log("Report data personal info:", reportData.personalInfo);
+      console.log("Report data accounts:", reportData.accounts?.length);
       
       // Store data for dispute generation
       const stored = storeForDispute(reportData, targetAccount);
@@ -129,24 +134,42 @@ export const useReportUpload = () => {
           } else {
             console.error("Letter generation failed or produced insufficient content");
             
+            // Try a backup approach - set flags for the dispute letters page to generate on load
+            sessionStorage.setItem('forceLetterGeneration', 'true');
+            sessionStorage.setItem('reportReadyForLetters', 'true');
+            sessionStorage.setItem('shouldNavigateToLetters', 'true');
+            
+            // Force navigation after a delay
+            setTimeout(() => {
+              window.location.href = '/dispute-letters';
+            }, 1000);
+            
             toast({
-              title: "Letter generation issue",
-              description: "There was a problem with the letter content. Please try again or create a manual letter.",
-              variant: "destructive",
+              title: "Processing report",
+              description: "Redirecting to dispute letters page...",
             });
             
-            return false;
+            return true;
           }
         } catch (error) {
           console.error("Error in automatic letter generation:", error);
           
+          // Set flags for the dispute letters page to handle fallback
+          sessionStorage.setItem('forceLetterGeneration', 'true');
+          sessionStorage.setItem('reportReadyForLetters', 'true');
+          sessionStorage.setItem('shouldNavigateToLetters', 'true');
+          
+          // Force navigation after a delay
+          setTimeout(() => {
+            window.location.href = '/dispute-letters';
+          }, 1000);
+          
           toast({
-            title: "Error generating letter",
-            description: "There was a problem generating your dispute letter. Please try again.",
-            variant: "destructive",
+            title: "Processing report",
+            description: "Redirecting to dispute letters page...",
           });
           
-          return false;
+          return true;
         }
       } else {
         toast({

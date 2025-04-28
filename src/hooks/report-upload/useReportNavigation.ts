@@ -56,10 +56,11 @@ export const useReportNavigation = () => {
   // Expose a function to directly trigger navigation
   const triggerNavigation = useCallback(() => {
     console.log("Manually triggering navigation to dispute letters page");
-    sessionStorage.setItem('shouldNavigateToLetters', 'true');
     
-    // Also set a flag to force letter generation
+    // Set all navigation flags
+    sessionStorage.setItem('shouldNavigateToLetters', 'true');
     sessionStorage.setItem('forceLetterGeneration', 'true');
+    sessionStorage.setItem('reportReadyForLetters', 'true');
     
     // Also dispatch event in case listener is active
     const event = new CustomEvent('navigateToLetters', { 

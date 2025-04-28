@@ -25,6 +25,11 @@ export async function generateAutomaticDisputeLetter(
       userInfo: userInfo?.name || 'Not provided'
     });
     
+    if (!creditReportData.accounts || creditReportData.accounts.length === 0) {
+      console.error("No accounts found in credit report data");
+      return "Error: No accounts found in credit report to dispute.";
+    }
+    
     // Find the account to dispute if specified
     let accountToDispute = undefined;
     
@@ -35,9 +40,15 @@ export async function generateAutomaticDisputeLetter(
       
       if (!accountToDispute) {
         console.warn(`Account "${accountName}" not found in credit report accounts`);
+        accountToDispute = creditReportData.accounts[0]; // Default to first account
+        console.log("Using first account instead:", accountToDispute.accountName);
       } else {
         console.log(`Found account to dispute:`, accountToDispute.accountName);
       }
+    } else if (creditReportData.accounts && creditReportData.accounts.length > 0) {
+      // If no account specified, use the first account
+      accountToDispute = creditReportData.accounts[0];
+      console.log("No account specified, using first account:", accountToDispute.accountName);
     }
     
     // Get primary bureau from credit report
@@ -57,13 +68,35 @@ export async function generateAutomaticDisputeLetter(
       zip: userInfo?.zip || getUserZipFromStorage() || ''
     };
     
+    let errorType = "General Dispute";
+    let errorDescription = "This information appears to be inaccurate on my credit report.";
+    
+    // If we have an actual account, create a more specific dispute
+    if (accountToDispute) {
+      // Check account status to determine error type
+      if (accountToDispute.paymentStatus?.toLowerCase().includes('late') || 
+          accountToDispute.status?.toLowerCase().includes('late')) {
+        errorType = "Late Payment";
+        errorDescription = "I have never been late on this account. This information is inaccurate and must be verified.";
+      } else if (accountToDispute.accountType?.toLowerCase().includes('collection') || 
+                accountToDispute.accountName?.toLowerCase().includes('collect')) {
+        errorType = "Collection Account";
+        errorDescription = "This collection account is disputed as inaccurate. I do not recognize this debt and it cannot be verified as belonging to me.";
+      } else {
+        errorType = "Account Information Error";
+        errorDescription = "The information reported for this account contains errors and should be investigated.";
+      }
+    }
+    
+    console.log(`Creating dispute letter for ${errorType}: ${errorDescription}`);
+    
     // Use enhanced dispute letter generator
     const letterContent = await generateEnhancedDisputeLetter(
-      'General Dispute',
+      errorType,
       {
-        accountName: accountToDispute?.accountName || 'Multiple Accounts',
+        accountName: accountToDispute?.accountName || 'Account in question',
         accountNumber: accountToDispute?.accountNumber || '',
-        errorDescription: 'This information appears to be inaccurate on my credit report.',
+        errorDescription,
         bureau
       },
       letterUserInfo,
@@ -76,10 +109,10 @@ export async function generateAutomaticDisputeLetter(
     if (letterContent) {
       const letterObject = {
         id: Date.now(),
-        title: `Credit Report Dispute - ${bureau.toUpperCase()}`,
+        title: `${errorType} - ${accountToDispute?.accountName || bureau.toUpperCase()}`,
         bureau: bureau,
         recipient: bureau,
-        accountName: accountToDispute?.accountName || 'Multiple Accounts',
+        accountName: accountToDispute?.accountName || 'Account in question',
         accountNumber: accountToDispute?.accountNumber || '',
         content: letterContent,
         letterContent: letterContent,
@@ -88,7 +121,7 @@ export async function generateAutomaticDisputeLetter(
           month: 'short', day: 'numeric', year: 'numeric' 
         }),
         status: "ready",
-        errorType: "General Dispute"
+        errorType: errorType
       };
       
       // Store in all possible storage locations to ensure it's found

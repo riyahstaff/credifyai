@@ -31,6 +31,16 @@ export const useReportStorage = () => {
       if (targetAccount) {
         localStorage.setItem('disputeTargetAccount', JSON.stringify(targetAccount));
         sessionStorage.setItem('disputeTargetAccount', JSON.stringify(targetAccount));
+        console.log("Target account stored:", targetAccount.accountName);
+      } else {
+        console.warn("No target account provided for dispute");
+        // If report has accounts, store the first one as default target
+        if (reportData.accounts && reportData.accounts.length > 0) {
+          const defaultAccount = reportData.accounts[0];
+          localStorage.setItem('disputeTargetAccount', JSON.stringify(defaultAccount));
+          sessionStorage.setItem('disputeTargetAccount', JSON.stringify(defaultAccount));
+          console.log("Using first account as default target:", defaultAccount.accountName);
+        }
       }
       
       // Set a timestamp for when the data was stored
@@ -38,14 +48,17 @@ export const useReportStorage = () => {
       localStorage.setItem('reportStorageTime', timestamp);
       sessionStorage.setItem('reportStorageTime', timestamp);
       
-      // Set flag for letter generation
+      // Set flags for letter generation
       sessionStorage.setItem('reportReadyForLetters', 'true');
-      
-      // Set flag to force letter generation
       sessionStorage.setItem('forceLetterGeneration', 'true');
-      
-      // Set navigation flag
       sessionStorage.setItem('shouldNavigateToLetters', 'true');
+      sessionStorage.setItem('reportAnalyzed', 'true');
+      sessionStorage.setItem('analysisComplete', 'true');
+      
+      // Set account count flag to indicate the report has accounts
+      if (reportData.accounts) {
+        sessionStorage.setItem('reportAccountCount', reportData.accounts.length.toString());
+      }
       
       console.log("Successfully stored report data for dispute generation");
       return true;
@@ -85,6 +98,7 @@ export const useReportStorage = () => {
     sessionStorage.removeItem('currentReportAnalysis');
     sessionStorage.removeItem('reportIssues');
     sessionStorage.removeItem('reportReadyForLetters');
+    sessionStorage.removeItem('reportAccountCount');
     
     console.log("Cleared all stored report data");
   }, []);
@@ -94,6 +108,7 @@ export const useReportStorage = () => {
     sessionStorage.setItem('reportReadyForLetters', 'true');
     sessionStorage.setItem('forceLetterGeneration', 'true');
     sessionStorage.setItem('shouldNavigateToLetters', 'true');
+    sessionStorage.setItem('analysisComplete', 'true');
     
     console.log("Report prepared for letter generation, flags set");
     
