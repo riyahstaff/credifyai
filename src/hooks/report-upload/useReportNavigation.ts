@@ -32,8 +32,8 @@ export const useReportNavigation = () => {
     // Check flag initially
     checkNavigationFlag();
     
-    // Set up interval to check flag periodically (every 1 second)
-    const intervalId = setInterval(checkNavigationFlag, 1000);
+    // Set up interval to check flag periodically (every 500ms for faster response)
+    const intervalId = setInterval(checkNavigationFlag, 500);
     
     // Add event listener for custom navigation event
     const handleCustomNavigationEvent = (e: any) => {
@@ -72,7 +72,7 @@ export const useReportNavigation = () => {
     setTimeout(() => {
       console.log("DIRECT NAVIGATION: Redirecting to dispute letters page");
       window.location.href = '/dispute-letters';
-    }, 1000);
+    }, 500); // Reduced timeout for faster response
     
     toast({
       title: "Generating Letters",

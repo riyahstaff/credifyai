@@ -36,10 +36,11 @@ export const useReportStorage = () => {
         console.warn("No target account provided for dispute");
         // If report has accounts, store the first one as default target
         if (reportData.accounts && reportData.accounts.length > 0) {
-          const defaultAccount = reportData.accounts[0];
-          localStorage.setItem('disputeTargetAccount', JSON.stringify(defaultAccount));
-          sessionStorage.setItem('disputeTargetAccount', JSON.stringify(defaultAccount));
-          console.log("Using first account as default target:", defaultAccount.accountName);
+          // Try to find an account with issues first instead of just the first one
+          const problematicAccount = findProblematicAccount(reportData.accounts);
+          localStorage.setItem('disputeTargetAccount', JSON.stringify(problematicAccount));
+          sessionStorage.setItem('disputeTargetAccount', JSON.stringify(problematicAccount));
+          console.log("Using account with issues as target:", problematicAccount.accountName);
         }
       }
       
@@ -48,7 +49,7 @@ export const useReportStorage = () => {
       localStorage.setItem('reportStorageTime', timestamp);
       sessionStorage.setItem('reportStorageTime', timestamp);
       
-      // Set flags for letter generation
+      // Set flags for letter generation - set these IMMEDIATELY to prevent race conditions
       sessionStorage.setItem('reportReadyForLetters', 'true');
       sessionStorage.setItem('forceLetterGeneration', 'true');
       sessionStorage.setItem('shouldNavigateToLetters', 'true');
@@ -114,6 +115,56 @@ export const useReportStorage = () => {
     
     return checkPendingLetters();
   }, [checkPendingLetters]);
+
+  /**
+   * Find an account with potential issues for disputing
+   */
+  function findProblematicAccount(accounts: CreditReportAccount[]): CreditReportAccount {
+    // First try to find accounts with negative statuses
+    const negativeStatusAccount = accounts.find(account => {
+      const status = (account.paymentStatus || account.status || '').toLowerCase();
+      return status.includes('late') || 
+            status.includes('past due') || 
+            status.includes('delinq') || 
+            status.includes('charge') || 
+            status.includes('collection');
+    });
+    
+    if (negativeStatusAccount) {
+      return negativeStatusAccount;
+    }
+    
+    // Next look for collection agencies or debt buyers
+    const collectionAccount = accounts.find(account => {
+      const name = (account.accountName || '').toLowerCase();
+      return name.includes('collect') || 
+            name.includes('recovery') || 
+            name.includes('asset') || 
+            name.includes('portfolio') ||
+            name.includes('lvnv') ||
+            name.includes('midland');
+    });
+    
+    if (collectionAccount) {
+      return collectionAccount;
+    }
+    
+    // Next look for accounts with high balances
+    const accountsWithBalance = accounts
+      .filter(a => a.balance || a.currentBalance)
+      .sort((a, b) => {
+        const balA = parseFloat(String(a.balance || a.currentBalance || 0));
+        const balB = parseFloat(String(b.balance || b.currentBalance || 0));
+        return balB - balA; // Descending order
+      });
+      
+    if (accountsWithBalance.length > 0) {
+      return accountsWithBalance[0];
+    }
+    
+    // Just return the first account if nothing else is found
+    return accounts[0];
+  }
   
   return {
     storeForDispute,

@@ -1,5 +1,5 @@
 
-import { CreditReportData, UserInfo } from '@/utils/creditReport/types';
+import { CreditReportData, UserInfo, CreditReportAccount } from '@/utils/creditReport/types';
 import { UserInfo as LetterUserInfo } from '@/utils/creditReport/types/letterTypes';
 import { generateEnhancedDisputeLetter } from '@/utils/creditReport/disputeLetters';
 
@@ -30,25 +30,41 @@ export async function generateAutomaticDisputeLetter(
       return "Error: No accounts found in credit report to dispute.";
     }
     
-    // Find the account to dispute if specified
-    let accountToDispute = undefined;
+    // Find the specific account to dispute
+    let accountToDispute: CreditReportAccount | undefined;
     
     if (accountName && creditReportData.accounts) {
+      // Try to find the exact account by name
       accountToDispute = creditReportData.accounts.find(
         account => account.accountName === accountName
       );
       
       if (!accountToDispute) {
+        // Try case-insensitive match
+        accountToDispute = creditReportData.accounts.find(
+          account => account.accountName.toLowerCase() === accountName.toLowerCase()
+        );
+      }
+      
+      if (!accountToDispute) {
+        // Try fuzzy match (contains)
+        accountToDispute = creditReportData.accounts.find(
+          account => account.accountName.toLowerCase().includes(accountName.toLowerCase())
+        );
+      }
+      
+      if (!accountToDispute) {
         console.warn(`Account "${accountName}" not found in credit report accounts`);
-        accountToDispute = creditReportData.accounts[0]; // Default to first account
-        console.log("Using first account instead:", accountToDispute.accountName);
+        // Find a problematic account instead of using the first one
+        accountToDispute = findProblematicAccount(creditReportData.accounts);
+        console.log("Using problematic account instead:", accountToDispute?.accountName);
       } else {
         console.log(`Found account to dispute:`, accountToDispute.accountName);
       }
     } else if (creditReportData.accounts && creditReportData.accounts.length > 0) {
-      // If no account specified, use the first account
-      accountToDispute = creditReportData.accounts[0];
-      console.log("No account specified, using first account:", accountToDispute.accountName);
+      // If no account specified, find one with issues
+      accountToDispute = findProblematicAccount(creditReportData.accounts);
+      console.log("No account specified, using account with issues:", accountToDispute?.accountName);
     }
     
     // Get primary bureau from credit report
@@ -68,25 +84,8 @@ export async function generateAutomaticDisputeLetter(
       zip: userInfo?.zip || getUserZipFromStorage() || ''
     };
     
-    let errorType = "General Dispute";
-    let errorDescription = "This information appears to be inaccurate on my credit report.";
-    
-    // If we have an actual account, create a more specific dispute
-    if (accountToDispute) {
-      // Check account status to determine error type
-      if (accountToDispute.paymentStatus?.toLowerCase().includes('late') || 
-          accountToDispute.status?.toLowerCase().includes('late')) {
-        errorType = "Late Payment";
-        errorDescription = "I have never been late on this account. This information is inaccurate and must be verified.";
-      } else if (accountToDispute.accountType?.toLowerCase().includes('collection') || 
-                accountToDispute.accountName?.toLowerCase().includes('collect')) {
-        errorType = "Collection Account";
-        errorDescription = "This collection account is disputed as inaccurate. I do not recognize this debt and it cannot be verified as belonging to me.";
-      } else {
-        errorType = "Account Information Error";
-        errorDescription = "The information reported for this account contains errors and should be investigated.";
-      }
-    }
+    // Analyze account to determine specific dispute reasons
+    const { errorType, errorDescription } = analyzeAccountForDispute(accountToDispute);
     
     console.log(`Creating dispute letter for ${errorType}: ${errorDescription}`);
     
@@ -150,6 +149,134 @@ export async function generateAutomaticDisputeLetter(
     console.error("Error generating automatic dispute letter:", error);
     return "Error generating dispute letter. Please try again.";
   }
+}
+
+/**
+ * Find an account with potential issues for disputing
+ */
+function findProblematicAccount(accounts: CreditReportAccount[]): CreditReportAccount {
+  // First try to find accounts with negative statuses
+  const negativeStatusAccount = accounts.find(account => {
+    const status = (account.paymentStatus || account.status || '').toLowerCase();
+    return status.includes('late') || 
+           status.includes('past due') || 
+           status.includes('delinq') || 
+           status.includes('charge') || 
+           status.includes('collection');
+  });
+  
+  if (negativeStatusAccount) {
+    return negativeStatusAccount;
+  }
+  
+  // Next look for collection agencies or debt buyers
+  const collectionAccount = accounts.find(account => {
+    const name = (account.accountName || '').toLowerCase();
+    return name.includes('collect') || 
+           name.includes('recovery') || 
+           name.includes('asset') || 
+           name.includes('portfolio') ||
+           name.includes('lvnv') ||
+           name.includes('midland');
+  });
+  
+  if (collectionAccount) {
+    return collectionAccount;
+  }
+  
+  // Next look for accounts with high balances
+  const accountsWithBalance = accounts
+    .filter(a => a.balance || a.currentBalance)
+    .sort((a, b) => {
+      const balA = parseFloat(String(a.balance || a.currentBalance || 0));
+      const balB = parseFloat(String(b.balance || b.currentBalance || 0));
+      return balB - balA; // Descending order
+    });
+    
+  if (accountsWithBalance.length > 0) {
+    return accountsWithBalance[0];
+  }
+  
+  // Just return the first account if nothing else is found
+  return accounts[0];
+}
+
+/**
+ * Analyze an account to determine specific dispute reasons
+ */
+function analyzeAccountForDispute(account?: CreditReportAccount): { errorType: string; errorDescription: string } {
+  if (!account) {
+    return {
+      errorType: "Account Information Error",
+      errorDescription: "This account contains unverifiable information that requires investigation."
+    };
+  }
+  
+  const accountName = account.accountName?.toLowerCase() || '';
+  const status = (account.paymentStatus || account.status || '').toLowerCase();
+  
+  // Check for collection accounts
+  if (accountName.includes('collect') || 
+      accountName.includes('recovery') || 
+      accountName.includes('asset') || 
+      status.includes('collection')) {
+    
+    return {
+      errorType: "Collection Account Dispute",
+      errorDescription: "I am disputing this collection account as it contains inaccurate information. " +
+        "Under the Fair Credit Reporting Act (FCRA), I request validation that this debt belongs to me, " +
+        "including proof of the original debt, a copy of the signed contract, and verification of your " +
+        "legal right to collect this debt. Without complete verification, this account must be removed from my report."
+    };
+  }
+  
+  // Check for late payments
+  if (status.includes('late') || 
+      status.includes('past due') || 
+      status.includes('delinq')) {
+    
+    return {
+      errorType: "Late Payment Dispute",
+      errorDescription: "I am disputing the late payment notation on this account as inaccurate. " +
+        "Under FCRA Section 611, I maintain that my payment history has been reported incorrectly. " +
+        "I have always made payments on time or this represents an isolated incident that does not " +
+        "accurately reflect my payment history. Please verify this information with the creditor " +
+        "and remove any inaccurate late payment remarks."
+    };
+  }
+  
+  // Check for charged off accounts
+  if (status.includes('charge') || status.includes('charged off')) {
+    return {
+      errorType: "Charge-Off Dispute",
+      errorDescription: "I am disputing this charge-off as it contains inaccurate information. " +
+        "Under the Fair Credit Reporting Act, I request verification of the full account history, " +
+        "including original creditor information, account opening date, and complete payment history. " +
+        "Additionally, I dispute the balance reported as it may not reflect payments made or other adjustments."
+    };
+  }
+  
+  // Check for high balance accounts
+  const balance = parseFloat(String(account.balance || account.currentBalance || 0));
+  if (balance > 5000) {
+    return {
+      errorType: "Balance Dispute",
+      errorDescription: "I am disputing the balance reported for this account as it is inaccurate. " +
+        "The current balance shown does not reflect my actual financial obligation. " +
+        "Under the FCRA, I request verification of the complete payment history and a detailed " +
+        "accounting of how the current balance was calculated. This information may include " +
+        "unauthorized fees or charges that should be removed."
+    };
+  }
+  
+  // Default dispute reason
+  return {
+    errorType: "Account Information Error",
+    errorDescription: "The information reported for this account contains errors that must be investigated. " +
+      "Under Section 611 of the Fair Credit Reporting Act, I request a complete verification of all account " +
+      "details including account status, balance information, payment history, and account terms. " +
+      "Any information that cannot be properly verified must be promptly corrected or deleted."
+  };
 }
 
 // Helper functions to get user info from storage
