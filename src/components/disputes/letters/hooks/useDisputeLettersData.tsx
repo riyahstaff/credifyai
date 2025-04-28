@@ -61,7 +61,7 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
             description: "We couldn't load your dispute letters. Please try refreshing the page.",
           });
         }
-      }, 5000); // 5 second timeout
+      }, 3000); // 3 second timeout - reduced from 5s
       
       return () => clearTimeout(timeoutId);
     }
@@ -94,7 +94,7 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
                 }),
                 status: letter.status || 'draft',
                 bureaus: letter.bureaus || [letter.bureau || 'Unknown'],
-                content: letter.letterContent || letter.content,
+                content: letter.letterContent || letter.content || "",
                 accountName: letter.accountName,
                 accountNumber: letter.accountNumber,
                 errorType: letter.errorType
@@ -137,7 +137,7 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
               }),
               status: pendingLetter.status || 'draft',
               bureaus: pendingLetter.bureaus || [pendingLetter.bureau || 'Unknown'],
-              content: pendingLetter.letterContent || pendingLetter.content,
+              content: pendingLetter.letterContent || pendingLetter.content || "",
               accountName: pendingLetter.accountName,
               accountNumber: pendingLetter.accountNumber,
               errorType: pendingLetter.errorType

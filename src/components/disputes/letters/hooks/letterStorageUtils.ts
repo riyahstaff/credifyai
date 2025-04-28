@@ -7,7 +7,7 @@
 export interface Letter {
   id: number | string;
   title: string;
-  bureau: string;
+  bureau?: string;
   accountName: string;
   accountNumber?: string;
   content: string;

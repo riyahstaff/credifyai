@@ -15,6 +15,6 @@ export type { Letter };
  * This exists only for backward compatibility
  */
 export const getSampleLetters = (): Letter[] => {
-  console.log("REMOVED: getSampleLetters called but returns empty array - NO MOCK DATA");
+  console.log("getSampleLetters called but returns empty array - NO MOCK DATA");
   return [];
 };

@@ -19,16 +19,8 @@ const DisputeLetters = () => {
     console.log("DisputeLetters page: User auth state:", user ? "Logged in" : "Not logged in");
     
     const loadLetters = async () => {
+      // Start the loading process
       setIsLoading(true);
-      
-      // Store profile data in localStorage for letter generation if not already done in AuthProvider
-      if (profile) {
-        localStorage.setItem('userProfile', JSON.stringify(profile));
-        
-        if (profile.full_name) {
-          localStorage.setItem('userName', profile.full_name);
-        }
-      }
       
       // First check if we already have letters in session storage
       const sessionLetters = sessionStorage.getItem('generatedDisputeLetters');
@@ -40,7 +32,24 @@ const DisputeLetters = () => {
         return;
       }
       
-      // If no letters in session storage, try to get them from the backend
+      // Store profile data in localStorage for letter generation if not already done in AuthProvider
+      if (profile) {
+        localStorage.setItem('userProfile', JSON.stringify(profile));
+        
+        if (profile.full_name) {
+          localStorage.setItem('userName', profile.full_name);
+        }
+      }
+      
+      // Force completion of loading after 3 seconds max to prevent permanent stuck state
+      setTimeout(() => {
+        if (isLoading) {
+          console.log("[DisputeLetters] Forcing loading to complete after timeout");
+          setIsLoading(false);
+        }
+      }, 3000);
+      
+      // Try to get letters from the backend only if we don't have them in session storage
       if (user) {
         try {
           console.log("[DisputeLetters] Fetching letters from backend");
@@ -74,6 +83,7 @@ const DisputeLetters = () => {
         checkPendingLetter();
       }
       
+      // Always complete loading even if we don't find any letters
       setIsLoading(false);
     };
     
