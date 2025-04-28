@@ -36,6 +36,34 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
   const location = useLocation();
   const [profile, setProfile] = useState<Profile | undefined>(undefined);
   
+  // Define the loadSampleLetters function that was referenced but not found
+  const loadSampleLetters = () => {
+    console.log("Loading sample letters as fallback");
+    
+    const sampleLetters: Letter[] = [
+      {
+        id: 1,
+        title: 'Sample Dispute Letter',
+        recipient: 'Experian',
+        createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        status: 'ready',
+        bureaus: ['Experian'],
+        content: `Dear Experian,\n\nI am writing to dispute information in my credit report that I believe to be inaccurate. Under the Fair Credit Reporting Act, I request that you investigate and correct the following item:\n\nAccount: Capital One\nReason for dispute: This account does not belong to me.\n\nPlease investigate this matter and update my credit report accordingly.\n\nSincerely,\n[Your Name]`,
+        accountName: 'Capital One',
+        errorType: 'Identity Theft'
+      }
+    ];
+    
+    setLetters(sampleLetters);
+    setSelectedLetter(sampleLetters[0]);
+    setIsLoading(false);
+    
+    toast({
+      title: "Sample Letter Created",
+      description: "We've created a sample dispute letter for you to review.",
+    });
+  };
+  
   // Load user profile if available
   useEffect(() => {
     try {
@@ -184,36 +212,8 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
       }
     };
     
-    // Function to load sample letters as fallback
-    const loadSampleLetters = () => {
-      console.log("Loading sample letters as fallback");
-      
-      const sampleLetters: Letter[] = [
-        {
-          id: 1,
-          title: 'Sample Dispute Letter',
-          recipient: 'Experian',
-          createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          status: 'ready',
-          bureaus: ['Experian'],
-          content: `Dear Experian,\n\nI am writing to dispute information in my credit report that I believe to be inaccurate. Under the Fair Credit Reporting Act, I request that you investigate and correct the following item:\n\nAccount: Capital One\nReason for dispute: This account does not belong to me.\n\nPlease investigate this matter and update my credit report accordingly.\n\nSincerely,\n[Your Name]`,
-          accountName: 'Capital One',
-          errorType: 'Identity Theft'
-        }
-      ];
-      
-      setLetters(sampleLetters);
-      setSelectedLetter(sampleLetters[0]);
-      setIsLoading(false);
-      
-      toast({
-        title: "Sample Letter Created",
-        description: "We've created a sample dispute letter for you to review.",
-      });
-    };
-    
     loadLetters();
-  }, [toast, testMode, location.pathname, selectedLetter]);
+  }, [toast, testMode, location.pathname]);
   
   // Function to add a new letter
   const addLetter = (newLetter: Letter) => {

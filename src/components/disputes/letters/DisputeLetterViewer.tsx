@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Letter } from './hooks/sampleLettersData';
+import { Letter } from './hooks/useDisputeLettersData';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Download, Mail, Printer, Edit, Check } from 'lucide-react';
@@ -28,7 +28,7 @@ const DisputeLetterViewer: React.FC<DisputeLetterViewerProps> = ({
   // Initialize the editor with letter content when a letter is selected
   React.useEffect(() => {
     if (letter) {
-      setLetterContent(letter.content || letter.letterContent || '');
+      setLetterContent(letter.content || '');
     }
   }, [letter]);
 
@@ -37,7 +37,7 @@ const DisputeLetterViewer: React.FC<DisputeLetterViewerProps> = ({
     if (!letter) return '';
     
     // Replace line breaks with HTML breaks
-    const content = letter.content || letter.letterContent || '';
+    const content = letter.content || '';
     return content
       .replace(/\n/g, '<br/>')
       .replace(/\[YOUR NAME\]/g, userProfile?.full_name || '[YOUR NAME]')
@@ -48,8 +48,8 @@ const DisputeLetterViewer: React.FC<DisputeLetterViewerProps> = ({
   const handleLetterDownload = () => {
     if (!letter) return;
     
-    const letterText = letter.content || letter.letterContent || '';
-    const fileName = `dispute-letter-${letter.bureau || 'bureau'}-${new Date().toISOString().slice(0, 10)}.txt`;
+    const letterText = letter.content || '';
+    const fileName = `dispute-letter-${letter.bureaus[0] || 'bureau'}-${new Date().toISOString().slice(0, 10)}.txt`;
     
     const blob = new Blob([letterText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -70,7 +70,7 @@ const DisputeLetterViewer: React.FC<DisputeLetterViewerProps> = ({
     const printContent = `
       <html>
         <head>
-          <title>Dispute Letter - ${letter.bureau || 'Credit Bureau'}</title>
+          <title>Dispute Letter - ${letter.bureaus[0] || 'Credit Bureau'}</title>
           <style>
             body {
               font-family: Arial, sans-serif;
@@ -140,7 +140,7 @@ const DisputeLetterViewer: React.FC<DisputeLetterViewerProps> = ({
             {letter.title || 'Dispute Letter'}
           </h3>
           <p className="text-sm text-credify-navy-light dark:text-white/60">
-            {letter.bureaus?.map((bureau) => bureau).join(', ') || letter.bureau || 'Credit Bureau'} - {letter.createdAt || 'No date'}
+            {letter.bureaus?.map((bureau) => bureau).join(', ') || 'Credit Bureau'} - {letter.createdAt || 'No date'}
           </p>
         </div>
         
@@ -219,7 +219,7 @@ const DisputeLetterViewer: React.FC<DisputeLetterViewerProps> = ({
             />
           ) : (
             <pre className="w-full h-full p-6 text-sm font-mono bg-gray-50 dark:bg-gray-900/50 text-credify-navy dark:text-white/90 overflow-auto">
-              {letter.content || letter.letterContent || ''}
+              {letter.content || ''}
             </pre>
           )}
         </TabsContent>
