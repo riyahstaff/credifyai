@@ -98,7 +98,20 @@ export async function generateAutomaticDisputeLetter(
       sessionStorage.setItem('generatedDisputeLetters', JSON.stringify([letterObject]));
       sessionStorage.setItem('hasDisputeLetters', 'true');
       
+      // Important - set navigation flag
+      sessionStorage.setItem('shouldNavigateToLetters', 'true');
+      
       console.log("Auto-generated letter saved to storage");
+      
+      // Dispatch custom event for navigation
+      try {
+        const event = new CustomEvent('navigateToLetters', { 
+          detail: { navigateTo: 'letters' } 
+        });
+        window.dispatchEvent(event);
+      } catch (e) {
+        console.error("Error dispatching navigation event:", e);
+      }
       
       // Trigger navigation event
       console.log("ANALYSIS_COMPLETE_READY_FOR_NAVIGATION");

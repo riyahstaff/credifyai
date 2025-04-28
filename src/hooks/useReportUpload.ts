@@ -96,6 +96,9 @@ export const useReportUpload = () => {
           description: "Your dispute letter has been generated. You'll be redirected to review it.",
         });
         
+        // Important: Store flag to trigger navigation
+        sessionStorage.setItem('shouldNavigateToLetters', 'true');
+        
         // Trigger event for automatic navigation
         console.log("ANALYSIS_COMPLETE_READY_FOR_NAVIGATION");
         return true;
