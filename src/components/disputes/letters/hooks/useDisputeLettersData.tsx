@@ -1,366 +1,270 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/auth';
-import { useToast } from '@/hooks/use-toast';
-import {
-  loadLettersFromStorage,
-  saveLettersToStorage,
-  addLetterToStorage
-} from './letterStorageUtils';
-import { supabase } from '@/integrations/supabase/client';
 
-// Export the Letter interface/type separately so it can be imported elsewhere
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import { Profile } from '@/lib/supabase/client';
+
 export interface Letter {
-  id: number | string;
+  id: number;
   title: string;
-  bureau: string;
-  accountName: string;
-  accountNumber?: string;
-  content: string;
-  letterContent?: string; // For compatibility
+  recipient: string;
   createdAt: string;
   status: string;
+  bureaus: string[];
+  content: string;
+  accountName?: string;
+  accountNumber?: string;
   errorType?: string;
-  recipient: string;
-  bureaus: string[]; // Required property for compatibility
 }
 
-/**
- * Hook to manage dispute letter data
- */
-export function useDisputeLettersData(testMode: boolean = false) {
-  const { user, profile } = useAuth();
-  const { toast } = useToast();
-  
+export interface UseDisputeLettersDataReturn {
+  letters: Letter[];
+  setLetters: (letters: Letter[]) => void;
+  addLetter: (letter: Letter) => void;
+  selectedLetter: Letter | null;
+  setSelectedLetter: (letter: Letter | null) => void;
+  isLoading: boolean;
+  profile?: Profile;
+  saveLetter?: (letter: Letter) => Promise<boolean>;
+}
+
+export function useDisputeLettersData(testMode: boolean = false): UseDisputeLettersDataReturn {
   const [letters, setLetters] = useState<Letter[]>([]);
   const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadAttempt, setLoadAttempt] = useState(0);
-  const [loadingTimeoutId, setLoadingTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const { toast } = useToast();
+  const location = useLocation();
+  const [profile, setProfile] = useState<Profile | undefined>(undefined);
   
-  // Effect to load letters on mount
+  // Load user profile if available
   useEffect(() => {
-    // Prevent double-loading or infinite loops
-    if (loadAttempt > 3) {
-      console.log("Too many load attempts, stopping attempts to load letters");
-      setIsLoading(false);
-      return;
+    try {
+      const profileData = localStorage.getItem('userProfile');
+      if (profileData) {
+        setProfile(JSON.parse(profileData));
+      }
+    } catch (error) {
+      console.error("Error loading user profile:", error);
     }
-    
-    // Set a timeout to prevent infinite loading state
-    const timeoutId = setTimeout(() => {
-      if (isLoading) {
-        console.log("Loading timeout reached in hook, transitioning to non-loading state");
+  }, []);
+  
+  // Force exit loading state after 10 seconds - this is our failsafe
+  useEffect(() => {
+    if (isLoading) {
+      const timeoutId = setTimeout(() => {
+        console.log("Forcing exit from loading state after timeout");
         setIsLoading(false);
         
-        toast({
-          title: "Loading Timeout",
-          description: "Unable to load letters after multiple attempts. Please try creating a new letter.",
-          variant: "destructive",
-        });
-      }
-    }, 15000); // 15 seconds timeout
-    
-    setLoadingTimeoutId(timeoutId);
-    
+        // Check if we still have no letters and show message
+        if (letters.length === 0) {
+          toast({
+            title: "Loading timeout reached",
+            description: "We couldn't load your dispute letters. Please try refreshing the page or creating a new letter.",
+          });
+          
+          // Try to load sample letters as fallback
+          loadSampleLetters();
+        }
+      }, 10000); // 10 second timeout
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isLoading, letters.length, toast]);
+
+  // Load letters from storage on component mount
+  useEffect(() => {
     const loadLetters = async () => {
       try {
-        console.log("Loading letters from storage, user:", user?.id, "profile:", profile?.id, "attempt:", loadAttempt);
+        setIsLoading(true);
+        console.log("Loading dispute letters...");
         
-        // Check if we should reload based on the forceLettersReload flag
-        const forceReload = sessionStorage.getItem('forceLettersReload');
-        if (forceReload === 'true') {
-          console.log("Force reload flag detected, clearing cached letters");
-          // Clear the flag so it doesn't cause infinite reloads
-          sessionStorage.setItem('forceLettersReload', 'done');
-        }
+        // First check session storage for automatically generated letters
+        const generatedLettersJSON = sessionStorage.getItem('generatedDisputeLetters');
+        const pendingLetterJSON = sessionStorage.getItem('pendingDisputeLetter');
         
-        // Check if we should load from Supabase
-        if (user?.id && !testMode) {
-          console.log("Attempting to load letters from Supabase for user:", user.id);
-          
+        if (generatedLettersJSON) {
           try {
-            const { data: dbLetters, error } = await supabase
-              .from('dispute_letters')
-              .select('*')
-              .eq('userId', user.id)
-              .order('createdAt', { ascending: false });
+            const parsedLetters = JSON.parse(generatedLettersJSON);
+            if (Array.isArray(parsedLetters) && parsedLetters.length > 0) {
+              console.log(`Found ${parsedLetters.length} generated letters in session storage`);
               
-            if (error) {
-              console.error("Error loading letters from Supabase:", error);
-              throw error;
-            }
-            
-            if (dbLetters && dbLetters.length > 0) {
-              console.log("Successfully loaded letters from Supabase:", dbLetters.length);
-              
-              // Format letters to match our interface
-              const formattedLetters: Letter[] = dbLetters.map(letter => ({
-                id: letter.id,
-                title: letter.title,
-                bureau: letter.bureau,
-                accountName: letter.accountName || '',
-                accountNumber: letter.accountNumber || '',
-                content: letter.letterContent || letter.content,
-                letterContent: letter.content || letter.letterContent,
-                createdAt: new Date(letter.createdAt).toLocaleDateString('en-US', {
-                  month: 'short', day: 'numeric', year: 'numeric'
+              // Transform the letters to match our Letter interface
+              const formattedLetters = parsedLetters.map((letter, index) => ({
+                id: letter.id || Date.now() + index,
+                title: letter.title || `${letter.errorType || 'Dispute'} (${letter.accountName || 'Account'})`,
+                recipient: letter.bureau || letter.recipient || 'Credit Bureau',
+                createdAt: letter.createdAt || new Date().toLocaleDateString('en-US', { 
+                  month: 'short', day: 'numeric', year: 'numeric' 
                 }),
-                status: letter.status,
-                errorType: letter.errorType,
-                recipient: letter.bureau,
-                bureaus: [letter.bureau]
+                status: letter.status || 'draft',
+                bureaus: letter.bureaus || [letter.bureau || 'Unknown'],
+                content: letter.letterContent || letter.content,
+                accountName: letter.accountName,
+                accountNumber: letter.accountNumber,
+                errorType: letter.errorType
               }));
               
               setLetters(formattedLetters);
               
+              // Set first letter as selected by default
               if (formattedLetters.length > 0 && !selectedLetter) {
                 setSelectedLetter(formattedLetters[0]);
               }
               
+              // Toast notification about loaded letters
+              toast({
+                title: testMode ? "Test Letters Loaded" : "Dispute Letters Loaded",
+                description: `${formattedLetters.length} dispute ${formattedLetters.length === 1 ? 'letter has' : 'letters have'} been loaded${testMode ? ' in test mode' : ''}.`,
+                duration: 5000,
+              });
+              
               setIsLoading(false);
               return;
-            } else {
-              console.log("No letters found in Supabase, falling back to session storage");
             }
           } catch (error) {
-            console.error("Error in Supabase letter lookup:", error);
-            // Continue to local storage as fallback
+            console.error("Error parsing generated letters:", error);
+          }
+        } 
+        
+        // If we don't have multiple letters, check for a single pending letter
+        if (pendingLetterJSON) {
+          try {
+            const pendingLetter = JSON.parse(pendingLetterJSON);
+            console.log("Found pending letter in session storage");
+            
+            // Create formatted letter
+            const formattedLetter = {
+              id: pendingLetter.id || Date.now(),
+              title: pendingLetter.title || `${pendingLetter.errorType || 'Dispute'} (${pendingLetter.accountName || 'Account'})`,
+              recipient: pendingLetter.bureau || pendingLetter.recipient || 'Credit Bureau',
+              createdAt: pendingLetter.createdAt || new Date().toLocaleDateString('en-US', { 
+                month: 'short', day: 'numeric', year: 'numeric' 
+              }),
+              status: pendingLetter.status || 'draft',
+              bureaus: pendingLetter.bureaus || [pendingLetter.bureau || 'Unknown'],
+              content: pendingLetter.letterContent || pendingLetter.content,
+              accountName: pendingLetter.accountName,
+              accountNumber: pendingLetter.accountNumber,
+              errorType: pendingLetter.errorType
+            };
+            
+            setLetters([formattedLetter]);
+            setSelectedLetter(formattedLetter);
+            
+            // Toast notification
+            toast({
+              title: testMode ? "Test Letter Loaded" : "Dispute Letter Loaded",
+              description: "Your dispute letter has been loaded from session storage.",
+              duration: 5000,
+            });
+            
+            setIsLoading(false);
+            return;
+          } catch (error) {
+            console.error("Error parsing pending letter:", error);
           }
         }
         
-        // Fallback to local storage
-        const loadedLetters = await loadLettersFromStorage();
-        console.log("Loaded letters from local storage:", loadedLetters.length);
+        // If no letters found, try loading sample letters
+        loadSampleLetters();
         
-        // Set letters state
-        setLetters(loadedLetters);
-        
-        // Select the first letter if available
-        if (loadedLetters.length > 0 && !selectedLetter) {
-          setSelectedLetter(loadedLetters[0]);
-        }
-        
-        // If no letters found after 2 attempts, try creating a sample letter for demo
-        if (loadedLetters.length === 0 && loadAttempt >= 2 && testMode) {
-          console.log("No letters found after multiple attempts, creating sample letter for demo");
-          const sampleLetter: Letter = {
-            id: Date.now(),
-            title: "Sample Dispute Letter",
-            bureau: "Experian",
-            accountName: "Sample Account",
-            accountNumber: "1234567890",
-            content: "This is a sample dispute letter for demonstration purposes.",
-            createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            status: "draft",
-            errorType: "Sample",
-            recipient: "Experian",
-            bureaus: ["Experian"]
-          };
-          
-          setLetters([sampleLetter]);
-          setSelectedLetter(sampleLetter);
-          await addLetterToStorage(sampleLetter);
-        }
       } catch (error) {
-        console.error("Error loading letters:", error);
-        
-        if (loadAttempt < 3) {
-          // Increment attempt counter and try again if we still have attempts left
-          setLoadAttempt(prev => prev + 1);
-        } else {
-          toast({
-            title: "Error Loading Letters",
-            description: "Failed to load dispute letters after multiple attempts. Please try creating a new letter.",
-            variant: "destructive",
-          });
-        }
-      } finally {
+        console.error("Error loading dispute letters:", error);
+        setLetters([]);
         setIsLoading(false);
+        
+        toast({
+          title: "Error Loading Letters",
+          description: "There was a problem loading your dispute letters.",
+          variant: "destructive",
+        });
+        
+        // Load sample letters as fallback
+        loadSampleLetters();
       }
+    };
+    
+    // Function to load sample letters as fallback
+    const loadSampleLetters = () => {
+      console.log("Loading sample letters as fallback");
+      
+      const sampleLetters: Letter[] = [
+        {
+          id: 1,
+          title: 'Sample Dispute Letter',
+          recipient: 'Experian',
+          createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          status: 'ready',
+          bureaus: ['Experian'],
+          content: `Dear Experian,\n\nI am writing to dispute information in my credit report that I believe to be inaccurate. Under the Fair Credit Reporting Act, I request that you investigate and correct the following item:\n\nAccount: Capital One\nReason for dispute: This account does not belong to me.\n\nPlease investigate this matter and update my credit report accordingly.\n\nSincerely,\n[Your Name]`,
+          accountName: 'Capital One',
+          errorType: 'Identity Theft'
+        }
+      ];
+      
+      setLetters(sampleLetters);
+      setSelectedLetter(sampleLetters[0]);
+      setIsLoading(false);
+      
+      toast({
+        title: "Sample Letter Created",
+        description: "We've created a sample dispute letter for you to review.",
+      });
     };
     
     loadLetters();
-    
-    // Clear timeout on unmount
-    return () => {
-      if (loadingTimeoutId) {
-        clearTimeout(loadingTimeoutId);
-      }
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [user, profile, toast, testMode, loadAttempt, selectedLetter]);
-
+  }, [toast, testMode, location.pathname, selectedLetter]);
+  
   // Function to add a new letter
-  const addLetter = async (letterData: any) => {
+  const addLetter = (newLetter: Letter) => {
+    setLetters(prevLetters => {
+      const updatedLetters = [...prevLetters, newLetter];
+      try {
+        sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(updatedLetters));
+      } catch (error) {
+        console.error("Error storing updated letters:", error);
+      }
+      return updatedLetters;
+    });
+    
+    // Auto-select the new letter
+    setSelectedLetter(newLetter);
+  };
+  
+  // Function to save changes to letters
+  const updateLetters = (updatedLetters: Letter[]) => {
+    setLetters(updatedLetters);
     try {
-      // Create a new letter object
-      const newLetter: Letter = {
-        id: Date.now(),
-        title: letterData.title || "Credit Report Dispute",
-        bureau: letterData.bureau || "Credit Bureau",
-        accountName: letterData.accountName || "Multiple Accounts",
-        accountNumber: letterData.accountNumber || "",
-        content: letterData.content || letterData.letterContent || "",
-        letterContent: letterData.letterContent || letterData.content || "",
-        createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        status: "ready",
-        errorType: letterData.errorType || "General Dispute",
-        recipient: letterData.recipient || letterData.bureau || "Credit Bureau",
-        bureaus: letterData.bureaus || [letterData.bureau || "Credit Bureau"],
-      };
-      
-      // Validate letter content
-      if (!newLetter.content || newLetter.content.length < 10) {
-        console.error("Invalid letter content:", newLetter.content);
-        toast({
-          title: "Error Adding Letter",
-          description: "The letter content is invalid or too short.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      console.log("Adding new letter:", newLetter);
-      
-      // Update state
-      const updatedLetters = [...letters, newLetter];
-      setLetters(updatedLetters);
-      setSelectedLetter(newLetter);
-      
-      // Try to save to Supabase if we have a user
-      if (user?.id && !testMode) {
-        try {
-          // Format for Supabase
-          const letterForDb = {
-            title: newLetter.title,
-            bureau: newLetter.bureau,
-            accountName: newLetter.accountName,
-            accountNumber: newLetter.accountNumber,
-            content: newLetter.content,
-            letterContent: newLetter.letterContent || newLetter.content,
-            errorType: newLetter.errorType,
-            status: newLetter.status,
-            userId: user.id
-          };
-          
-          const { data, error } = await supabase
-            .from('dispute_letters')
-            .insert(letterForDb)
-            .select();
-            
-          if (error) {
-            console.error("Error saving letter to Supabase:", error);
-            // Continue to save locally if Supabase fails
-          } else if (data && data[0]) {
-            console.log("Letter saved to Supabase successfully:", data[0].id);
-            
-            // Update the letter with the database ID
-            newLetter.id = data[0].id;
-            updatedLetters[updatedLetters.length - 1] = newLetter;
-            setLetters([...updatedLetters]);
-            setSelectedLetter(newLetter);
-          }
-        } catch (dbError) {
-          console.error("Error in Supabase letter insertion:", dbError);
-          // Continue with local storage as fallback
-        }
-      }
-      
-      // Save to local storage (as fallback or if not using Supabase)
-      await addLetterToStorage(newLetter);
-      
-      // Show success toast
-      toast({
-        title: "Letter Added",
-        description: "Your dispute letter has been added successfully.",
-      });
-      
-      return newLetter;
+      sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(updatedLetters));
     } catch (error) {
-      console.error("Error adding letter:", error);
-      toast({
-        title: "Error Adding Letter",
-        description: "Failed to add dispute letter. Please try again.",
-        variant: "destructive",
-      });
+      console.error("Error storing updated letters:", error);
     }
   };
-
-  // Function to save a letter
-  const saveLetter = async (letter: Letter) => {
+  
+  // Function to save a letter (stub)
+  const saveLetter = async (letter: Letter): Promise<boolean> => {
+    // For now this just updates the local state
+    // In a real implementation, this would save to the backend
     try {
-      // Find and update the letter
-      const updatedLetters = letters.map((l) => (l.id === letter.id ? letter : l));
-      setLetters(updatedLetters);
-      
-      // Update selection if this is the selected letter
-      if (selectedLetter && selectedLetter.id === letter.id) {
-        setSelectedLetter(letter);
-      }
-      
-      // Try to save to Supabase if we have a user and a valid UUID
-      if (user?.id && !testMode && typeof letter.id === 'string' && letter.id.includes('-')) {
-        try {
-          // Format for Supabase
-          const letterForDb = {
-            title: letter.title,
-            bureau: letter.bureau,
-            accountName: letter.accountName,
-            accountNumber: letter.accountNumber,
-            content: letter.content,
-            letterContent: letter.letterContent || letter.content,
-            errorType: letter.errorType,
-            status: letter.status,
-          };
-          
-          const { error } = await supabase
-            .from('dispute_letters')
-            .update(letterForDb)
-            .eq('id', letter.id)
-            .eq('userId', user.id);
-            
-          if (error) {
-            console.error("Error updating letter in Supabase:", error);
-            // Continue to save locally if Supabase fails
-          } else {
-            console.log("Letter updated in Supabase successfully");
-          }
-        } catch (dbError) {
-          console.error("Error in Supabase letter update:", dbError);
-          // Continue with local storage as fallback
-        }
-      }
-      
-      // Save to storage as fallback
-      await saveLettersToStorage(updatedLetters);
-      
-      // Show success toast
-      toast({
-        title: "Letter Saved",
-        description: "Your dispute letter has been saved successfully.",
-      });
-      
-      return letter;
+      const updatedLetters = letters.map(l => 
+        l.id === letter.id ? { ...l, ...letter } : l
+      );
+      updateLetters(updatedLetters);
+      return true;
     } catch (error) {
       console.error("Error saving letter:", error);
-      toast({
-        title: "Error Saving Letter",
-        description: "Failed to save dispute letter. Please try again.",
-        variant: "destructive",
-      });
+      return false;
     }
   };
   
   return {
     letters,
-    setLetters,
+    setLetters: updateLetters,
+    addLetter,
     selectedLetter,
     setSelectedLetter,
     isLoading,
-    addLetter,
-    saveLetter,
     profile,
+    saveLetter
   };
 }

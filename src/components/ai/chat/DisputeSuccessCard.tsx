@@ -11,7 +11,9 @@ const DisputeSuccessCard: React.FC<DisputeSuccessCardProps> = ({ onDownload }) =
     <div className="flex justify-center">
       <div className="bg-card text-card-foreground border border-border rounded-xl p-3 flex flex-col items-center">
         <div className="flex items-center gap-2 mb-2">
-          <Check size={16} className="text-primary" />
+          <div className="p-1 bg-primary/10 rounded-full">
+            <Check size={14} className="text-primary" />
+          </div>
           <span className="font-medium">Dispute Letter Generated</span>
         </div>
         <button 
