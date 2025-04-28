@@ -80,7 +80,7 @@ export const useReportUpload = () => {
     
     if (reportData) {
       // If no account is provided, use the first account from the report
-      const targetAccount = account || (reportData.accounts.length > 0 ? reportData.accounts[0] : null);
+      const targetAccount = account || (reportData.accounts && reportData.accounts.length > 0 ? reportData.accounts[0] : null);
       
       // Log detailed information about the account and report data for debugging
       console.log("Target account for dispute:", targetAccount);
@@ -95,6 +95,9 @@ export const useReportUpload = () => {
           title: "Dispute letter generated",
           description: "Your dispute letter has been generated. You'll be redirected to review it.",
         });
+        
+        // Trigger event for automatic navigation
+        console.log("ANALYSIS_COMPLETE_READY_FOR_NAVIGATION");
         return true;
       } else {
         toast({

@@ -13,6 +13,7 @@ import { verifyLetterStorage, forceNavigateToLetters } from '@/components/disput
 import { useNavigate } from 'react-router-dom';
 import { useDisputeGeneration } from '@/hooks/report-upload/useDisputeGeneration';
 import { useLetterManagement } from '@/hooks/report-upload/useLetterManagement';
+import { useReportNavigation } from '@/hooks/report-upload/useReportNavigation';
 import PendingLettersNotification from '@/components/disputes/uploader/PendingLettersNotification';
 
 const UploadReport = () => {
@@ -56,10 +57,16 @@ const UploadReport = () => {
     hasPendingLetters,
     handleStartNewReport
   } = useLetterManagement();
+  
+  // Use report navigation hook
+  const reportNavigation = useReportNavigation();
 
   // Log test mode status
   useEffect(() => {
     console.log("UploadReport: Test mode is", testMode ? "active" : "inactive");
+    
+    // Clear any stale navigation flags
+    sessionStorage.removeItem('navigationInProgress');
   }, [testMode]);
 
   // Check for existing letters on load
@@ -84,6 +91,9 @@ const UploadReport = () => {
           description: "Your dispute letter has been created successfully. Navigating to letters page...",
           duration: 3000,
         });
+        
+        // Trigger navigation event
+        console.log("ANALYSIS_COMPLETE_READY_FOR_NAVIGATION");
         
         const timer = setTimeout(() => {
           forceNavigateToLetters(navigate, testMode);
