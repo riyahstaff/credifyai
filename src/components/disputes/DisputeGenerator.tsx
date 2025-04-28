@@ -1,8 +1,8 @@
+
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { CreditReportAccount } from '@/utils/creditReport/types';
 import CreditReportUploader from './CreditReportUploader';
-import LetterTemplateManager from './LetterTemplateManager';
 import DisputeForm from './generator/DisputeForm';
 import DisputeResult from './generator/DisputeResult';
 import DisputeGeneratorLayout from './generator/DisputeGeneratorLayout';
@@ -114,11 +114,6 @@ const DisputeGenerator: React.FC<DisputeGeneratorProps> = ({ onGenerateDispute }
       <CreditReportUploader 
         onReportProcessed={handleReportProcessed}
         onAccountSelected={handleAccountSelected}
-        testMode={testMode}
-      />
-      
-      <LetterTemplateManager 
-        onSelectTemplate={handleTemplateSelected}
         testMode={testMode}
       />
     </>

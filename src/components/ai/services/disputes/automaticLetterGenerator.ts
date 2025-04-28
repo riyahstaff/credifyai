@@ -1,7 +1,7 @@
-
 import { CreditReportData, UserInfo, CreditReportAccount } from '@/utils/creditReport/types';
 import { UserInfo as LetterUserInfo } from '@/utils/creditReport/types/letterTypes';
-import { generateEnhancedDisputeLetter } from '@/utils/creditReport/disputeLetters';
+import { generateLettersForIssues } from '@/utils/creditReport/disputeLetters';
+import { getTemplateForIssueType } from '@/utils/creditReport/disputeLetters/templateLoader';
 
 /**
  * Generates an automatic dispute letter based on credit report data
@@ -89,18 +89,63 @@ export async function generateAutomaticDisputeLetter(
     
     console.log(`Creating dispute letter for ${errorType}: ${errorDescription}`);
     
-    // Use enhanced dispute letter generator
-    const letterContent = await generateEnhancedDisputeLetter(
-      errorType,
-      {
-        accountName: accountToDispute?.accountName || 'Account in question',
-        accountNumber: accountToDispute?.accountNumber || '',
-        errorDescription,
-        bureau
-      },
-      letterUserInfo,
-      creditReportData
-    );
+    // Try to get template from storage
+    const templateContent = await getTemplateForIssueType(errorType.toLowerCase().replace(/ /g, '_'));
+    let letterContent = '';
+    
+    if (templateContent) {
+      console.log("Using template from storage for letter generation");
+      
+      // Format current date
+      const currentDate = new Date().toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+      
+      // Get bureau address
+      const bureauAddress = getBureauAddress(bureau);
+      
+      // Replace placeholders in the template
+      letterContent = templateContent
+        .replace(/\{NAME\}|\{CONSUMER_NAME\}|\{USER_NAME\}/gi, letterUserInfo.name)
+        .replace(/\{ADDRESS\}|\{CONSUMER_ADDRESS\}/gi, letterUserInfo.address || '')
+        .replace(/\{CITY\}|\{CONSUMER_CITY\}/gi, letterUserInfo.city || '')
+        .replace(/\{STATE\}|\{CONSUMER_STATE\}/gi, letterUserInfo.state || '')
+        .replace(/\{ZIP\}|\{CONSUMER_ZIP\}/gi, letterUserInfo.zip || '')
+        .replace(/\{DATE\}|\{CURRENT_DATE\}/gi, currentDate)
+        .replace(/\{BUREAU\}|\{CREDIT_BUREAU\}/gi, bureau)
+        .replace(/\{BUREAU_ADDRESS\}/gi, bureauAddress)
+        .replace(/\{ACCOUNT_NAME\}/gi, accountToDispute?.accountName || 'Account in question')
+        .replace(/\{ACCOUNT_NUMBER\}/gi, accountToDispute?.accountNumber || '')
+        .replace(/\{ISSUE_TYPE\}/gi, errorType)
+        .replace(/\{ISSUE_DESCRIPTION\}/gi, errorDescription);
+      
+      // Add a header with user info if not already present
+      if (!letterContent.trim().startsWith(letterUserInfo.name)) {
+        letterContent = `${letterUserInfo.name}
+${letterUserInfo.address ? letterUserInfo.address + '\n' : ''}${letterUserInfo.city ? letterUserInfo.city + ', ' : ''}${letterUserInfo.state || ''} ${letterUserInfo.zip || ''}
+
+${currentDate}
+
+${bureau}
+${bureauAddress}
+
+${letterContent}`;
+      }
+    } else {
+      // Fall back to default template if no template found in storage
+      console.log("No template found in storage, using default");
+      
+      // Generate a simplified letter using the account information
+      letterContent = generateDefaultLetter(
+        letterUserInfo,
+        bureau,
+        accountToDispute,
+        errorType,
+        errorDescription
+      );
+    }
     
     console.log("Generated letter content length:", letterContent?.length || 0);
     
@@ -277,6 +322,74 @@ function analyzeAccountForDispute(account?: CreditReportAccount): { errorType: s
       "details including account status, balance information, payment history, and account terms. " +
       "Any information that cannot be properly verified must be promptly corrected or deleted."
   };
+}
+
+/**
+ * Get address for a credit bureau
+ */
+function getBureauAddress(bureau: string): string {
+  const bureauLower = bureau.toLowerCase();
+  
+  if (bureauLower.includes('experian')) {
+    return 'Experian\nP.O. Box 4500\nAllen, TX 75013';
+  } else if (bureauLower.includes('equifax')) {
+    return 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374';
+  } else if (bureauLower.includes('transunion') || bureauLower.includes('trans union')) {
+    return 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016';
+  }
+  
+  return '[BUREAU ADDRESS]';
+}
+
+/**
+ * Generate a default letter when no template is found
+ */
+function generateDefaultLetter(
+  userInfo: LetterUserInfo,
+  bureau: string,
+  account?: CreditReportAccount,
+  errorType?: string,
+  errorDescription?: string
+): string {
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+  
+  const bureauAddress = getBureauAddress(bureau);
+  
+  return `${userInfo.name}
+${userInfo.address ? userInfo.address + '\n' : ''}${userInfo.city ? userInfo.city + ', ' : ''}${userInfo.state || ''} ${userInfo.zip || ''}
+
+${currentDate}
+
+${bureau}
+${bureauAddress}
+
+RE: Dispute of ${errorType || 'Inaccurate Information'} in Credit Report
+
+To Whom It May Concern:
+
+I am writing to dispute information in my credit report that I believe to be inaccurate. After reviewing my credit report, I have identified information that requires investigation.
+
+Account Name: ${account?.accountName || 'Account in question'}
+${account?.accountNumber ? `Account Number: ${account.accountNumber}\n` : ''}
+Issue: ${errorType || 'Data Inaccuracy'}
+
+${errorDescription || 'The information reported for this account contains inaccuracies that must be corrected.'}
+
+Under the Fair Credit Reporting Act (FCRA), I request that you conduct a reasonable investigation into this matter and provide verification of this information. If you cannot verify this information, please remove it from my credit report.
+
+I understand that you are required to forward all relevant information to the information provider and to respond to my dispute within 30 days of receipt.
+
+In accordance with Metro 2 reporting guidelines, I request that you properly code this account as "disputed by consumer" (compliance code XB) during your investigation.
+
+Thank you for your prompt attention to this matter.
+
+Sincerely,
+
+${userInfo.name}`;
 }
 
 // Helper functions to get user info from storage

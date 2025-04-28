@@ -1,6 +1,7 @@
 
 import { CreditReportAccount, CreditReportData, IdentifiedIssue } from "@/utils/creditReport/types";
 import { generateLettersForIssues } from "@/utils/creditReport/disputeLetters";
+import { getTemplateForIssueType } from "@/utils/creditReport/disputeLetters/templateLoader";
 
 /**
  * Generates dispute letters based on identified issues in a credit report
@@ -32,7 +33,7 @@ export const generateDisputeLetters = async (
       return letters;
     } else {
       console.warn("No letters were generated, creating generic letter");
-      const genericLetter = createGenericLetter(reportData);
+      const genericLetter = await createGenericLetter(reportData);
       
       // Store the generic letter
       try {
@@ -48,7 +49,7 @@ export const generateDisputeLetters = async (
     console.error("Error generating dispute letters:", error);
     
     // Create and store a fallback letter
-    const fallbackLetter = createGenericLetter(reportData);
+    const fallbackLetter = await createGenericLetter(reportData);
     try {
       sessionStorage.setItem('generatedDisputeLetters', JSON.stringify([fallbackLetter]));
     } catch (storageError) {
@@ -109,7 +110,7 @@ function getUserInfoFromStorage(): { name: string; address?: string; city?: stri
 /**
  * Create a generic dispute letter when no specific issues are found
  */
-export function createGenericLetter(reportData: CreditReportData): any {
+export async function createGenericLetter(reportData: CreditReportData): Promise<any> {
   // Get user information from storage
   const userInfo = getUserInfoFromStorage();
   
@@ -134,7 +135,31 @@ export function createGenericLetter(reportData: CreditReportData): any {
     console.log(`Using account for letter: ${accountName}, number: ${accountNumber || 'not available'}`);
   }
   
-  const letterContent = `${userInfo.name}
+  // Try to get a template from storage first
+  let letterContent;
+  try {
+    const templateContent = await getTemplateForIssueType('general');
+    
+    if (templateContent) {
+      // Replace placeholders in the template
+      letterContent = templateContent
+        .replace(/\{NAME\}|\{CONSUMER_NAME\}|\{USER_NAME\}/gi, userInfo.name)
+        .replace(/\{ADDRESS\}|\{CONSUMER_ADDRESS\}/gi, userInfo.address || '')
+        .replace(/\{CITY\}|\{CONSUMER_CITY\}/gi, userInfo.city || '')
+        .replace(/\{STATE\}|\{CONSUMER_STATE\}/gi, userInfo.state || '')
+        .replace(/\{ZIP\}|\{CONSUMER_ZIP\}/gi, userInfo.zip || '')
+        .replace(/\{DATE\}|\{CURRENT_DATE\}/gi, letterDate)
+        .replace(/\{BUREAU\}|\{CREDIT_BUREAU\}/gi, bureau)
+        .replace(/\{ACCOUNT_NAME\}/gi, accountName)
+        .replace(/\{ACCOUNT_NUMBER\}/gi, accountNumber);
+    }
+  } catch (error) {
+    console.error("Error using template from storage:", error);
+  }
+  
+  // If no template was found or an error occurred, use the default letter
+  if (!letterContent) {
+    letterContent = `${userInfo.name}
 ${userInfo.address ? userInfo.address + '\n' : ''}${userInfo.city ? userInfo.city + ', ' : ''}${userInfo.state || ''} ${userInfo.zip || ''}
 
 ${letterDate}
@@ -162,6 +187,7 @@ Thank you for your prompt attention to this matter.
 Sincerely,
 
 ${userInfo.name}`;
+  }
   
   return {
     id: letterId,
