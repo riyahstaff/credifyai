@@ -1,5 +1,5 @@
 
-import { CreditReportAccount, CreditReportData, IdentifiedIssue } from "@/utils/creditReport/types";
+import { CreditReportAccount, CreditReportData, IdentifiedIssue, FCRA_LAWS } from "@/utils/creditReport/types";
 import { generateLettersForIssues } from "@/utils/creditReport/disputeLetters";
 import { getTemplateForIssueType } from "@/utils/creditReport/disputeLetters/templateLoader";
 
@@ -114,11 +114,30 @@ export async function createGenericLetter(reportData: CreditReportData): Promise
   // Get user information from storage
   const userInfo = getUserInfoFromStorage();
   
-  // Determine the bureau from the report data
-  const bureau = reportData?.primaryBureau || 
-               (reportData?.bureaus?.experian ? "Experian" : 
-                reportData?.bureaus?.equifax ? "Equifax" : 
-                reportData?.bureaus?.transunion ? "TransUnion" : "Credit Bureau");
+  // Determine the bureau from the report data - be more specific about bureau name
+  let bureau = "Credit Bureau";
+  let bureauName = "Credit Bureau";
+  
+  if (reportData?.primaryBureau) {
+    bureau = reportData.primaryBureau;
+    bureauName = reportData.primaryBureau;
+  } else if (reportData?.bureau) {
+    bureau = reportData.bureau;
+    bureauName = reportData.bureau;
+  } else if (reportData?.bureaus) {
+    if (reportData.bureaus.experian) {
+      bureau = "Experian";
+      bureauName = "Experian";
+    } else if (reportData.bureaus.equifax) {
+      bureau = "Equifax"; 
+      bureauName = "Equifax";
+    } else if (reportData.bureaus.transunion) {
+      bureau = "TransUnion";
+      bureauName = "TransUnion";
+    }
+  }
+  
+  console.log("Using bureau for letter:", bureauName);
   
   const letterId = Date.now();
   const letterDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -149,9 +168,12 @@ export async function createGenericLetter(reportData: CreditReportData): Promise
         .replace(/\{STATE\}|\{CONSUMER_STATE\}/gi, userInfo.state || '')
         .replace(/\{ZIP\}|\{CONSUMER_ZIP\}/gi, userInfo.zip || '')
         .replace(/\{DATE\}|\{CURRENT_DATE\}/gi, letterDate)
-        .replace(/\{BUREAU\}|\{CREDIT_BUREAU\}/gi, bureau)
+        .replace(/\{BUREAU\}|\{CREDIT_BUREAU\}/gi, bureauName)
         .replace(/\{ACCOUNT_NAME\}/gi, accountName)
         .replace(/\{ACCOUNT_NUMBER\}/gi, accountNumber);
+        
+      // Add legal references
+      letterContent = addLegalReferences(letterContent);
     }
   } catch (error) {
     console.error("Error using template from storage:", error);
@@ -164,8 +186,8 @@ ${userInfo.address ? userInfo.address + '\n' : ''}${userInfo.city ? userInfo.cit
 
 ${letterDate}
 
-${bureau}
-${getBureauAddress(bureau)}
+${bureauName}
+${getBureauAddress(bureauName)}
 
 RE: Dispute of Inaccurate Information in Credit Report
 
@@ -174,7 +196,13 @@ To Whom It May Concern:
 I am writing to dispute information in my credit report that I believe to be inaccurate. After reviewing my credit report, I have identified several discrepancies that require investigation.
 
 Account Name: ${accountName}
-Account Number: ${accountNumber}
+${accountNumber ? `Account Number: ${accountNumber}\n` : ''}
+
+I am disputing this information under the following laws and regulations:
+
+1. 15 USC 1681e(b): Requires credit reporting agencies to follow reasonable procedures to assure maximum possible accuracy.
+2. 15 USC 1681i(a)(1): Requires credit reporting agencies to conduct a reasonable investigation of disputed information.
+3. 15 USC 1681s-2(a)(3): Prohibits furnishers from continuing to report information that is discovered to be inaccurate.
 
 Please conduct a thorough investigation of all items I am disputing, as required by the Fair Credit Reporting Act. If you cannot verify this information, please remove it from my credit report.
 
@@ -192,12 +220,13 @@ ${userInfo.name}`;
   return {
     id: letterId,
     title: "Credit Report Dispute",
-    bureau: bureau,
-    recipient: bureau,
+    bureau: bureauName,
+    recipient: bureauName,
     accountName: accountName,
     accountNumber: accountNumber,
     content: letterContent,
-    bureaus: [bureau],
+    letterContent: letterContent,
+    bureaus: [bureauName],
     createdAt: letterDate,
     status: "ready",
     errorType: "Data Inaccuracy"
@@ -205,18 +234,52 @@ ${userInfo.name}`;
 }
 
 /**
+ * Add legal references to a letter if they're not already present
+ */
+function addLegalReferences(letterContent: string): string {
+  // Check if the letter already contains legal references
+  if (letterContent.includes("USC 1681") || 
+      letterContent.includes("FCRA Section") ||
+      letterContent.includes("Fair Credit Reporting Act section")) {
+    return letterContent;
+  }
+  
+  // Add general legal references before the closing
+  const legalReferences = `
+I am disputing this information under the following laws and regulations:
+
+1. 15 USC 1681e(b): Requires credit reporting agencies to follow reasonable procedures to assure maximum possible accuracy.
+2. 15 USC 1681i(a)(1): Requires credit reporting agencies to conduct a reasonable investigation of disputed information.
+3. 15 USC 1681s-2(a)(3): Prohibits furnishers from continuing to report information that is discovered to be inaccurate.
+`;
+  
+  // Find a good place to insert the references
+  if (letterContent.includes("Sincerely")) {
+    return letterContent.replace(
+      /(?:Thank you.*?matter\.|Please investigate.*?FCRA\.)\s*\n\s*Sincerely/i,
+      match => `${match}\n\n${legalReferences}\nSincerely`
+    );
+  } else {
+    // If no good insertion point, just append to the end
+    return letterContent + '\n\n' + legalReferences;
+  }
+}
+
+/**
  * Get the address for a credit bureau
  */
 function getBureauAddress(bureau: string): string {
-  switch (bureau.toLowerCase()) {
-    case 'experian':
-      return 'Experian\nP.O. Box 4500\nAllen, TX 75013';
-    case 'equifax':
-      return 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374';
-    case 'transunion':
-      return 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016';
-    default:
-      return '[BUREAU ADDRESS]';
+  // Normalize bureau name for better matching
+  const normalizedBureau = bureau.toLowerCase().trim();
+  
+  if (normalizedBureau.includes('experian')) {
+    return 'P.O. Box 4500\nAllen, TX 75013';
+  } else if (normalizedBureau.includes('equifax')) {
+    return 'P.O. Box 740256\nAtlanta, GA 30374';
+  } else if (normalizedBureau.includes('transunion') || normalizedBureau.includes('trans union')) {
+    return 'Consumer Dispute Center\nP.O. Box 2000\nChester, PA 19016';
+  } else {
+    return '[BUREAU ADDRESS]';
   }
 }
 

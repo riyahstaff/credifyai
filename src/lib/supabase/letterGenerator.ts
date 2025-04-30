@@ -1,8 +1,9 @@
+
 import { fetchDisputeTemplate } from './legalTemplates';
 import { getRelevantFCRASections } from './legalTemplates';
 import { getSuccessfulDisputeExamples } from './disputeLetters';
 import { DISPUTE_TEMPLATES } from './constants';
-import { CreditReportData, CreditReportAccount, UserInfo } from '@/utils/creditReport/types';
+import { CreditReportData, CreditReportAccount, UserInfo, FCRA_LAWS } from '@/utils/creditReport/types';
 import { generateDisputeLetter } from '@/services/externalBackendService';
 
 /**
@@ -90,6 +91,61 @@ export async function generateEnhancedDisputeLetter(
   }
 }
 
+// Get the appropriate legal references for a dispute type
+function getLegalReferences(disputeType: string): string[] {
+  // Map the dispute type to FCRA_LAWS categories
+  const lowerType = disputeType.toLowerCase();
+  
+  if (lowerType.includes('late') || lowerType.includes('payment')) {
+    return FCRA_LAWS.latePayments || [];
+  } else if (lowerType.includes('collection') || lowerType.includes('debt')) {
+    return FCRA_LAWS.collections || [];
+  } else if (lowerType.includes('inquiry') || lowerType.includes('inquiries')) {
+    return FCRA_LAWS.inquiries || [];
+  } else if (lowerType.includes('personal') || lowerType.includes('info') || lowerType.includes('name') || lowerType.includes('address') || lowerType.includes('ssn')) {
+    return FCRA_LAWS.personalInfo || [];
+  } else if (lowerType.includes('student') || lowerType.includes('loan')) {
+    return FCRA_LAWS.studentLoans || [];
+  } else if (lowerType.includes('bankruptcy')) {
+    return FCRA_LAWS.bankruptcy || [];
+  } else {
+    // Default to general inaccuracies
+    return FCRA_LAWS.inaccuracies || [];
+  }
+}
+
+// Format legal references for inclusion in the letter
+function formatLegalReferencesForLetter(references: string[]): string {
+  if (!references || references.length === 0) {
+    return "As required by the Fair Credit Reporting Act (FCRA), specifically 15 USC 1681i(a)(1), you must conduct a reasonable investigation regarding the information I am disputing.";
+  }
+  
+  let legalText = "I am disputing this information under the following laws and regulations:\n\n";
+  
+  references.forEach((reference, index) => {
+    legalText += `${index + 1}. ${reference}: `;
+    
+    // Add description for common FCRA sections
+    if (reference === "15 USC 1681e(b)") {
+      legalText += "Requires credit reporting agencies to follow reasonable procedures to assure maximum possible accuracy.";
+    } else if (reference === "15 USC 1681i(a)(1)") {
+      legalText += "Requires credit reporting agencies to conduct a reasonable investigation of disputed information.";
+    } else if (reference === "15 USC 1681s-2(a)(3)") {
+      legalText += "Prohibits furnishers from continuing to report information that is discovered to be inaccurate.";
+    } else if (reference === "15 USC 1681c") {
+      legalText += "Governs requirements for what information may be included in consumer reports.";
+    } else if (reference.includes("Metro 2")) {
+      legalText += "Industry standard reporting format requires specific, accurate account information and status codes.";
+    } else {
+      legalText += "Requires accuracy and proper procedures in credit reporting.";
+    }
+    
+    legalText += "\n";
+  });
+  
+  return legalText;
+}
+
 // Original letter generation function renamed as a fallback
 async function generateLocalFallbackLetter(
   disputeType: string,
@@ -110,15 +166,17 @@ async function generateLocalFallbackLetter(
   creditReportData?: CreditReportData | null
 ): Promise<string> {
   try {
-    // Determine the dispute category and type based on the input
-    let disputeCategory: keyof typeof DISPUTE_TEMPLATES = 'general';
-    let templateType = 'GENERAL_DISPUTE';
+    // Get relevant legal references for this dispute type
+    const legalReferences = getLegalReferences(disputeType);
+    
+    // Format legal references for inclusion in the letter
+    const formattedLegalText = formatLegalReferencesForLetter(legalReferences);
     
     // Get relevant FCRA sections
-    const fcraSections = await getRelevantFCRASections(templateType);
+    const fcraSections = await getRelevantFCRASections(disputeType);
     
     // Get successful dispute examples
-    const successfulExamples = await getSuccessfulDisputeExamples(templateType);
+    const successfulExamples = await getSuccessfulDisputeExamples(disputeType);
     
     // Use a successful example if available
     let additionalLanguage = '';
@@ -153,7 +211,7 @@ async function generateLocalFallbackLetter(
       }
     }
     
-    // Bureau addresses - ONLY use these if we have a valid bureau
+    // Bureau addresses - use the correct bureau address based on the bureau name
     const bureauAddresses = {
       'experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
       'equifax': 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374',
@@ -162,18 +220,50 @@ async function generateLocalFallbackLetter(
     
     // Normalize bureau name for address lookup
     const bureau = accountDetails.bureau.toLowerCase();
+    let bureauName = accountDetails.bureau;
     let bureauAddress = '';
     
     if (bureau.includes('experian')) {
       bureauAddress = bureauAddresses.experian;
+      bureauName = 'Experian';
     } else if (bureau.includes('equifax')) {
       bureauAddress = bureauAddresses.equifax;
+      bureauName = 'Equifax';
     } else if (bureau.includes('transunion') || bureau.includes('trans union')) {
       bureauAddress = bureauAddresses.transunion;
+      bureauName = 'TransUnion';
     } else {
-      // Just use the bureau name directly with no address
-      bureauAddress = `${accountDetails.bureau}`;
-      console.error("Unknown bureau for address lookup:", accountDetails.bureau);
+      // If no specific bureau is identified, try to determine from credit report data
+      if (creditReportData) {
+        if (creditReportData.bureaus?.experian) {
+          bureauAddress = bureauAddresses.experian;
+          bureauName = 'Experian';
+        } else if (creditReportData.bureaus?.equifax) {
+          bureauAddress = bureauAddresses.equifax;
+          bureauName = 'Equifax';
+        } else if (creditReportData.bureaus?.transunion) {
+          bureauAddress = bureauAddresses.transunion;
+          bureauName = 'TransUnion';
+        } else if (creditReportData.primaryBureau) {
+          bureauName = creditReportData.primaryBureau;
+          // Try to match bureau name
+          if (bureauName.toLowerCase().includes('experian')) {
+            bureauAddress = bureauAddresses.experian;
+          } else if (bureauName.toLowerCase().includes('equifax')) {
+            bureauAddress = bureauAddresses.equifax;
+          } else if (bureauName.toLowerCase().includes('transunion')) {
+            bureauAddress = bureauAddresses.transunion;
+          } else {
+            bureauAddress = `${bureauName}\n[Bureau Address]`;
+          }
+        } else {
+          // Default fallback
+          bureauAddress = "Credit Bureau\n[Bureau Address]";
+        }
+      } else {
+        // Just use the bureau name directly with no address
+        bureauAddress = `${accountDetails.bureau}\n[Bureau Address]`;
+      }
     }
     
     // Clean up account name and number
@@ -251,24 +341,43 @@ Reason for Dispute: ${disputeType}
     }
     
     // Only include bureau section if we have it
-    if (bureauAddress) {
-      result += `${bureauAddress}\n\n`;
+    if (bureauName) {
+      result += `${bureauName}\n`;
+      
+      if (bureauAddress) {
+        // Extract just the address lines, not the bureau name
+        const addressLines = bureauAddress.split('\n');
+        if (addressLines.length > 1) {
+          result += `${addressLines.slice(1).join('\n')}\n\n`;
+        } else {
+          result += `[ADDRESS NEEDED]\n\n`;
+        }
+      }
     }
     
     // Only include other sections if we have a valid bureau
-    if (bureauAddress) {
+    if (bureauName) {
       result += `Re: Dispute of Inaccurate Information - ${disputeType}\n\n`;
       result += `To Whom It May Concern:\n\n`;
       result += `I am writing to dispute the following information in my credit report. I have identified the following item(s) that are inaccurate or incomplete:\n\n`;
       result += `${accountSection}\n\n`;
+      
+      // Include legal references section
+      result += `${formattedLegalText}\n\n`;
+      
       result += `Under the Fair Credit Reporting Act (FCRA), you are required to:\n`;
       result += `1. Conduct a reasonable investigation into the information I am disputing\n`;
       result += `2. Forward all relevant information that I provide to the furnisher\n`;
       result += `3. Review and consider all relevant information\n`;
       result += `4. Provide me the results of your investigation\n`;
       result += `5. Delete the disputed information if it cannot be verified\n\n`;
+      
       result += `I am disputing this information as it is inaccurate and the creditor may be unable to provide adequate verification as required by law. The industry standard Metro 2 format requires specific, accurate reporting practices that have not been followed in this case.\n\n`;
-      result += `${accountDetails.errorDescription || "The information appears to be incorrect and should be verified or removed from my credit report."}\n\n`;
+      
+      if (accountDetails.errorDescription) {
+        result += `${accountDetails.errorDescription}\n\n`;
+      }
+      
       result += `Please investigate this matter and provide me with the results within 30 days as required by the FCRA.\n\n`;
       result += `Sincerely,\n\n`;
       
