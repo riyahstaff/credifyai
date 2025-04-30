@@ -1,3 +1,4 @@
+
 export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
@@ -95,6 +96,7 @@ export interface CreditReportData {
   reportNumber?: string;
   bureau?: string;
   reportDate?: string;
+  isEmergencyFallback?: boolean;  // Added this property to fix the TypeScript error
 }
 
 export interface PersonalInfo {
