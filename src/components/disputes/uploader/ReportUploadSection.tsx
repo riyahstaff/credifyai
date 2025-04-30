@@ -11,6 +11,14 @@ const ReportUploadSection: React.FC<ReportUploadSectionProps> = ({
   isUploading,
   onFileSelected
 }) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      console.log(`File selected: ${file.name} (${file.type}), size: ${file.size}`);
+      onFileSelected(file);
+    }
+  };
+
   return (
     <div className="border-2 border-dashed border-gray-200 dark:border-gray-700/50 rounded-lg p-6 text-center">
       <div className="w-16 h-16 mx-auto bg-credify-teal/10 rounded-full flex items-center justify-center mb-4">
@@ -28,12 +36,8 @@ const ReportUploadSection: React.FC<ReportUploadSectionProps> = ({
       <div className="relative inline-block">
         <input
           type="file"
-          accept=".pdf,.txt,.text"
-          onChange={(e) => {
-            if (e.target.files?.[0]) {
-              onFileSelected(e.target.files[0]);
-            }
-          }}
+          accept=".pdf,.txt,.text,.html,.htm"
+          onChange={handleFileChange}
           className="absolute inset-0 opacity-0 w-full cursor-pointer"
           disabled={isUploading}
         />

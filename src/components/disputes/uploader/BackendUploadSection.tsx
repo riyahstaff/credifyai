@@ -17,9 +17,11 @@ const BackendUploadSection: React.FC<BackendUploadSectionProps> = ({
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [uploadAttempted, setUploadAttempted] = useState(false);
 
   const handleUploadSuccess = (reportId: string) => {
     console.log("Backend upload successful with report ID:", reportId);
+    setUploadAttempted(true);
     
     // Set flag to indicate we're using the backend
     sessionStorage.setItem('usingBackendProcessor', 'true');
@@ -37,7 +39,7 @@ const BackendUploadSection: React.FC<BackendUploadSectionProps> = ({
     // Navigate to dispute letters page after a delay
     setTimeout(() => {
       navigate('/dispute-letters' + (testMode ? '?testMode=true' : ''));
-    }, 3000);
+    }, 2000);
   };
 
   // Check if user is logged in
@@ -76,6 +78,14 @@ const BackendUploadSection: React.FC<BackendUploadSectionProps> = ({
         onSuccess={handleUploadSuccess}
         testMode={testMode}
       />
+      
+      {uploadAttempted && (
+        <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-lg">
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            If you're seeing upload errors, try the "Process Locally" option below instead.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
