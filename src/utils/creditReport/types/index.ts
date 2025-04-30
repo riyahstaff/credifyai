@@ -17,6 +17,9 @@ export type {
   AnalysisResults
 } from './creditReportTypes';
 
+// Export FCRA_LAWS constant
+export { FCRA_LAWS } from './creditReportTypes';
+
 // Explicitly re-export types from analysisTypes to avoid naming conflicts
 export type {
   AnalysisProcessorProps,
