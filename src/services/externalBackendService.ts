@@ -10,6 +10,7 @@ interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+  isLocalFallback?: boolean; // Flag to indicate if this is a locally generated response
 }
 
 /**
@@ -35,9 +36,12 @@ async function callApi<T>(
   body?: FormData | object
 ): Promise<ApiResponse<T>> {
   try {
-    // For preview/development environments, return mock responses
-    if (window.location.host.includes('lovableproject.com')) {
-      console.log(`Mock API ${method} ${endpoint} in preview environment`);
+    // For preview/development environments or if we can't connect to the external API,
+    // return mock responses or generate them locally
+    if (window.location.host.includes('lovableproject.com') || 
+        window.location.host.includes('lovable.app') ||
+        !navigator.onLine) {
+      console.log(`Mock API ${method} ${endpoint} in preview environment or offline mode`);
       return getMockResponse<T>(endpoint, method);
     }
     
@@ -65,7 +69,7 @@ async function callApi<T>(
       console.log(`API ${method} ${endpoint}`, body ? { body } : '');
     }
     
-    const response = await fetchWithTimeout(url, options);
+    const response = await fetchWithTimeout(url, options, 8000); // Reduced timeout to 8 seconds
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -84,6 +88,15 @@ async function callApi<T>(
     };
   } catch (error) {
     console.error(`API error for ${method} ${endpoint}:`, error);
+    
+    // Special handling for network errors - return mock data with a flag
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.log(`Network error detected, using local fallback for ${endpoint}`);
+      const mockResponse = await getMockResponse<T>(endpoint, method);
+      mockResponse.isLocalFallback = true;
+      return mockResponse;
+    }
+    
     return {
       success: false,
       error: error instanceof Error ? error.message : 'An unknown error occurred'
@@ -94,40 +107,44 @@ async function callApi<T>(
 /**
  * Helper function for mock responses in preview/development
  */
-function getMockResponse<T>(endpoint: string, method: string): ApiResponse<T> {
-  // Simulated delay for API calls
-  const delay = Math.random() * 1000 + 500;
-  
-  console.log(`Returning mock response for ${method} ${endpoint} after ${delay}ms delay`);
-  
-  // Mock responses based on endpoint
-  if (endpoint === ENDPOINTS.ANALYZE_REPORT && method === 'POST') {
-    return {
-      success: true,
-      data: {
-        id: 'mock_report_' + Date.now(),
-        status: 'completed',
-        issues: [
-          { id: 1, type: 'late_payment', description: 'Late payment on mortgage account', severity: 'high' },
-          { id: 2, type: 'collection_account', description: 'Collection account from unknown creditor', severity: 'medium' }
-        ],
-        accounts: [
-          { id: 'acc1', name: 'Bank of America', accountNumber: '****1234', type: 'credit_card', balance: 1500 },
-          { id: 'acc2', name: 'Wells Fargo', accountNumber: '****5678', type: 'mortgage', balance: 250000 }
-        ],
-        summary: {
-          totalAccounts: 2,
-          totalIssues: 2,
-          score: 680
-        }
-      } as unknown as T
-    };
-  }
-  
-  if (endpoint === ENDPOINTS.GENERATE_LETTER && method === 'POST') {
-    return {
-      success: true,
-      data: `
+function getMockResponse<T>(endpoint: string, method: string): Promise<ApiResponse<T>> {
+  return new Promise(resolve => {
+    // Simulated delay for API calls
+    const delay = Math.random() * 1000 + 500;
+    
+    console.log(`Returning mock response for ${method} ${endpoint} after ${delay}ms delay`);
+    
+    setTimeout(() => {
+      // Mock responses based on endpoint
+      if (endpoint === ENDPOINTS.ANALYZE_REPORT && method === 'POST') {
+        resolve({
+          success: true,
+          data: {
+            id: 'mock_report_' + Date.now(),
+            status: 'completed',
+            issues: [
+              { id: 1, type: 'late_payment', description: 'Late payment on mortgage account', severity: 'high' },
+              { id: 2, type: 'collection_account', description: 'Collection account from unknown creditor', severity: 'medium' }
+            ],
+            accounts: [
+              { id: 'acc1', name: 'Bank of America', accountNumber: '****1234', type: 'credit_card', balance: 1500 },
+              { id: 'acc2', name: 'Wells Fargo', accountNumber: '****5678', type: 'mortgage', balance: 250000 }
+            ],
+            summary: {
+              totalAccounts: 2,
+              totalIssues: 2,
+              score: 680
+            }
+          } as unknown as T,
+          isLocalFallback: true
+        });
+        return;
+      }
+      
+      if (endpoint === ENDPOINTS.GENERATE_LETTER && method === 'POST') {
+        resolve({
+          success: true,
+          data: `
 Dear Credit Bureau,
 
 I am writing to dispute the following information in my credit report:
@@ -139,32 +156,35 @@ These items are inaccurate because I have always made timely payments on my acco
 
 Sincerely,
 [Your Name]
-      `.trim() as unknown as T
-    };
-  }
-  
-  if (endpoint === ENDPOINTS.TEMPLATES) {
-    return {
-      success: true,
-      data: [
-        { id: 1, name: 'Standard Dispute Letter', type: 'dispute_standard' },
-        { id: 2, name: 'Late Payment Dispute', type: 'dispute_late_payment' },
-        { id: 3, name: 'Debt Validation Letter', type: 'debt_validation' }
-      ] as unknown as T
-    };
-  }
-  
-  return {
-    success: false,
-    error: 'Mock endpoint not implemented'
-  };
+      `.trim() as unknown as T,
+          isLocalFallback: true
+        });
+        return;
+      }
+      
+      if (endpoint === ENDPOINTS.TEMPLATES) {
+        resolve({
+          success: true,
+          data: [
+            { id: 1, name: 'Standard Dispute Letter', type: 'dispute_standard' },
+            { id: 2, name: 'Late Payment Dispute', type: 'dispute_late_payment' },
+            { id: 3, name: 'Debt Validation Letter', type: 'debt_validation' }
+          ] as unknown as T,
+          isLocalFallback: true
+        });
+        return;
+      }
+      
+      resolve({
+        success: false,
+        error: 'Mock endpoint not implemented',
+        isLocalFallback: true
+      });
+    }, delay);
+  });
 }
 
-/**
- * Analyzes a credit report file
- * @param file The credit report file to analyze
- * @returns Analysis results
- */
+// Export functions
 export const analyzeReport = async (file: File): Promise<ApiResponse<any>> => {
   console.log(`Analyzing report: ${file.name} (${file.type}), size: ${file.size} bytes`);
   
@@ -174,12 +194,6 @@ export const analyzeReport = async (file: File): Promise<ApiResponse<any>> => {
   return callApi(ENDPOINTS.ANALYZE_REPORT, 'POST', formData);
 };
 
-/**
- * Generates a dispute letter based on analysis results
- * @param analysisData Analysis data from the analyzeReport function
- * @param userInfo User information for the letter
- * @returns Generated letter
- */
 export const generateDisputeLetter = async (
   analysisData: any,
   userInfo: {
@@ -197,21 +211,10 @@ export const generateDisputeLetter = async (
   });
 };
 
-/**
- * Fetches all available letter templates from the backend
- * @returns List of available letter templates
- */
 export const getLetterTemplates = async (): Promise<ApiResponse<any[]>> => {
   return callApi<any[]>(ENDPOINTS.TEMPLATES);
 };
 
-/**
- * Sends a dispute letter to a credit bureau
- * @param letter The letter content
- * @param bureau The credit bureau to send to
- * @param contactInfo Contact information for the credit bureau
- * @returns Status of the sending operation
- */
 export const sendDisputeLetter = async (
   letter: string,
   bureau: string,

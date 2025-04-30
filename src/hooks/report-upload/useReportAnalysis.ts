@@ -52,58 +52,102 @@ export const useReportAnalysis = (
                 console.log("Analysis backup timeout reached - forcing completion");
                 onAnalysisComplete();
               }
-            }, 15000); // Reduced from 25s to 15s for faster timeout
+            }, 10000); // Reduced from 15s to 10s for even faster timeout
             
-            // Try to handle the analysis
+            // First attempt: Try local analysis directly, skipping the external API
+            console.log("Using local analysis for credit report processing");
             try {
-              // Updated to pass the props object that handleAnalysisComplete expects
-              await handleAnalysisComplete({
-                uploadedFile,
-                setReportData,
-                setIssues,
-                setLetterGenerated,
-                setAnalysisError,
-                setAnalyzing,
-                setAnalyzed,
-                toast: toastObject,
-                testMode: false // Always use real mode, no test mode with per-letter payments
-              });
-            } catch (analysisError) {
-              console.warn("Error in primary analysis method, using local fallback:", analysisError);
-              
-              // Import and use local parser as fallback if external API fails
+              // Import needed modules for local processing
               const { parseReportContent } = await import('@/utils/creditReport/parser');
               const { extractTextFromPDF } = await import('@/utils/creditReport/extractors/pdfExtractor');
               const { identifyIssues } = await import('@/utils/reportAnalysis/issueIdentification');
               
-              // Extract text from file
+              // Extract text from file based on its type
               let textContent = '';
               if (uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf')) {
+                console.log("Extracting text from PDF file...");
                 textContent = await extractTextFromPDF(uploadedFile);
               } else {
+                console.log("Reading text from non-PDF file...");
                 textContent = await uploadedFile.text();
               }
               
+              if (!textContent || textContent.length < 50) {
+                throw new Error("Failed to extract sufficient text from the file");
+              }
+              
+              console.log(`Successfully extracted ${textContent.length} characters from file`);
+              
               // Parse content
               const isPdf = uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf');
+              console.log("Parsing report content...");
               const reportData = parseReportContent(textContent, isPdf);
               
               // Find issues
+              console.log("Identifying issues in report...");
               const issues = identifyIssues(reportData);
+              
+              console.log(`Found ${issues.length} issues in the report`);
               
               // Update state with results
               setReportData(reportData);
               setIssues(issues);
               
-              // Display fallback notice
               toast({
-                title: "Using Local Analysis",
-                description: "External API unavailable. Using local analysis instead.",
+                title: "Report Analysis Complete",
+                description: `Analyzed your report and found ${issues.length} potential issues.`,
                 variant: "default"
               });
               
               // Complete the analysis
               onAnalysisComplete();
+              
+              // Only try the external API as a backup if the local analysis doesn't find enough issues
+              if (issues.length < 3) {
+                console.log("Local analysis found few issues, attempting external API as enhancement...");
+                
+                // Try external API as enhancement but don't wait for it
+                try {
+                  handleAnalysisComplete({
+                    uploadedFile,
+                    setReportData,
+                    setIssues,
+                    setLetterGenerated,
+                    setAnalysisError,
+                    setAnalyzing,
+                    setAnalyzed,
+                    toast: toastObject,
+                    testMode: false
+                  }).then(() => {
+                    console.log("External API analysis completed as enhancement");
+                  }).catch(err => {
+                    console.log("External API enhancement failed, continuing with local results");
+                  });
+                } catch (err) {
+                  // Ignore errors from external API since we already have local results
+                  console.log("Error in external API enhancement attempt:", err);
+                }
+              }
+            } catch (localError) {
+              console.error("Error in local analysis, trying external API:", localError);
+              
+              // Second attempt: Try external API if local analysis fails
+              try {
+                await handleAnalysisComplete({
+                  uploadedFile,
+                  setReportData,
+                  setIssues,
+                  setLetterGenerated,
+                  setAnalysisError,
+                  setAnalyzing,
+                  setAnalyzed,
+                  toast: toastObject,
+                  testMode: false
+                });
+              } catch (apiError) {
+                console.error("Both local and external analysis failed:", apiError);
+                throw new Error("Failed to analyze report with both local and external methods");
+              }
             }
             
             clearTimeout(analysisBackupTimeout);

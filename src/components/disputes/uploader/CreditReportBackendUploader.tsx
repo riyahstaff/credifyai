@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileUp, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '@/lib/supabase/client';
 import { analyzeReport } from '@/services/externalBackendService';
+import { processCreditReport } from '@/utils/creditReport/processor';
 
 interface CreditReportBackendUploaderProps {
   onSuccess?: (reportId: string) => void;
@@ -21,6 +23,7 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
   const [uploadComplete, setUploadComplete] = useState(false);
   const [processingStarted, setProcessingStarted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usingLocalFallback, setUsingLocalFallback] = useState(false);
   
   const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -32,6 +35,7 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
       setError(null);
       setUploadComplete(false);
       setProcessingStarted(false);
+      setUsingLocalFallback(false);
       
       // Check file size (limit to 10MB)
       if (file.size > 10 * 1024 * 1024) {
@@ -66,13 +70,41 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
         });
       }, 500);
       
-      // Upload the file to the external backend
-      const response = await analyzeReport(file);
+      // First attempt with external API
+      console.log("Attempting to analyze report using external API");
+      let response = await analyzeReport(file);
       
       clearInterval(progressInterval);
       
-      if (!response.success) {
-        throw new Error(`Error uploading file: ${response.error}`);
+      // If external API fails or returns a local fallback, try local processing
+      if (!response.success || response.isLocalFallback) {
+        console.log("External API unavailable, using local processing");
+        setUsingLocalFallback(true);
+        
+        try {
+          // Process the file locally
+          const reportData = await processCreditReport(file);
+          
+          // Create a mock response structure
+          response = {
+            success: true,
+            data: {
+              id: `local_${Date.now()}`,
+              ...reportData,
+              // Add any other fields needed for compatibility
+            },
+            isLocalFallback: true
+          };
+          
+          toast({
+            title: "Using Local Processing",
+            description: "External API unavailable. Processing your report locally.",
+            variant: "default"
+          });
+        } catch (localError) {
+          console.error("Local processing failed:", localError);
+          throw new Error(`Local processing failed: ${localError instanceof Error ? localError.message : "Unknown error"}`);
+        }
       }
       
       setUploadComplete(true);
@@ -82,7 +114,9 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
       // Show success message
       toast({
         title: "Credit report uploaded",
-        description: "Your credit report is being processed. This may take a few moments.",
+        description: usingLocalFallback 
+          ? "Your credit report is being processed locally."
+          : "Your credit report is being processed. This may take a few moments.",
       });
       
       if (response.data?.id) {
@@ -136,7 +170,9 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
       
       <p className="text-credify-navy-light dark:text-white/70 text-sm mb-6 max-w-md mx-auto">
         {uploadComplete
-          ? 'Your credit report is being processed. You will be redirected to the dispute letters page shortly.'
+          ? usingLocalFallback 
+            ? 'Your credit report is being processed locally. You will be redirected to the dispute letters page shortly.'
+            : 'Your credit report is being processed. You will be redirected to the dispute letters page shortly.'
           : 'Upload a credit report PDF or text file to analyze and generate personalized dispute letters.'}
       </p>
       
@@ -201,7 +237,7 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
         <div className="flex justify-center mt-4">
           <p className="text-sm text-credify-teal flex items-center gap-1">
             <span className="h-2 w-2 bg-credify-teal rounded-full animate-pulse"></span>
-            Processing your report...
+            Processing your report{usingLocalFallback ? ' locally' : ''}...
           </p>
         </div>
       )}
