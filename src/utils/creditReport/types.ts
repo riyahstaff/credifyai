@@ -58,6 +58,7 @@ export interface IdentifiedIssue {
   impactColor: string;
   account?: CreditReportAccount;
   laws: string[];
+  legalReferences?: string[];  // Added legal references array
 }
 
 export interface AnalysisResults {
@@ -159,4 +160,18 @@ export interface Issue {
   legalBasis?: LegalReference[] | string;
   severity: 'high' | 'medium' | 'low';
   details?: Record<string, any>;
+  legalReferences?: string[];  // Added legal references array
 }
+
+// Define legal references for different issue types
+export const FCRA_LAWS = {
+  latePayments: ['15 USC 1681s-2(a)(3)', '15 USC 1681e(b)'],
+  collections: ['15 USC 1692c', '15 USC 1681s-2(a)(3)'],
+  inaccuracies: ['15 USC 1681e(b)', '15 USC 1681i'],
+  inquiries: ['15 USC 1681b(a)(2)', '15 USC 1681m'],
+  personalInfo: ['15 USC 1681c', '15 USC 1681g'],
+  metro2: ['Metro 2® Compliance Guidelines'],
+  bankruptcy: ['15 USC 1681c(a)(1)', '11 USC 525'],
+  studentLoans: ['15 USC 1681s-2(a)(1)', '20 USC 1087'],
+  generalCredit: ['15 USC 1681e(b)', '12 CFR 1026.13', '18 USC 1028a']
+};
