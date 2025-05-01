@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Upload, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Upload, AlertTriangle, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
 interface ReportUploadSectionProps {
   isUploading: boolean;
@@ -12,7 +12,7 @@ const ReportUploadSection: React.FC<ReportUploadSectionProps> = ({
   onFileSelected
 }) => {
   const [fileInfo, setFileInfo] = useState<{ name: string; type: string } | null>(null);
-  const [status, setStatus] = useState<'idle' | 'ready' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'ready' | 'error' | 'network-error'>('idle');
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -23,6 +23,13 @@ const ReportUploadSection: React.FC<ReportUploadSectionProps> = ({
       // Validate file
       if (isValidFileType(file)) {
         setStatus('ready');
+        
+        // Check for network connectivity
+        if (!navigator.onLine) {
+          console.warn("Network appears to be offline, but proceeding with file selection");
+          setStatus('network-error');
+        }
+        
         onFileSelected(file);
       } else {
         setStatus('error');
@@ -73,6 +80,8 @@ const ReportUploadSection: React.FC<ReportUploadSectionProps> = ({
           className={`px-6 py-3 ${
             status === 'error' 
               ? 'bg-red-500 hover:bg-red-600' 
+              : status === 'network-error'
+              ? 'bg-amber-500 hover:bg-amber-600'
               : 'bg-credify-teal hover:bg-credify-teal-dark'
           } text-white rounded-lg transition-colors flex items-center gap-2 justify-center`}
         >
@@ -85,6 +94,11 @@ const ReportUploadSection: React.FC<ReportUploadSectionProps> = ({
             <>
               <AlertTriangle size={18} />
               <span>Invalid File Type</span>
+            </>
+          ) : status === 'network-error' ? (
+            <>
+              <AlertCircle size={18} />
+              <span>Network Issue - Continue Locally</span>
             </>
           ) : status === 'ready' ? (
             <>
@@ -113,6 +127,18 @@ const ReportUploadSection: React.FC<ReportUploadSectionProps> = ({
       {status === 'error' && (
         <div className="mt-3 text-xs text-red-500">
           Please select a PDF or text file (.pdf, .txt, .html)
+        </div>
+      )}
+      
+      {status === 'network-error' && (
+        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-md">
+          <div className="flex items-start gap-2">
+            <Info className="text-amber-600 shrink-0 mt-0.5" size={16} />
+            <div className="text-xs text-amber-800 dark:text-amber-300 text-left">
+              <p className="font-medium mb-1">Network connectivity issues detected</p>
+              <p>Your report will be processed locally instead of using our cloud service. All processing happens in your browser and no data is sent to our servers.</p>
+            </div>
+          </div>
         </div>
       )}
     </div>
