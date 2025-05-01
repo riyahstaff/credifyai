@@ -1,171 +1,43 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { 
+  issueTemplateMapping, 
+  generalDisputeTemplate 
+} from './templates/issueSpecificTemplates';
 
-interface TemplateFile {
-  name: string;
-  type: string;
-  content: string;
+/**
+ * Get the template for a specific issue type
+ */
+export async function getTemplateForIssueType(issueType: string): Promise<string> {
+  // Normalize issue type
+  const normalizedType = normalizeIssueType(issueType);
+  
+  // Get the appropriate template
+  const template = issueTemplateMapping[normalizedType] || generalDisputeTemplate;
+  
+  return template;
 }
 
 /**
- * Loads dispute letter templates from the Supabase storage bucket
+ * Normalize issue type to a standard format
  */
-export async function loadDisputeLetterTemplates(): Promise<TemplateFile[]> {
-  try {
-    console.log("Loading dispute letter templates from storage bucket...");
-    
-    // Get list of files in the template folder
-    const { data: files, error } = await supabase
-      .storage
-      .from('dispute-letter-templates')
-      .list('final_package 2');
-      
-    if (error) {
-      throw error;
-    }
-    
-    if (!files || files.length === 0) {
-      console.warn("No template files found in storage bucket");
-      return [];
-    }
-    
-    console.log(`Found ${files.length} potential template files`);
-    
-    // Only process text files that might be templates
-    const templateFiles = files.filter(file => 
-      file.name.endsWith('.txt') || 
-      file.name.endsWith('.md') || 
-      file.name.includes('template') ||
-      file.name.includes('letter')
-    );
-    
-    // Download the content of each template file
-    const templates: TemplateFile[] = [];
-    
-    for (const file of templateFiles) {
-      try {
-        const { data, error } = await supabase
-          .storage
-          .from('dispute-letter-templates')
-          .download(`final_package 2/${file.name}`);
-          
-        if (error || !data) {
-          console.error(`Error downloading template ${file.name}:`, error);
-          continue;
-        }
-        
-        // Convert blob to text
-        const content = await data.text();
-        
-        // Determine template type based on filename
-        let type = 'general';
-        const filename = file.name.toLowerCase();
-        
-        if (filename.includes('collection')) type = 'collection_account';
-        else if (filename.includes('late') || filename.includes('payment')) type = 'late_payment';
-        else if (filename.includes('inquiry')) type = 'inquiry';
-        else if (filename.includes('charge')) type = 'charge_off';
-        else if (filename.includes('personal') || filename.includes('info')) type = 'personal_information';
-        else if (filename.includes('balance')) type = 'balance';
-        
-        templates.push({
-          name: file.name,
-          type,
-          content
-        });
-        
-        console.log(`Loaded template: ${file.name} (${type})`);
-      } catch (err) {
-        console.error(`Error processing template ${file.name}:`, err);
-      }
-    }
-    
-    // Also try to load the README file if available
-    try {
-      const readmeFiles = files.filter(file => 
-        file.name.toLowerCase().includes('readme') || 
-        file.name.toLowerCase().includes('read_me') ||
-        file.name.toLowerCase().includes('instructions')
-      );
-      
-      if (readmeFiles.length > 0) {
-        const { data } = await supabase
-          .storage
-          .from('dispute-letter-templates')
-          .download(`final_package 2/${readmeFiles[0].name}`);
-          
-        if (data) {
-          const readmeContent = await data.text();
-          console.log("README content loaded:", readmeContent.substring(0, 100) + "...");
-          
-          // Store the README content in session storage for reference
-          try {
-            sessionStorage.setItem('templateReadme', readmeContent);
-          } catch (e) {
-            console.error("Error storing README in session storage:", e);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Error loading README file:", err);
-    }
-    
-    return templates;
-  } catch (error) {
-    console.error("Error loading dispute letter templates:", error);
-    return [];
-  }
-}
-
-/**
- * Get the best template for a specific issue type
- */
-export async function getTemplateForIssueType(issueType: string): Promise<string | null> {
-  try {
-    // Load all templates
-    const templates = await loadDisputeLetterTemplates();
-    
-    if (templates.length === 0) {
-      console.warn("No templates available for issue type:", issueType);
-      return null;
-    }
-    
-    // Normalize the issue type for matching
-    const normalizedIssueType = issueType.toLowerCase();
-    
-    // Try to find an exact match first
-    const exactMatch = templates.find(t => t.type.toLowerCase() === normalizedIssueType);
-    
-    if (exactMatch) {
-      console.log(`Found exact template match for ${issueType}: ${exactMatch.name}`);
-      return exactMatch.content;
-    }
-    
-    // Try to find a partial match
-    const partialMatch = templates.find(t => 
-      normalizedIssueType.includes(t.type) || 
-      t.type.includes(normalizedIssueType)
-    );
-    
-    if (partialMatch) {
-      console.log(`Found partial template match for ${issueType}: ${partialMatch.name}`);
-      return partialMatch.content;
-    }
-    
-    // Fall back to a general template
-    const generalTemplate = templates.find(t => t.type === 'general');
-    
-    if (generalTemplate) {
-      console.log(`Using general template for ${issueType}: ${generalTemplate.name}`);
-      return generalTemplate.content;
-    }
-    
-    // If no general template, use the first available template
-    console.log(`No matching template for ${issueType}, using first available: ${templates[0].name}`);
-    return templates[0].content;
-    
-  } catch (error) {
-    console.error("Error getting template for issue type:", error);
-    return null;
+function normalizeIssueType(issueType: string): string {
+  const type = issueType.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  
+  if (type.includes('personal') || type.includes('name') || type.includes('address') || type.includes('ssn')) {
+    return 'personal_info';
+  } else if (type.includes('late') || type.includes('payment')) {
+    return 'late_payment';
+  } else if (type.includes('collect')) {
+    return 'collection';
+  } else if (type.includes('student') || type.includes('loan')) {
+    return 'student_loan';
+  } else if (type.includes('bankrupt')) {
+    return 'bankruptcy';
+  } else if (type.includes('inquir')) {
+    return 'inquiry';
+  } else if (type.includes('inaccura') || type.includes('wrong') || type.includes('error')) {
+    return 'inaccuracy';
+  } else {
+    return 'general';
   }
 }

@@ -1,6 +1,10 @@
 
 import { CreditReportAccount, CreditReportData, IdentifiedIssue, FCRA_LAWS } from "@/utils/creditReport/types";
-import { generateLettersForIssues } from "@/utils/creditReport/disputeLetters";
+import { 
+  generateLettersForIssues, 
+  generateDisputeLetter, 
+  generateAndStoreDisputeLetters 
+} from "@/utils/creditReport/disputeLetters";
 import { getTemplateForIssueType } from "@/utils/creditReport/disputeLetters/templateLoader";
 
 /**
@@ -17,18 +21,10 @@ export const generateDisputeLetters = async (
     const userInfo = getUserInfoFromStorage();
     console.log("User info retrieved:", userInfo.name);
     
-    // Use the enhanced letter generation function
-    const letters = await generateLettersForIssues(issues, reportData, userInfo);
+    // Use our enhanced letter generation system
+    const letters = await generateAndStoreDisputeLetters(issues, reportData, userInfo);
     
     if (letters && letters.length > 0) {
-      // Store the letters in session storage for the dispute letters page
-      try {
-        sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(letters));
-        console.log(`Stored ${letters.length} generated letters in session storage`);
-      } catch (error) {
-        console.error("Failed to store generated letters in session:", error);
-      }
-      
       console.log(`Successfully generated ${letters.length} letters`);
       return letters;
     } else {
@@ -114,25 +110,19 @@ export async function createGenericLetter(reportData: CreditReportData): Promise
   // Get user information from storage
   const userInfo = getUserInfoFromStorage();
   
-  // Determine the bureau from the report data - be more specific about bureau name
-  let bureau = "Credit Bureau";
+  // Determine the bureau from the report data
   let bureauName = "Credit Bureau";
   
   if (reportData?.primaryBureau) {
-    bureau = reportData.primaryBureau;
     bureauName = reportData.primaryBureau;
   } else if (reportData?.bureau) {
-    bureau = reportData.bureau;
     bureauName = reportData.bureau;
   } else if (reportData?.bureaus) {
     if (reportData.bureaus.experian) {
-      bureau = "Experian";
       bureauName = "Experian";
     } else if (reportData.bureaus.equifax) {
-      bureau = "Equifax"; 
-      bureauName = "Equifax";
+      bureauName = "Equifax"; 
     } else if (reportData.bureaus.transunion) {
-      bureau = "TransUnion";
       bureauName = "TransUnion";
     }
   }
@@ -154,33 +144,22 @@ export async function createGenericLetter(reportData: CreditReportData): Promise
     console.log(`Using account for letter: ${accountName}, number: ${accountNumber || 'not available'}`);
   }
   
-  // Try to get a template from storage first
+  // Generate a proper letter using our generator
   let letterContent;
   try {
-    const templateContent = await getTemplateForIssueType('general');
-    
-    if (templateContent) {
-      // Replace placeholders in the template
-      letterContent = templateContent
-        .replace(/\{NAME\}|\{CONSUMER_NAME\}|\{USER_NAME\}/gi, userInfo.name)
-        .replace(/\{ADDRESS\}|\{CONSUMER_ADDRESS\}/gi, userInfo.address || '')
-        .replace(/\{CITY\}|\{CONSUMER_CITY\}/gi, userInfo.city || '')
-        .replace(/\{STATE\}|\{CONSUMER_STATE\}/gi, userInfo.state || '')
-        .replace(/\{ZIP\}|\{CONSUMER_ZIP\}/gi, userInfo.zip || '')
-        .replace(/\{DATE\}|\{CURRENT_DATE\}/gi, letterDate)
-        .replace(/\{BUREAU\}|\{CREDIT_BUREAU\}/gi, bureauName)
-        .replace(/\{ACCOUNT_NAME\}/gi, accountName)
-        .replace(/\{ACCOUNT_NUMBER\}/gi, accountNumber);
-        
-      // Add legal references
-      letterContent = addLegalReferences(letterContent);
-    }
+    letterContent = await generateDisputeLetter(
+      'general',
+      {
+        accountName,
+        accountNumber,
+        bureau: bureauName
+      },
+      userInfo,
+      reportData
+    );
   } catch (error) {
-    console.error("Error using template from storage:", error);
-  }
-  
-  // If no template was found or an error occurred, use the default letter
-  if (!letterContent) {
+    console.error("Error generating letter from template:", error);
+    // If letter generation fails, use a basic fallback template
     letterContent = `${userInfo.name}
 ${userInfo.address ? userInfo.address + '\n' : ''}${userInfo.city ? userInfo.city + ', ' : ''}${userInfo.state || ''} ${userInfo.zip || ''}
 
@@ -231,38 +210,6 @@ ${userInfo.name}`;
     status: "ready",
     errorType: "Data Inaccuracy"
   };
-}
-
-/**
- * Add legal references to a letter if they're not already present
- */
-function addLegalReferences(letterContent: string): string {
-  // Check if the letter already contains legal references
-  if (letterContent.includes("USC 1681") || 
-      letterContent.includes("FCRA Section") ||
-      letterContent.includes("Fair Credit Reporting Act section")) {
-    return letterContent;
-  }
-  
-  // Add general legal references before the closing
-  const legalReferences = `
-I am disputing this information under the following laws and regulations:
-
-1. 15 USC 1681e(b): Requires credit reporting agencies to follow reasonable procedures to assure maximum possible accuracy.
-2. 15 USC 1681i(a)(1): Requires credit reporting agencies to conduct a reasonable investigation of disputed information.
-3. 15 USC 1681s-2(a)(3): Prohibits furnishers from continuing to report information that is discovered to be inaccurate.
-`;
-  
-  // Find a good place to insert the references
-  if (letterContent.includes("Sincerely")) {
-    return letterContent.replace(
-      /(?:Thank you.*?matter\.|Please investigate.*?FCRA\.)\s*\n\s*Sincerely/i,
-      match => `${match}\n\n${legalReferences}\nSincerely`
-    );
-  } else {
-    // If no good insertion point, just append to the end
-    return letterContent + '\n\n' + legalReferences;
-  }
 }
 
 /**
