@@ -19,6 +19,9 @@ export {
   legalReferences as templateLegalReferences
 } from './templates/issueSpecificTemplates';
 
+// Export dispute letter for discrepancy function
+export { generateDisputeLetterForDiscrepancy } from './discrepancyLetters';
+
 /**
  * Get sample dispute language for a specific issue type
  */

@@ -1,5 +1,5 @@
 
-import { generateEnhancedDisputeLetter } from './index';
+import { generateEnhancedDisputeLetter } from './letterGenerator';
 
 /**
  * Generates a letter for credit report discrepancies
