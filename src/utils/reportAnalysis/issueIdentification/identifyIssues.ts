@@ -19,6 +19,7 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
     
     // Convert Issue[] to IdentifiedIssue[] by ensuring all required fields are present
     const identifiedIssues: IdentifiedIssue[] = issues.map(issue => ({
+      id: issue.id || `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       type: issue.type,
       title: issue.type.charAt(0).toUpperCase() + issue.type.slice(1).replace('_', ' '),
       description: issue.description,
@@ -31,7 +32,9 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
         accountNumber: issue.accountNumber
       } : undefined,
       laws: Array.isArray(issue.legalBasis) ? 
-        (typeof issue.legalBasis[0] === 'string' ? issue.legalBasis as string[] : []) : 
+        (typeof issue.legalBasis[0] === 'string' ? issue.legalBasis as string[] : 
+          // Properly convert LegalReference[] to string[]
+          issue.legalBasis.map(ref => typeof ref === 'string' ? ref : ref.law)) : 
         (typeof issue.legalBasis === 'string' ? [issue.legalBasis] : []),
       bureau: issue.bureau,
       severity: issue.severity

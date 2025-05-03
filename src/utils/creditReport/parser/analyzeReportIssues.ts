@@ -1,4 +1,3 @@
-
 import { CreditReportData, Issue, PersonalInfo } from '@/utils/creditReport/types';
 
 /**
@@ -43,7 +42,7 @@ function analyzePersonalInfo(personalInfo: PersonalInfo, issues: Issue[], bureau
         bureau,
         severity: 'medium',
         reason: 'Credit report contains multiple name variations that may be incorrect',
-        legalBasis: '15 USC 1681c, 15 USC 1681g', // Changed to string instead of array
+        legalBasis: '15 USC 1681c, 15 USC 1681g', // Use as string instead of array
       });
       
       console.log("Issue detected: Multiple names");
@@ -61,7 +60,7 @@ function analyzePersonalInfo(personalInfo: PersonalInfo, issues: Issue[], bureau
         bureau,
         severity: 'medium',
         reason: 'Credit report contains outdated or incorrect addresses',
-        legalBasis: '15 USC 1681c, 15 USC 1681g', // Changed to string instead of array
+        legalBasis: '15 USC 1681c, 15 USC 1681g', // Use as string instead of array
       });
       
       console.log("Issue detected: Multiple addresses");
@@ -79,7 +78,7 @@ function analyzePersonalInfo(personalInfo: PersonalInfo, issues: Issue[], bureau
         bureau,
         severity: 'medium',
         reason: 'Credit report contains outdated or incorrect employment information',
-        legalBasis: '15 USC 1681c, 15 USC 1681g', // Changed to string instead of array
+        legalBasis: '15 USC 1681c, 15 USC 1681g', // Use as string instead of array
       });
       
       console.log("Issue detected: Multiple employers");
@@ -98,7 +97,7 @@ function analyzePersonalInfo(personalInfo: PersonalInfo, issues: Issue[], bureau
         bureau,
         severity: 'high',
         reason: 'Credit report contains incorrect or multiple Social Security Numbers',
-        legalBasis: '15 USC 1681c, 15 USC 1681g, 18 USC 1028a', // Changed to string instead of array
+        legalBasis: '15 USC 1681c, 15 USC 1681g, 18 USC 1028a', // Use as string instead of array
       });
       
       console.log("Issue detected: SSN discrepancy");
@@ -176,7 +175,7 @@ function checkDuplicateStudentLoans(studentLoans, issues, bureau) {
         accountName: loans[0].accountName,
         accountNumber: loans[0].accountNumber,
         reason: 'Multiple student loans with identical balances may indicate duplicate reporting',
-        legalBasis: '15 USC 1681e(b), 15 USC 1681i', // Changed to string instead of array
+        legalBasis: '15 USC 1681e(b), 15 USC 1681i', // Use as string instead of array
       });
       
       console.log("Issue detected: Duplicate student loans");
@@ -205,7 +204,7 @@ function checkBankruptcyIssues(bankruptcyAccounts, issues, bureau) {
           accountName: account.accountName,
           accountNumber: account.accountNumber,
           reason: 'Bankruptcy information may be beyond the legal reporting period',
-          legalBasis: '15 USC 1681c, 15 USC 1681i', // Changed to string instead of array
+          legalBasis: '15 USC 1681c, 15 USC 1681i', // Use as string instead of array
         });
         
         console.log("Issue detected: Outdated bankruptcy");
@@ -231,7 +230,7 @@ function checkAccountInaccuracies(account, issues, bureau, reportData) {
       accountName: account.accountName,
       accountNumber: account.accountNumber,
       reason: 'Late payment may be reported inaccurately',
-      legalBasis: '15 USC 1681s-2(a)(3), 15 USC 1681e(b)', // Changed to string instead of array
+      legalBasis: '15 USC 1681s-2(a)(3), 15 USC 1681e(b)', // Use as string instead of array
     });
     
     console.log("Issue detected: Late payment");
@@ -250,7 +249,7 @@ function checkAccountInaccuracies(account, issues, bureau, reportData) {
       accountName: account.accountName,
       accountNumber: account.accountNumber,
       reason: 'Collection account may be unverifiable or inaccurate',
-      legalBasis: '15 USC 1692c, 15 USC 1681s-2(a)(3), 15 USC 1681e(b)', // Changed to string instead of array
+      legalBasis: '15 USC 1692c, 15 USC 1681s-2(a)(3), 15 USC 1681e(b)', // Use as string instead of array
     });
     
     console.log("Issue detected: Collection account");
@@ -267,7 +266,7 @@ function checkAccountInaccuracies(account, issues, bureau, reportData) {
       accountName: account.accountName,
       accountNumber: account.accountNumber,
       reason: 'Account is missing required date information',
-      legalBasis: '15 USC 1681e(b), 15 USC 1681i', // Changed to string instead of array
+      legalBasis: '15 USC 1681e(b), 15 USC 1681i', // Use as string instead of array
     });
     
     console.log("Issue detected: Missing dates");
@@ -293,7 +292,7 @@ function analyzeInquiries(inquiries, issues, bureau) {
           bureau,
           severity: 'medium',
           reason: 'Inquiry is over 1 year old and may need to be removed',
-          legalBasis: '15 USC 1681b(a)(2), 15 USC 1681m', // Changed to string instead of array
+          legalBasis: '15 USC 1681b(a)(2), 15 USC 1681m', // Use as string instead of array
         });
         
         console.log("Issue detected: Old inquiry");

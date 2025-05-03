@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { CreditReportData, CreditReportAccount, IdentifiedIssue } from '@/utils/creditReport/types';
 import { useReportAnalysis } from './report-upload/useReportAnalysis';
@@ -108,7 +109,7 @@ export const useReportUpload = () => {
       // Analyze report for issues if not already done
       if (!reportData.issues || reportData.issues.length === 0) {
         console.log("No issues found in report data, analyzing now...");
-        // Use the identifyIssues function instead which returns IdentifiedIssue[]
+        // Use the identifyIssues function which returns IdentifiedIssue[]
         const identifiedIssues = identifyIssues(reportData);
         if (identifiedIssues.length > 0) {
           reportData.issues = identifiedIssues;

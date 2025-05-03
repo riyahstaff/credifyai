@@ -2,7 +2,7 @@
  * Credit Report Parser - Main Parser
  * This module handles parsing text content from credit reports into structured data
  */
-import { CreditReportData, CreditReportInquiry, RecommendedDispute, AnalysisResults } from '../types';
+import { CreditReportData, CreditReportInquiry, RecommendedDispute, AnalysisResults, IdentifiedIssue } from '../types';
 import { extractPersonalInfo } from './extractPersonalInfo';
 import { extractAccounts } from './accounts';
 import { extractInquiries } from './extractInquiries';
@@ -203,6 +203,7 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
   
   // Convert Issue[] to IdentifiedIssue[] format for storage in reportData
   const formattedIssues = identifiedIssues.map(issue => ({
+    id: issue.id || `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     type: issue.type,
     title: issue.type.charAt(0).toUpperCase() + issue.type.slice(1).replace('_', ' '),
     description: issue.description,
@@ -216,10 +217,12 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
     } : undefined,
     laws: typeof issue.legalBasis === 'string' ? 
       issue.legalBasis.split(', ') : 
-      (Array.isArray(issue.legalBasis) ? issue.legalBasis.map(lb => typeof lb === 'string' ? lb : lb.law) : []),
+      (Array.isArray(issue.legalBasis) ? 
+        issue.legalBasis.map(lb => typeof lb === 'string' ? lb : lb.law) : 
+        []),
     bureau: issue.bureau,
     severity: issue.severity
-  }));
+  })) as IdentifiedIssue[];
   
   // Add the identified issues to the report data
   if (formattedIssues.length > 0) {

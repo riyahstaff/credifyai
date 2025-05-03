@@ -1,3 +1,4 @@
+
 /**
  * Credit report data structure types
  */
@@ -54,6 +55,7 @@ export interface RecommendedDispute {
 }
 
 export interface IdentifiedIssue {
+  id?: string; // Added id property
   type: string;
   title: string;
   description: string;
@@ -62,8 +64,8 @@ export interface IdentifiedIssue {
   account?: CreditReportAccount;
   laws: string[];
   legalReferences?: string[]; // Added legal references array
-  bureau?: string;  // Add this field to match Issue
-  severity?: string; // Add this field to match Issue
+  bureau?: string;  // Added bureau property
+  severity?: string; // Added severity field
 }
 
 export interface AnalysisResults {
@@ -103,7 +105,7 @@ export interface CreditReportData {
   bureau?: string;
   reportDate?: string;
   isEmergencyFallback?: boolean;
-  issues?: IdentifiedIssue[]; // Add this to fix the issue
+  issues?: IdentifiedIssue[]; // Added issues property
 }
 
 export interface PersonalInfo {

@@ -1,3 +1,4 @@
+
 export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
@@ -50,6 +51,7 @@ export interface RecommendedDispute {
 }
 
 export interface IdentifiedIssue {
+  id?: string; // Added id property
   type: string;
   title: string;
   description: string;
@@ -58,6 +60,8 @@ export interface IdentifiedIssue {
   account?: CreditReportAccount;
   laws: string[];
   legalReferences?: string[];  // Added legal references array
+  bureau?: string; // Added bureau property
+  severity?: string; // Added severity property
 }
 
 export interface AnalysisResults {
@@ -97,6 +101,7 @@ export interface CreditReportData {
   bureau?: string;
   reportDate?: string;
   isEmergencyFallback?: boolean;  // Added this property to fix the TypeScript error
+  issues?: IdentifiedIssue[]; // Added issues property
 }
 
 export interface PersonalInfo {
