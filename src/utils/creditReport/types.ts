@@ -1,4 +1,3 @@
-
 export interface CreditReportAccount {
   accountName: string;
   accountNumber?: string;
@@ -160,7 +159,11 @@ export interface Issue {
   legalBasis?: LegalReference[] | string;
   severity: 'high' | 'medium' | 'low';
   details?: Record<string, any>;
-  legalReferences?: string[];  // Added legal references array
+  legalReferences?: string[];
+  title?: string; // Added to match IdentifiedIssue
+  impact?: string; // Added to match IdentifiedIssue
+  impactColor?: string; // Added to match IdentifiedIssue
+  laws?: string[]; // Added to match IdentifiedIssue
 }
 
 // Define legal references for different issue types

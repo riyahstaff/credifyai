@@ -1,6 +1,7 @@
-import { CreditReportData, CreditReportAccount, PersonalInfo } from '@/utils/creditReport/types';
+import { CreditReportData, CreditReportAccount, PersonalInfo, IdentifiedIssue } from '@/utils/creditReport/types';
 import { generateEnhancedDisputeLetter, generateLettersForIssues } from '@/utils/creditReport/disputeLetters';
 import { analyzeReportForIssues } from '@/utils/creditReport/parser/analyzeReportIssues';
+import { identifyIssues } from '@/utils/reportAnalysis/issueIdentification/identifyIssues';
 
 /**
  * Automatically generate a dispute letter based on credit report data
@@ -48,21 +49,38 @@ export async function generateAutomaticDisputeLetter(
     };
     
     // Check if the report already has issues identified
-    let issues = reportData.issues || [];
+    let issues: IdentifiedIssue[] = reportData.issues || [];
     
-    // If not, analyze the report
+    // If not, analyze the report using identifyIssues instead of analyzeReportForIssues
     if (issues.length === 0) {
       console.log("No issues found in report data, analyzing now...");
-      issues = analyzeReportForIssues(reportData);
+      issues = identifyIssues(reportData);
       console.log(`Found ${issues.length} issues in report`);
+      
+      // Store the issues back to the report data
+      reportData.issues = issues;
     }
     
     // If we have issues, generate a letter for them
     if (issues.length > 0) {
       console.log("Generating letter from detected issues");
       
+      // Convert IdentifiedIssues to the format expected by generateLettersForIssues
+      const convertedIssues = issues.map(issue => ({
+        id: issue.id || `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        type: issue.type,
+        description: issue.description,
+        bureau: issue.bureau || reportData.primaryBureau || "Unknown",
+        accountName: issue.account?.accountName,
+        accountNumber: issue.account?.accountNumber,
+        reason: issue.description,
+        severity: issue.severity || (issue.impact.includes('High') ? 'high' : 
+                  issue.impact.includes('Medium') ? 'medium' : 'low'),
+        legalBasis: issue.laws.join(', ')
+      }));
+      
       // Generate letters for all issues
-      const generatedLetters = await generateLettersForIssues(issues, userData, reportData);
+      const generatedLetters = await generateLettersForIssues(convertedIssues, userData, reportData);
       
       if (generatedLetters.length > 0) {
         // Store all generated letters

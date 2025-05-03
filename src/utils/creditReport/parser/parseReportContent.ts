@@ -201,10 +201,30 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
   // Use our enhanced issue analyzer instead of the simple detection
   const identifiedIssues = analyzeReportForIssues(reportData);
   
+  // Convert Issue[] to IdentifiedIssue[] format for storage in reportData
+  const formattedIssues = identifiedIssues.map(issue => ({
+    type: issue.type,
+    title: issue.type.charAt(0).toUpperCase() + issue.type.slice(1).replace('_', ' '),
+    description: issue.description,
+    impact: issue.severity === 'high' ? 'High Impact' : 
+           issue.severity === 'medium' ? 'Medium Impact' : 'Low Impact',
+    impactColor: issue.severity === 'high' ? 'red' : 
+                issue.severity === 'medium' ? 'orange' : 'yellow',
+    account: issue.accountName ? { 
+      accountName: issue.accountName,
+      accountNumber: issue.accountNumber
+    } : undefined,
+    laws: typeof issue.legalBasis === 'string' ? 
+      issue.legalBasis.split(', ') : 
+      (Array.isArray(issue.legalBasis) ? issue.legalBasis.map(lb => typeof lb === 'string' ? lb : lb.law) : []),
+    bureau: issue.bureau,
+    severity: issue.severity
+  }));
+  
   // Add the identified issues to the report data
-  if (identifiedIssues.length > 0) {
-    console.log(`Found ${identifiedIssues.length} issues in credit report`);
-    reportData.issues = identifiedIssues;
+  if (formattedIssues.length > 0) {
+    console.log(`Found ${formattedIssues.length} issues in credit report`);
+    reportData.issues = formattedIssues;
   }
   
   // Generate a complete analysis results object

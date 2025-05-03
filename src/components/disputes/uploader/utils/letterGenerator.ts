@@ -1,4 +1,3 @@
-
 import { CreditReportAccount, CreditReportData, IdentifiedIssue, FCRA_LAWS } from "@/utils/creditReport/types";
 import { 
   generateLettersForIssues, 
@@ -21,8 +20,22 @@ export const generateDisputeLetters = async (
     const userInfo = getUserInfoFromStorage();
     console.log("User info retrieved:", userInfo.name);
     
+    // Convert IdentifiedIssue[] to the format expected by generateAndStoreDisputeLetters
+    const convertedIssues = issues.map(issue => ({
+      id: issue.id || `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      type: issue.type,
+      description: issue.description,
+      bureau: issue.bureau || reportData.primaryBureau || "Unknown",
+      accountName: issue.account?.accountName,
+      accountNumber: issue.account?.accountNumber,
+      reason: issue.description,
+      severity: issue.severity || (issue.impact.includes('High') ? 'high' : 
+                issue.impact.includes('Medium') ? 'medium' : 'low'),
+      legalBasis: issue.laws.join(', ')
+    }));
+    
     // Use our enhanced letter generation system
-    const letters = await generateAndStoreDisputeLetters(issues, reportData, userInfo);
+    const letters = await generateAndStoreDisputeLetters(convertedIssues, reportData, userInfo);
     
     if (letters && letters.length > 0) {
       console.log(`Successfully generated ${letters.length} letters`);

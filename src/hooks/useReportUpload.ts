@@ -6,6 +6,7 @@ import { useReportStorage } from './report-upload/useReportStorage';
 import { useReportNavigation } from './report-upload/useReportNavigation';
 import { generateAutomaticDisputeLetter } from '@/components/ai/services/disputes/automaticLetterGenerator';
 import { analyzeReportForIssues } from '@/utils/creditReport/parser/analyzeReportIssues';
+import { identifyIssues } from '@/utils/reportAnalysis/issueIdentification/identifyIssues';
 
 export const useReportUpload = () => {
   const { toast } = useToast();
@@ -107,7 +108,8 @@ export const useReportUpload = () => {
       // Analyze report for issues if not already done
       if (!reportData.issues || reportData.issues.length === 0) {
         console.log("No issues found in report data, analyzing now...");
-        const identifiedIssues = analyzeReportForIssues(reportData);
+        // Use the identifyIssues function instead which returns IdentifiedIssue[]
+        const identifiedIssues = identifyIssues(reportData);
         if (identifiedIssues.length > 0) {
           reportData.issues = identifiedIssues;
           console.log(`Found ${identifiedIssues.length} issues in report`);

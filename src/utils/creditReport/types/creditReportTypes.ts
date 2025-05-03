@@ -1,4 +1,3 @@
-
 /**
  * Credit report data structure types
  */
@@ -63,6 +62,8 @@ export interface IdentifiedIssue {
   account?: CreditReportAccount;
   laws: string[];
   legalReferences?: string[]; // Added legal references array
+  bureau?: string;  // Add this field to match Issue
+  severity?: string; // Add this field to match Issue
 }
 
 export interface AnalysisResults {
@@ -101,7 +102,8 @@ export interface CreditReportData {
   reportNumber?: string;
   bureau?: string;
   reportDate?: string;
-  isEmergencyFallback?: boolean;  // Added this property to fix the TypeScript error
+  isEmergencyFallback?: boolean;
+  issues?: IdentifiedIssue[]; // Add this to fix the issue
 }
 
 export interface PersonalInfo {
