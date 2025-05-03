@@ -33,8 +33,8 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
       } : undefined,
       laws: Array.isArray(issue.legalBasis) ? 
         (typeof issue.legalBasis[0] === 'string' ? issue.legalBasis as string[] : 
-          // Properly convert LegalReference[] to string[]
-          issue.legalBasis.map(ref => typeof ref === 'string' ? ref : ref.law)) : 
+          // Properly convert LegalReference[] to string[] with type assertion
+          (issue.legalBasis as any[]).map(ref => typeof ref === 'string' ? ref : ref.law)) : 
         (typeof issue.legalBasis === 'string' ? [issue.legalBasis] : []),
       bureau: issue.bureau,
       severity: issue.severity

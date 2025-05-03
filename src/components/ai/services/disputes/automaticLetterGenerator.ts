@@ -74,8 +74,8 @@ export async function generateAutomaticDisputeLetter(
         accountName: issue.account?.accountName,
         accountNumber: issue.account?.accountNumber,
         reason: issue.description,
-        severity: issue.severity || (issue.impact.includes('High') ? 'high' : 
-                  issue.impact.includes('Medium') ? 'medium' : 'low'),
+        severity: (issue.severity === 'high' || issue.impact?.includes('High') || issue.impact?.includes('Critical')) ? 'high' : 
+                 (issue.severity === 'medium' || issue.impact?.includes('Medium')) ? 'medium' : 'low' as "high" | "medium" | "low",
         legalBasis: issue.laws.join(', ')
       }));
       
