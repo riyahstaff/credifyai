@@ -1,6 +1,6 @@
-
 import { CreditReportData, CreditReportAccount, PersonalInfo } from '@/utils/creditReport/types';
 import { generateEnhancedDisputeLetter, generateLettersForIssues } from '@/utils/creditReport/disputeLetters';
+import { analyzeReportForIssues } from '@/utils/creditReport/parser/analyzeReportIssues';
 
 /**
  * Automatically generate a dispute letter based on credit report data
@@ -47,6 +47,54 @@ export async function generateAutomaticDisputeLetter(
       zip: userInfo?.zip || localStorage.getItem('userZip'),
     };
     
+    // Check if the report already has issues identified
+    let issues = reportData.issues || [];
+    
+    // If not, analyze the report
+    if (issues.length === 0) {
+      console.log("No issues found in report data, analyzing now...");
+      issues = analyzeReportForIssues(reportData);
+      console.log(`Found ${issues.length} issues in report`);
+    }
+    
+    // If we have issues, generate a letter for them
+    if (issues.length > 0) {
+      console.log("Generating letter from detected issues");
+      
+      // Generate letters for all issues
+      const generatedLetters = await generateLettersForIssues(issues, userData, reportData);
+      
+      if (generatedLetters.length > 0) {
+        // Store all generated letters
+        const lettersToStore = generatedLetters.map((letter, index) => {
+          return {
+            id: Date.now() + index,
+            title: `${letter.bureau} Dispute Letter`,
+            content: letter.content,
+            letterContent: letter.content,
+            bureau: letter.bureau,
+            accountName: targetAccount?.accountName || "Multiple Accounts",
+            accountNumber: targetAccount?.accountNumber || "",
+            errorType: issues[0]?.type || 'general',
+            createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            status: 'ready'
+          };
+        });
+        
+        // Store the generated letters in session storage
+        try {
+          sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(lettersToStore));
+          console.log(`Stored ${lettersToStore.length} letters in session storage`);
+        } catch (e) {
+          console.error("Error updating generated letters:", e);
+        }
+        
+        // Return the first letter (most relevant)
+        return generatedLetters[0].content;
+      }
+    }
+    
+    // Fallback: if no issues were detected or letter generation failed, use the enhanced dispute letter
     // Look for specific issue types in the account
     const issueType = determineMainIssueType(targetAccount, reportData);
     

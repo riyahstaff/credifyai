@@ -1,4 +1,3 @@
-
 /**
  * Credit Report Parser - Main Parser
  * This module handles parsing text content from credit reports into structured data
@@ -10,6 +9,7 @@ import { extractInquiries } from './extractInquiries';
 import { extractPublicRecords } from './extractPublicRecords';
 import { generateAnalysisResults } from './analysisGenerator';
 import { convertReportToHtml } from '../formatters';
+import { analyzeReportForIssues } from './analyzeReportIssues';
 
 /**
  * Parse text content from a credit report into structured data
@@ -197,6 +197,15 @@ export const parseReportContent = (content: string, isPdf: boolean = false): Cre
   // Extract public records information
   reportData.publicRecords = extractPublicRecords(content, reportData.bureaus);
   console.log(`Extracted ${reportData.publicRecords.length} public records from report`);
+  
+  // Use our enhanced issue analyzer instead of the simple detection
+  const identifiedIssues = analyzeReportForIssues(reportData);
+  
+  // Add the identified issues to the report data
+  if (identifiedIssues.length > 0) {
+    console.log(`Found ${identifiedIssues.length} issues in credit report`);
+    reportData.issues = identifiedIssues;
+  }
   
   // Generate a complete analysis results object
   reportData.analysisResults = {

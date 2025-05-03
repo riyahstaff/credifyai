@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { CreditReportData, CreditReportAccount, IdentifiedIssue } from '@/utils/creditReport/types';
 import { useReportAnalysis } from './report-upload/useReportAnalysis';
@@ -6,6 +5,7 @@ import { useToast } from './use-toast';
 import { useReportStorage } from './report-upload/useReportStorage';
 import { useReportNavigation } from './report-upload/useReportNavigation';
 import { generateAutomaticDisputeLetter } from '@/components/ai/services/disputes/automaticLetterGenerator';
+import { analyzeReportForIssues } from '@/utils/creditReport/parser/analyzeReportIssues';
 
 export const useReportUpload = () => {
   const { toast } = useToast();
@@ -103,6 +103,17 @@ export const useReportUpload = () => {
       console.log("Target account for dispute:", targetAccount);
       console.log("Report data personal info:", reportData.personalInfo);
       console.log("Report data accounts:", reportData.accounts?.length);
+      
+      // Analyze report for issues if not already done
+      if (!reportData.issues || reportData.issues.length === 0) {
+        console.log("No issues found in report data, analyzing now...");
+        const identifiedIssues = analyzeReportForIssues(reportData);
+        if (identifiedIssues.length > 0) {
+          reportData.issues = identifiedIssues;
+          console.log(`Found ${identifiedIssues.length} issues in report`);
+          setIssues(identifiedIssues);
+        }
+      }
       
       // Store data for dispute generation
       const stored = storeForDispute(reportData, targetAccount);
