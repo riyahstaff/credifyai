@@ -18,7 +18,6 @@ import DisputeLetterViewer from './DisputeLetterViewer';
 import DisputeLetterHeader from './DisputeLetterHeader';
 
 interface DisputeLettersPageProps {
-  testMode?: boolean;
   requirePayment?: boolean;
 }
 
@@ -29,21 +28,18 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ requirePayment 
   
   const { 
     letters, 
-    setLetters, 
-    addLetter, 
     selectedLetter, 
     setSelectedLetter, 
     isLoading,
-    saveLetter,
     profile
-  } = useDisputeLettersData(false); // Always pass false for testMode
+  } = useDisputeLettersData(); 
   
   const [navHeight, setNavHeight] = useState<number>(0);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   
-  // Don't automatically clear letters on mount, only check for stale data
+  // When component mounts, clear old navigation flags
   useEffect(() => {
-    console.log("DisputeLettersPage: Checking for navigation flags");
+    console.log("DisputeLettersPage: Initial mount - checking name:", profile?.full_name);
     
     // Break navigation loops by clearing flags
     sessionStorage.removeItem('navigationInProgress');
@@ -57,7 +53,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ requirePayment 
     } else {
       console.log("Dispute letters are present, keeping storage intact");
     }
-  }, []);
+  }, [profile]);
   
   // Effect to measure navbar height
   useEffect(() => {
@@ -87,7 +83,6 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ requirePayment 
     console.log("Navigating to upload report page to create new letters");
     
     // CRITICAL: Clear all existing letters before creating new ones
-    // This is essential to prevent reusing old letters
     clearAllLetterData();
     
     // Also clear report data to force a fresh analysis
@@ -218,7 +213,6 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ requirePayment 
                 onSelectLetter={handleSelectLetter}
                 isLoading={isLoading}
                 onCreateLetter={handleCreateLetterFromIssues}
-                testMode={false}
                 userProfile={profile as Profile}
               />
             </div>
@@ -227,7 +221,6 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ requirePayment 
               <DisputeLetterViewer 
                 letter={selectedLetter}
                 isLoading={isLoading}
-                testMode={false}
                 userProfile={profile as Profile}
               />
             </div>

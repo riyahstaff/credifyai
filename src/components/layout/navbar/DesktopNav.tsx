@@ -10,9 +10,7 @@ type DesktopNavProps = {
   profile: Profile | null;
   navLinks: NavLinkType[];
   isActive: (path: string) => boolean;
-  testMode: boolean;
   hasSubscription: boolean;
-  toggleTestMode: () => void;
   handleLogout: () => Promise<void>;
 };
 
@@ -43,6 +41,9 @@ const DesktopNav = ({
       </div>
     );
   }
+
+  // Get display name for the user with proper fallbacks
+  const displayName = profile?.full_name || (user?.email ? user.email.split('@')[0] : 'User');
 
   return (
     <>
@@ -82,7 +83,7 @@ const DesktopNav = ({
         
         <div className="flex items-center gap-2 px-3 py-2 text-credify-navy dark:text-white/90">
           <User size={18} className="text-credify-teal" />
-          <span className="font-medium">{profile?.full_name || 'User'}</span>
+          <span className="font-medium">{displayName}</span>
         </div>
         
         <button

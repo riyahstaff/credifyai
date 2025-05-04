@@ -9,34 +9,31 @@ interface DisputeLetterHeaderProps {
   testMode?: boolean;
 }
 
-const DisputeLetterHeader: React.FC<DisputeLetterHeaderProps> = ({ testMode = false }) => {
+const DisputeLetterHeader: React.FC<DisputeLetterHeaderProps> = () => {
   const { profile, user } = useAuth();
   const [userName, setUserName] = useState('User');
   
   // Improved name extraction logic with fallback mechanisms
   useEffect(() => {
     const getUserName = () => {
-      // First priority: profile from auth context
+      // First priority: profile full name from auth context
       if (profile?.full_name) {
         return profile.full_name;
       }
       
       // Second priority: user email from auth context
       if (user?.email) {
+        // Extract username from email but don't include domain part
         return user.email.split('@')[0];
-      }
-      
-      // Third priority: stored user name from localStorage
-      const storedName = localStorage.getItem('userName');
-      if (storedName && storedName !== '[YOUR NAME]') {
-        return storedName;
       }
       
       // Default fallback
       return 'User';
     };
     
-    setUserName(getUserName());
+    const name = getUserName();
+    console.log("Setting user name in DisputeLetterHeader:", name);
+    setUserName(name);
   }, [profile, user]);
 
   return (
