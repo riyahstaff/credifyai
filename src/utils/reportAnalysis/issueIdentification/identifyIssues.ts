@@ -1,4 +1,5 @@
 
+
 import { CreditReportData, IdentifiedIssue } from '@/utils/creditReport/types';
 import { analyzeReportForIssues } from '@/utils/creditReport/parser/analyzeReportIssues';
 
@@ -31,12 +32,12 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
         accountName: issue.accountName,
         accountNumber: issue.accountNumber
       } : undefined,
-      // Convert legalBasis from LegalReference[] to string[] with proper type handling
+      // Convert legalBasis to string[] with proper type handling
       laws: Array.isArray(issue.legalBasis) ? 
         (typeof issue.legalBasis[0] === 'string' ? 
           issue.legalBasis as string[] : 
-          // First cast to any to bypass TypeScript's type checking, then map to extract the law property
-          (issue.legalBasis as any[]).map(ref => ref.law || "")) : 
+          // First convert to unknown, then to array of objects with required structure
+          ((issue.legalBasis as unknown) as { law?: string }[]).map(ref => ref?.law || "")) : 
         (typeof issue.legalBasis === 'string' ? [issue.legalBasis] : []),
       bureau: issue.bureau,
       severity: issue.severity
@@ -50,3 +51,4 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
     return [];
   }
 }
+
