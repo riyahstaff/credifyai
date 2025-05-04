@@ -1,46 +1,31 @@
 
-import { bureauAddressMapping, issueTemplateMapping } from './templates/issueSpecificTemplates';
-import { getTemplateForIssueType } from './templateLoader';
-import { CreditReportData, Issue } from '@/utils/creditReport/types';
-import { FCRA_LAWS } from '@/utils/creditReport/constants';
-
-// Define the legal references
-const LEGAL_REFERENCES = {
-  latePayments: ['15 USC 1681s-2(a)(3)', '15 USC 1681e(b)'],
-  collections: ['15 USC 1692c', '15 USC 1681s-2(a)(3)'],
-  inaccuracies: ['15 USC 1681e(b)', '15 USC 1681i'],
-  inquiries: ['15 USC 1681b(a)(2)', '15 USC 1681m'],
-  personalInfo: ['15 USC 1681c', '15 USC 1681g'],
-  studentLoans: ['15 USC 1681e(b)', '15 USC 1681i'],
-  bankruptcy: ['15 USC 1681c', '15 USC 1681i', '15 USC 1681e(b)'],
-  metro2: ['Metro 2® Compliance Guidelines']
-};
+import { CreditReportData, CreditReportAccount, Issue, PersonalInfo } from '@/utils/creditReport/types';
 
 /**
- * Generate dispute letter
+ * Generate enhanced dispute letter with account-specific information
  */
-export async function generateDisputeLetter(
+export async function generateEnhancedDisputeLetter(
   issueType: string,
-  accountDetails: any,
+  disputeDetails: {
+    accountName: string;
+    accountNumber?: string;
+    errorDescription: string;
+    bureau: string;
+    relevantReportText?: string;
+  },
   userInfo: any,
-  creditReportData?: any
+  reportData?: CreditReportData
 ): Promise<string> {
-  // Determine which bureau to address
-  const bureau = accountDetails.bureau || 
-                 creditReportData?.primaryBureau || 
-                 creditReportData?.bureau || 
-                 'Credit Bureau';
-                 
-  console.log(`Generating dispute letter for ${issueType} issue with ${bureau}`);
+  console.log("Generating enhanced dispute letter for issue type:", issueType);
+  console.log("Dispute details:", JSON.stringify(disputeDetails, null, 2));
   
-  // Load the template for this issue type
-  const template = await getTemplateForIssueType(issueType);
+  // Ensure we have all required information
+  const accountName = disputeDetails.accountName || 'Account in Question';
+  const accountNumber = disputeDetails.accountNumber || 'XXXXXXXXXXXX';
+  const errorDescription = disputeDetails.errorDescription || 'contains inaccurate information';
   
-  // Get bureau address
-  const bureauAddress = bureauAddressMapping[bureau] || bureauAddressMapping['Unknown'];
-  
-  // Get legal references for this issue type
-  const legalRefs = getLegalReferencesForIssue(issueType);
+  // Get bureau-specific information
+  const bureauInfo = getBureauInfo(disputeDetails.bureau);
   
   // Format the current date
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -49,292 +34,242 @@ export async function generateDisputeLetter(
     day: 'numeric'
   });
   
-  // Prepare data for replacement in the template
-  const data = {
-    DATE: currentDate,
-    BUREAU_NAME: bureau,
-    BUREAU_ADDRESS: bureauAddress,
-    CONSUMER_NAME: userInfo?.name || '[YOUR NAME]',
-    CONSUMER_ADDRESS: formatUserAddress(userInfo),
-    ACCOUNT_DETAILS: formatAccountDetails(accountDetails),
-    ISSUE_TYPE: issueType,
-    ISSUE_DESCRIPTION: accountDetails.errorDescription || `This ${issueType} appears to be inaccurate.`,
-    LEGAL_REFERENCES: formatLegalReferences(legalRefs),
-    ACCOUNT_NAME: accountDetails.accountName || 'Account in Question',
-    ACCOUNT_NUMBER: accountDetails.accountNumber ? `Account Number: ${accountDetails.accountNumber}` : '',
-  };
+  // Get user name and address with fallbacks
+  const userName = userInfo?.name || localStorage.getItem('userName') || '[YOUR NAME]';
+  const userAddress = userInfo?.address || localStorage.getItem('userAddress') || '[YOUR ADDRESS]';
+  const userCity = userInfo?.city || localStorage.getItem('userCity') || '[CITY]';
+  const userState = userInfo?.state || localStorage.getItem('userState') || '[STATE]';
+  const userZip = userInfo?.zip || localStorage.getItem('userZip') || '[ZIP]';
   
-  // Replace placeholders in the template with actual data
-  let letter = template;
-  for (const [key, value] of Object.entries(data)) {
-    letter = letter.replace(new RegExp(`{{${key}}}`, 'g'), value as string);
+  // Generate a section with account details
+  let accountDetailsSection = '';
+  
+  // Try to find the account in the report data for more details
+  let accountDetails: CreditReportAccount | undefined;
+  if (reportData?.accounts && reportData.accounts.length > 0) {
+    accountDetails = reportData.accounts.find(acc => 
+      acc.accountName === accountName || accountName.includes(acc.accountName) || acc.accountName.includes(accountName)
+    );
+    
+    if (!accountDetails && accountNumber && accountNumber !== 'XXXXXXXXXXXX') {
+      accountDetails = reportData.accounts.find(acc => 
+        acc.accountNumber === accountNumber
+      );
+    }
+    
+    // If still not found, use the first account as a fallback
+    if (!accountDetails) {
+      accountDetails = reportData.accounts[0];
+    }
   }
   
-  return letter;
-}
+  // Format account details section based on the issue type
+  if (issueType === 'collection' || issueType === 'collection_account') {
+    accountDetailsSection = `
+DISPUTED ACCOUNTS:
 
-/**
- * Get legal references for a specific issue type
- */
-function getLegalReferencesForIssue(issueType: string): string[] {
-  // Normalize the issue type
-  const type = issueType.toLowerCase();
-  
-  if (type.includes('personal') || type.includes('info')) {
-    return LEGAL_REFERENCES.personalInfo;
-  } else if (type.includes('late') || type.includes('payment')) {
-    return LEGAL_REFERENCES.latePayments;
-  } else if (type.includes('collect')) {
-    return LEGAL_REFERENCES.collections;
-  } else if (type.includes('inquiry')) {
-    return LEGAL_REFERENCES.inquiries;
-  } else if (type.includes('student') || type.includes('loan')) {
-    return LEGAL_REFERENCES.studentLoans;
-  } else if (type.includes('bankrupt')) {
-    return LEGAL_REFERENCES.bankruptcy;
+Collection Account: ${accountName.toUpperCase()}
+Account Number: ${accountNumber}
+${accountDetails?.creditor ? `Original Creditor: ${accountDetails.creditor}\n` : ''}
+${accountDetails?.balance ? `Amount: $${accountDetails.balance}\n` : ''}
+${accountDetails?.lastReportedDate ? `Reported: ${accountDetails.lastReportedDate}\n` : ''}
+Issue: This collection account is disputed as inaccurate and unverified
+
+Pursuant to the Fair Credit Reporting Act (FCRA), I am disputing this collection account as inaccurate. I request verification of this debt as it appears on my credit report or its prompt removal.
+`;
+  } else if (issueType === 'late_payment') {
+    accountDetailsSection = `
+DISPUTED ACCOUNTS:
+
+Creditor: ${accountName.toUpperCase()}
+Account Number: ${accountNumber}
+${accountDetails?.balance ? `Balance: $${accountDetails.balance}\n` : ''}
+${accountDetails?.openDate ? `Opened: ${accountDetails.openDate}\n` : ''}
+${accountDetails?.lastReportedDate ? `Last Reported: ${accountDetails.lastReportedDate}\n` : ''}
+${accountDetails?.status ? `Status: ${accountDetails.status}\n` : ''}
+Issue: Late payments reported incorrectly
+
+I dispute the late payment information for this account as it is not accurate. Please verify the payment history or remove the inaccurate late payment notations.
+`;
+  } else if (issueType === 'inquiry') {
+    accountDetailsSection = `
+DISPUTED ITEMS:
+
+Inquiry By: ${accountName}
+${accountDetails?.lastReportedDate ? `Date of Inquiry: ${accountDetails.lastReportedDate}\n` : ''}
+Issue: Unauthorized inquiry
+
+I did not authorize this inquiry and it should be removed from my credit report. Under the FCRA, only companies with a permissible purpose may access my credit information.
+`;
+  } else if (issueType === 'personal_info') {
+    const personalInfo = reportData?.personalInfo;
+    
+    accountDetailsSection = `
+DISPUTED INFORMATION:
+
+Type: Personal Information
+Issue: Inaccurate personal information
+
+The following personal information on my credit report is incorrect or needs to be updated:
+${personalInfo?.name ? `Name: ${personalInfo.name}\n` : ''}
+${personalInfo?.address ? `Address: ${personalInfo.address}\n` : ''}
+${personalInfo?.city && personalInfo.state ? `City/State: ${personalInfo.city}, ${personalInfo.state}\n` : ''}
+${personalInfo?.employer ? `Employer: ${personalInfo.employer}\n` : ''}
+
+Please correct this information in your records.
+`;
   } else {
-    return LEGAL_REFERENCES.inaccuracies;
-  }
-}
+    accountDetailsSection = `
+DISPUTED ACCOUNTS:
 
-/**
- * Format legal references into a readable string
- */
-function formatLegalReferences(references: string[]): string {
-  if (!references || references.length === 0) {
-    return '';
-  }
-  
-  return references.map(ref => `- ${ref}`).join('\n');
-}
+Account: ${accountName.toUpperCase()}
+Account Number: ${accountNumber}
+${accountDetails?.balance ? `Current Balance: $${accountDetails.balance}\n` : ''}
+${accountDetails?.openDate ? `Date Opened: ${accountDetails.openDate}\n` : ''}
+${accountDetails?.lastReportedDate ? `Last Reported: ${accountDetails.lastReportedDate}\n` : ''}
+${accountDetails?.status ? `Status: ${accountDetails.status}\n` : ''}
+Issue: ${errorDescription}
 
-/**
- * Format user address information
- */
-function formatUserAddress(userInfo: any): string {
-  if (!userInfo) return '[YOUR ADDRESS]';
-  
-  let address = '';
-  
-  if (userInfo.address) {
-    address += userInfo.address;
+This account contains inaccurate information that requires verification. If you cannot verify this information, please remove it from my credit report.
+`;
   }
   
-  if (userInfo.city || userInfo.state || userInfo.zip) {
-    if (address) address += '\n';
-    
-    if (userInfo.city) {
-      address += userInfo.city;
-    }
-    
-    if (userInfo.state) {
-      if (userInfo.city) address += ', ';
-      address += userInfo.state;
-    }
-    
-    if (userInfo.zip) {
-      address += ' ' + userInfo.zip;
-    }
-  }
-  
-  return address || '[YOUR ADDRESS]';
-}
+  // Generate the full letter
+  const letter = `${userName}
+${userAddress}
+${userCity}, ${userState} ${userZip}
 
-/**
- * Format account details
- */
-function formatAccountDetails(accountDetails: any): string {
-  if (!accountDetails) return '';
-  
-  let details = '';
-  
-  if (accountDetails.accountName) {
-    details += `Account Name: ${accountDetails.accountName}\n`;
-  }
-  
-  if (accountDetails.accountNumber) {
-    details += `Account Number: ${accountDetails.accountNumber}\n`;
-  }
-  
-  if (accountDetails.balance) {
-    details += `Balance: $${accountDetails.balance}\n`;
-  }
-  
-  if (accountDetails.openDate) {
-    details += `Date Opened: ${accountDetails.openDate}\n`;
-  }
-  
-  if (accountDetails.errorDescription) {
-    details += `\nIssue: ${accountDetails.errorDescription}\n`;
-  }
-  
-  return details;
-}
+${currentDate}
 
-/**
- * Enhanced dispute letter generation with more specific formatting
- */
-export async function generateEnhancedDisputeLetter(
-  issueType: string,
-  accountDetails: any,
-  userInfo: any,
-  creditReportData?: any
-): Promise<string> {
-  // Use the basic generator and then enhance the output
-  let letter = await generateDisputeLetter(issueType, accountDetails, userInfo, creditReportData);
-  
-  // Ensure letter has the proper bureau
-  const bureau = accountDetails.bureau || 
-                creditReportData?.primaryBureau || 
-                creditReportData?.bureau || 
-                'Credit Bureau';
-  
-  // Make sure Metro 2 language is included
-  if (!letter.includes('Metro 2')) {
-    letter += `\n\nIn accordance with Metro 2® reporting guidelines, I request that you properly code this account as "disputed by consumer" (compliance code XB) during your investigation.`;
-  }
-  
-  // Ensure FCRA 30-day investigation requirement is mentioned
-  if (!letter.includes('30 days')) {
-    letter += `\n\nI understand that according to the Fair Credit Reporting Act, you are required to forward all relevant information to the information provider and to respond to my dispute within 30 days of receipt.`;
-  }
-  
-  // Make sure letter has a proper closing
-  if (!letter.includes('Sincerely')) {
-    letter += `\n\nThank you for your prompt attention to this matter.\n\nSincerely,\n\n${userInfo?.name || '[YOUR NAME]'}`;
-  }
-  
+${bureauInfo.name}
+${bureauInfo.address}
+
+RE: Dispute of Inaccurate Information in Credit Report
+
+To Whom It May Concern:
+
+I am writing to dispute information in my credit report that I believe to be inaccurate. After reviewing my credit report, I have identified several discrepancies that require investigation.
+
+${accountDetailsSection}
+
+Under the Fair Credit Reporting Act (FCRA), specifically Section 611(a), you are required to investigate this dispute and either verify the information as accurate or remove it from my credit report. Please conduct a thorough investigation of the disputed information, including contacting the original sources of the information.
+
+If you cannot verify this information, please remove it from my credit report and send me a free copy of my credit report showing the changes.
+
+I understand that according to the FCRA, you are required to forward all relevant information to the information provider and to respond to my dispute within 30 days of receipt.
+
+Thank you for your prompt attention to this matter.
+
+Sincerely,
+
+${userName}
+`;
+
   return letter;
 }
 
 /**
- * Generate letters for multiple issues
+ * Get the bureau-specific information for a letter
+ */
+function getBureauInfo(bureauName: string): { name: string, address: string } {
+  const bureau = bureauName.toLowerCase();
+  
+  if (bureau.includes('experian')) {
+    return {
+      name: 'Experian',
+      address: 'P.O. Box 4500\nAllen, TX 75013'
+    };
+  } else if (bureau.includes('equifax')) {
+    return {
+      name: 'Equifax Information Services LLC',
+      address: 'P.O. Box 740256\nAtlanta, GA 30374'
+    };
+  } else if (bureau.includes('transunion') || bureau.includes('trans union')) {
+    return {
+      name: 'TransUnion LLC',
+      address: 'Consumer Dispute Center\nP.O. Box 2000\nChester, PA 19016'
+    };
+  }
+  
+  // Default fallback
+  return {
+    name: 'Credit Bureau',
+    address: 'P.O. Box 4500\nAllen, TX 75013' // Default to Experian address
+  };
+}
+
+/**
+ * Generate dispute letters for multiple issues
  */
 export async function generateLettersForIssues(
-  issues: Issue[],
-  userInfo: any,
-  creditReportData?: any
-): Promise<{ content: string, bureau: string }[]> {
-  // Group issues by bureau
+  issues: Issue[], 
+  userInfo: any, 
+  reportData?: CreditReportData
+): Promise<Array<{ bureau: string, content: string }>> {
+  console.log(`Generating dispute letters for ${issues.length} issues`);
+  
+  const letters: Array<{ bureau: string, content: string }> = [];
+  
+  // Group issues by bureau to avoid duplicate letters
   const issuesByBureau: Record<string, Issue[]> = {};
   
   for (const issue of issues) {
-    const bureau = issue.bureau || 'Unknown';
+    const bureau = issue.bureau || determineBureauFromReport(reportData);
+    
     if (!issuesByBureau[bureau]) {
       issuesByBureau[bureau] = [];
     }
+    
     issuesByBureau[bureau].push(issue);
   }
   
-  // Generate a letter for each bureau
-  const letters = [];
-  
+  // Generate a letter for each bureau with its issues
   for (const [bureau, bureauIssues] of Object.entries(issuesByBureau)) {
-    // Group issues by type
-    const issuesByType: Record<string, Issue[]> = {};
+    // Get primary account for this bureau's issues
+    const primaryIssue = bureauIssues[0];
+    const accountName = primaryIssue.accountName || 'Multiple Accounts';
+    const accountNumber = primaryIssue.accountNumber || '';
     
+    // Generate description of all issues for this bureau
+    let combinedDescription = '';
+    let accountDetailsSection = 'DISPUTED ACCOUNTS:\n\n';
+    
+    // Add details for each account with issues
     for (const issue of bureauIssues) {
-      if (!issuesByType[issue.type]) {
-        issuesByType[issue.type] = [];
-      }
-      issuesByType[issue.type].push(issue);
-    }
-    
-    // Generate letter content
-    let letterContent = '';
-    
-    // User information and date
-    letterContent += `${userInfo?.name || '[YOUR NAME]'}\n`;
-    letterContent += `${formatUserAddress(userInfo)}\n\n`;
-    
-    const currentDate = new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    
-    letterContent += `${currentDate}\n\n`;
-    
-    // Bureau information
-    letterContent += `${bureau}\n`;
-    letterContent += `${bureauAddressMapping[bureau] || bureauAddressMapping['Unknown']}\n\n`;
-    
-    // Letter subject
-    letterContent += `RE: Dispute of Inaccurate Information in Credit Report\n\n`;
-    letterContent += `To Whom It May Concern:\n\n`;
-    
-    // Introduction
-    letterContent += `I am writing to dispute the following information in my credit report. The items listed below are inaccurate and/or incomplete. Under the Fair Credit Reporting Act (FCRA), I request that you investigate and correct the following items:\n\n`;
-    
-    // List each issue by type
-    for (const [type, typeIssues] of Object.entries(issuesByType)) {
-      // Get legal references for this issue type
-      const legalRefs = getLegalReferencesForIssue(type);
-      
-      // Add a section for this issue type
-      switch (type) {
-        case 'personal_info':
-          letterContent += `DISPUTED PERSONAL INFORMATION:\n`;
-          break;
-        case 'late_payment':
-          letterContent += `DISPUTED LATE PAYMENT ACCOUNTS:\n`;
-          break;
-        case 'collection':
-          letterContent += `DISPUTED COLLECTION ACCOUNTS:\n`;
-          break;
-        case 'inquiry':
-          letterContent += `DISPUTED INQUIRIES:\n`;
-          break;
-        case 'student_loan':
-          letterContent += `DISPUTED STUDENT LOAN ACCOUNTS:\n`;
-          break;
-        case 'bankruptcy':
-          letterContent += `DISPUTED BANKRUPTCY INFORMATION:\n`;
-          break;
-        default:
-          letterContent += `DISPUTED ACCOUNTS:\n`;
-      }
-      
-      // List each specific issue
-      for (const issue of typeIssues) {
-        if (issue.accountName) {
-          letterContent += `- ${issue.accountName}`;
-          if (issue.accountNumber) {
-            letterContent += ` (Account #: ${issue.accountNumber})`;
-          }
-          letterContent += `\n`;
+      if (issue.accountName) {
+        accountDetailsSection += `Account: ${issue.accountName.toUpperCase()}\n`;
+        if (issue.accountNumber) {
+          accountDetailsSection += `Account Number: ${issue.accountNumber}\n`;
         }
-        
-        letterContent += `  Issue: ${issue.description}\n`;
-        letterContent += `  Reason: ${issue.reason}\n\n`;
+        accountDetailsSection += `Issue: ${issue.description}\n\n`;
       }
-      
-      // Add legal references for this type
-      letterContent += `Legal basis for this dispute:\n`;
-      letterContent += formatLegalReferences(legalRefs) + '\n\n';
     }
     
-    // Add standard closing text
-    letterContent += `Under the Fair Credit Reporting Act (FCRA), you are required to:\n`;
-    letterContent += `1. Conduct a reasonable investigation into the information I am disputing\n`;
-    letterContent += `2. Forward all relevant information that I provide to the furnisher\n`;
-    letterContent += `3. Review and consider all relevant information\n`;
-    letterContent += `4. Provide me the results of your investigation\n`;
-    letterContent += `5. Delete the disputed information if it cannot be verified\n\n`;
+    // If no specific accounts were found, create a general description
+    if (!accountDetailsSection.includes('Account:')) {
+      accountDetailsSection = 'DISPUTED ITEMS:\n\n';
+      for (const issue of bureauIssues) {
+        accountDetailsSection += `Issue Type: ${issue.type.replace(/_/g, ' ').toUpperCase()}\n`;
+        accountDetailsSection += `Description: ${issue.description}\n\n`;
+      }
+    }
     
-    letterContent += `In accordance with Metro 2® reporting guidelines, I request that you properly code these accounts as "disputed by consumer" (compliance code XB) during your investigation.\n\n`;
+    // Generate the letter for this bureau
+    const letterContent = await generateEnhancedDisputeLetter(
+      primaryIssue.type,
+      {
+        accountName: accountName,
+        accountNumber: accountNumber,
+        errorDescription: accountDetailsSection,
+        bureau: bureau
+      },
+      userInfo,
+      reportData
+    );
     
-    letterContent += `I understand that according to the Fair Credit Reporting Act, you are required to forward all relevant information to the information provider and to respond to my dispute within 30 days of receipt.\n\n`;
-    
-    letterContent += `Thank you for your prompt attention to this matter.\n\n`;
-    
-    letterContent += `Sincerely,\n\n`;
-    letterContent += `${userInfo?.name || '[YOUR NAME]'}`;
-    
-    // Add letter to the list
     letters.push({
-      content: letterContent,
-      bureau: bureau
+      bureau: bureau,
+      content: letterContent
     });
   }
   
@@ -342,65 +277,36 @@ export async function generateLettersForIssues(
 }
 
 /**
- * Generate and store dispute letters
+ * Determine which bureau a report belongs to
  */
-export async function generateAndStoreDisputeLetters(
-  issues: Issue[],
-  reportData: CreditReportData,
-  userInfo: any
-): Promise<any[]> {
-  console.log(`Generating letters for ${issues.length} issues`);
+function determineBureauFromReport(reportData?: CreditReportData): string {
+  if (!reportData) return 'Credit Bureau';
   
-  // Generate letters for all issues
-  const generatedLetters = await generateLettersForIssues(issues, userInfo, reportData);
-  
-  // Format letters for storage
-  const storedLetters = generatedLetters.map((letter, index) => {
-    // Find an account to use for this letter
-    let accountName = '';
-    let accountNumber = '';
-    
-    const issuesForBureau = issues.filter(issue => issue.bureau === letter.bureau);
-    if (issuesForBureau.length > 0) {
-      const issueWithAccount = issuesForBureau.find(issue => issue.accountName);
-      if (issueWithAccount) {
-        accountName = issueWithAccount.accountName || '';
-        accountNumber = issueWithAccount.accountNumber || '';
-      }
+  if (reportData.primaryBureau) {
+    return reportData.primaryBureau;
+  } else if (reportData.bureau) {
+    return reportData.bureau;
+  } else if (reportData.bureaus) {
+    if (reportData.bureaus.experian) {
+      return 'Experian';
+    } else if (reportData.bureaus.equifax) {
+      return 'Equifax';
+    } else if (reportData.bureaus.transunion) {
+      return 'TransUnion';
     }
-    
-    // Fallback if no account found
-    if (!accountName && reportData.accounts && reportData.accounts.length > 0) {
-      accountName = reportData.accounts[0].accountName;
-      accountNumber = reportData.accounts[0].accountNumber || '';
-    }
-    
-    // Create letter object
-    return {
-      id: Date.now() + index,
-      title: `${letter.bureau} Dispute Letter`,
-      content: letter.content,
-      letterContent: letter.content,
-      bureau: letter.bureau,
-      accountName: accountName,
-      accountNumber: accountNumber,
-      errorType: issues[0]?.type || 'general',
-      status: 'ready',
-      createdAt: new Date().toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-      })
-    };
-  });
-  
-  // Store the generated letters in session storage
-  try {
-    sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(storedLetters));
-    console.log(`Successfully stored ${storedLetters.length} letters in session storage`);
-  } catch (error) {
-    console.error("Error storing letters in session storage:", error);
   }
   
-  return storedLetters;
+  // Try to detect from report text
+  if (reportData.rawText) {
+    const text = reportData.rawText.toLowerCase();
+    if (text.includes('experian')) {
+      return 'Experian';
+    } else if (text.includes('equifax')) {
+      return 'Equifax';
+    } else if (text.includes('transunion') || text.includes('trans union')) {
+      return 'TransUnion';
+    }
+  }
+  
+  return 'Credit Bureau';
 }

@@ -4,25 +4,22 @@
  * This module handles extracting inquiry information from credit reports
  */
 
+import { CreditReportInquiry } from '../types';
+
 /**
  * Extract inquiry information from credit report content
  */
 export const extractInquiries = (
   content: string,
   bureaus: { experian?: boolean; equifax?: boolean; transunion?: boolean; }
-) => {
+): CreditReportInquiry[] => {
   const inquirySectionPatterns = [
     /(?:Inquiries|Credit\s+Inquiries|Requests\s+for\s+Your\s+Credit\s+History)[\s\S]*?((?:Date|Creditor|Subscriber|Company)[^\n]*(?:[\s\S]*?)(?=\s*(?:Public\s+Records|Additional\s+Information|Summary|Disclaimers|End\s+of\s+Report|\Z)))/i,
     /(?:INQUIRIES|CREDIT\s+INQUIRIES|Companies\s+who\s+requested\s+your\s+credit\s+information)[\s\S]*?((?:[\d\/]+|[A-Z]{3}\s+\d{1,2})[^\n]*(?:[\s\S]*?)(?=\s*(?:Public\s+Records|Additional\s+Information|Summary|Disclaimers|End\s+of\s+Report|\Z)))/i,
     /(?:Regular\s+Inquiries|Hard\s+Inquiries|Inquiries\s+Shared\s+With\s+Others|Inquiries\s+That\s+May\s+Impact\s+Your\s+Credit\s+Rating)[\s\S]*?((?:[\d\/]+|[A-Z]{3}\s+\d{1,2})[^\n]*(?:[\s\S]*?)(?=\s*(?:Account\s+Review|Promotional\s+Inquiries|Inquiries\s+Not\s+Shared|Public\s+Records|Additional\s+Information|Summary|Disclaimers|End\s+of\s+Report|\Z)))/i
   ];
   
-  const inquiries: Array<{
-    inquiryDate: string;
-    creditor: string;
-    bureau: string;
-    inquiryCompany?: string; // Added to match CreditReportInquiry
-  }> = [];
+  const inquiries: CreditReportInquiry[] = [];
   
   // First try to find the inquiry section
   let inquirySection = '';
@@ -101,7 +98,9 @@ export const extractInquiries = (
             inquiryDate,
             creditor,
             bureau,
-            inquiryCompany: creditor // Adding inquiryCompany for compatibility
+            inquiryCompany: creditor, // Adding inquiryCompany for compatibility
+            date: inquiryDate, // Adding date for compatibility with different formats
+            name: creditor // Adding name for compatibility
           });
           
           console.log(`Found inquiry: ${creditor} on ${inquiryDate} (${bureau})`);

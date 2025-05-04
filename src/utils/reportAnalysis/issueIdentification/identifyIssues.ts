@@ -1,5 +1,5 @@
 
-import { CreditReportData, IdentifiedIssue, Issue } from '@/utils/creditReport/types';
+import { CreditReportData, IdentifiedIssue, Issue, LegalReference } from '@/utils/creditReport/types';
 import { analyzeReportForIssues } from '@/utils/creditReport/parser/analyzeReportIssues';
 
 /**
@@ -25,7 +25,7 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
     if (issues.length === 0 && reportData.rawText) {
       console.warn("No issues found by analyzer, attempting fallback text analysis");
       // Search for common keywords that indicate potential issues
-      const potentialIssues = extractIssuesFromRawText(reportData.rawText);
+      const potentialIssues = extractIssuesFromRawText(reportData.rawText, reportData);
       if (potentialIssues.length > 0) {
         console.log(`Found ${potentialIssues.length} potential issues from raw text`);
         issues.push(...potentialIssues);
@@ -40,8 +40,8 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
       if (Array.isArray(issue.legalBasis)) {
         // Check if elements appear to be LegalReference objects
         if (typeof issue.legalBasis[0] === 'object' && issue.legalBasis[0] !== null) {
-          laws = (issue.legalBasis as any[]).map(ref => 
-            typeof ref.law === 'string' ? ref.law : "");
+          const legalRefs = issue.legalBasis as LegalReference[];
+          laws = legalRefs.map(ref => typeof ref.law === 'string' ? ref.law : "");
         } else {
           // Assume array of strings
           laws = issue.legalBasis as unknown as string[];
@@ -50,26 +50,35 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
         laws = [issue.legalBasis];
       }
       
+      // Use existing legalReferences if available
+      if (issue.legalReferences && Array.isArray(issue.legalReferences)) {
+        laws = [...laws, ...issue.legalReferences];
+      }
+      
       return {
         id: issue.id || `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: issue.type,
-        title: issue.type.charAt(0).toUpperCase() + issue.type.slice(1).replace('_', ' '),
+        title: issue.title || issue.type.charAt(0).toUpperCase() + issue.type.slice(1).replace(/_/g, ' '),
         description: issue.description,
-        impact: issue.severity === 'high' ? 'High Impact' : 
-              issue.severity === 'medium' ? 'Medium Impact' : 'Low Impact',
-        impactColor: issue.severity === 'high' ? 'red' : 
-                    issue.severity === 'medium' ? 'orange' : 'yellow',
+        impact: issue.impact || (issue.severity === 'high' ? 'High Impact' : 
+                issue.severity === 'medium' ? 'Medium Impact' : 'Low Impact'),
+        impactColor: issue.impactColor || (issue.severity === 'high' ? 'red' : 
+                    issue.severity === 'medium' ? 'orange' : 'yellow'),
         account: issue.accountName ? { 
           accountName: issue.accountName,
           accountNumber: issue.accountNumber
         } : undefined,
-        laws: laws,
-        bureau: issue.bureau,
-        severity: issue.severity
+        laws: laws.filter(law => law), // Remove empty strings
+        bureau: issue.bureau || reportData.primaryBureau || reportData.bureau || "Unknown",
+        severity: issue.severity || (
+          issue.impact && issue.impact.toLowerCase().includes('high') ? 'high' :
+          issue.impact && issue.impact.toLowerCase().includes('medium') ? 'medium' : 'low'
+        )
       };
     });
     
     console.log(`Found ${identifiedIssues.length} issues in credit report`);
+    console.log("Sample issue:", identifiedIssues.length > 0 ? JSON.stringify(identifiedIssues[0], null, 2) : "No issues");
     
     return identifiedIssues;
   } catch (error) {
@@ -81,7 +90,7 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
 /**
  * Extract potential issues from raw text when the structured analyzer fails
  */
-function extractIssuesFromRawText(rawText: string): Issue[] {
+function extractIssuesFromRawText(rawText: string, reportData: CreditReportData): Issue[] {
   const potentialIssues: Issue[] = [];
   
   // Common keywords that indicate potential issues
@@ -102,7 +111,41 @@ function extractIssuesFromRawText(rawText: string): Issue[] {
     { keyword: "identity theft", type: "identity_theft", severity: "high" },
   ];
   
-  // Extract potential account names
+  // First, try to use actual accounts from the report
+  if (reportData.accounts && reportData.accounts.length > 0) {
+    console.log("Using actual accounts for issue identification:", reportData.accounts.length);
+    
+    // Check each account for potential issues
+    for (const account of reportData.accounts) {
+      const status = (account.status || account.paymentStatus || '').toLowerCase();
+      
+      // Check for negative accounts
+      if (account.isNegative || 
+          status.includes('late') || 
+          status.includes('past due') || 
+          status.includes('collection') || 
+          status.includes('charged off') || 
+          status.includes('delinq')) {
+        
+        const issueType = status.includes('collection') ? 'collection_account' : 'late_payment';
+        const description = `Potential ${issueType.replace('_', ' ')} found: ${account.accountName}`;
+        
+        potentialIssues.push({
+          id: `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          type: issueType,
+          title: issueType === 'collection_account' ? 'Collection Account' : 'Late Payment',
+          description: description,
+          severity: 'high' as 'high',
+          accountName: account.accountName,
+          accountNumber: account.accountNumber,
+          bureau: account.bureau || determineBureauFromReport(reportData),
+          legalBasis: ["15 USC 1681e(b)"]
+        });
+      }
+    }
+  }
+  
+  // Extract potential account names from raw text as fallback
   const accountPattern = /(?:account|acct)(?:\s*|:|\#).*?([\w\s\-&]+?)(?:\/|\n|,|\s{2,}|$)/gi;
   const accounts = [];
   let accountMatch;
@@ -112,7 +155,7 @@ function extractIssuesFromRawText(rawText: string): Issue[] {
     }
   }
   
-  // Look for common credit report issues
+  // Look for common credit report issues in the raw text
   for (const issue of issueKeywords) {
     const regex = new RegExp(`(.{0,50}${issue.keyword}.{0,50})`, 'gi');
     let match;
@@ -141,15 +184,21 @@ function extractIssuesFromRawText(rawText: string): Issue[] {
         }
       }
       
+      // If we don't have an account name from context but do have accounts in the report
+      if (!accountName && reportData.accounts && reportData.accounts.length > 0) {
+        accountName = reportData.accounts[0].accountName;
+      }
+      
       potentialIssues.push({
         id: `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: issue.type,
+        title: issue.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
         description: `Potential issue found: ${match[1].trim()}`,
         severity: issue.severity as 'high' | 'medium' | 'low',
         accountName: accountName || undefined,
-        accountNumber: undefined,
-        bureau: extractBureauFromContext(context) || "Unknown",
-        legalBasis: ["15 USC 1681e(b)"] as unknown as string
+        accountNumber: accountName ? 'XXXX' : undefined,
+        bureau: determineBureauFromReport(reportData),
+        legalBasis: ["15 USC 1681e(b)"]
       });
     }
   }
@@ -158,18 +207,41 @@ function extractIssuesFromRawText(rawText: string): Issue[] {
 }
 
 /**
- * Try to determine which bureau this issue is from based on context
+ * Try to determine which bureau this report is from based on context
  */
-function extractBureauFromContext(context: string): string | undefined {
-  context = context.toLowerCase();
-  
-  if (context.includes("experian")) {
-    return "Experian";
-  } else if (context.includes("equifax")) {
-    return "Equifax";
-  } else if (context.includes("transunion")) {
-    return "TransUnion";
+function determineBureauFromReport(reportData: CreditReportData): string {
+  // Check if we already have determined primary bureau
+  if (reportData.primaryBureau) {
+    return reportData.primaryBureau;
   }
   
-  return undefined;
+  // Check if bureau is directly specified
+  if (reportData.bureau) {
+    return reportData.bureau;
+  }
+  
+  // Check bureau flags
+  if (reportData.bureaus) {
+    if (reportData.bureaus.experian) {
+      return "Experian";
+    } else if (reportData.bureaus.equifax) {
+      return "Equifax";
+    } else if (reportData.bureaus.transunion) {
+      return "TransUnion";
+    }
+  }
+  
+  // Default to checking raw text
+  if (reportData.rawText) {
+    const text = reportData.rawText.toLowerCase();
+    if (text.includes('experian')) {
+      return 'Experian';
+    } else if (text.includes('equifax')) {
+      return 'Equifax';
+    } else if (text.includes('transunion') || text.includes('trans union')) {
+      return 'TransUnion';
+    }
+  }
+  
+  return "Unknown";
 }

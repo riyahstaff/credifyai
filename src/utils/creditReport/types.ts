@@ -32,7 +32,8 @@ export interface CreditReportInquiry {
   bureau?: string;
   type?: string;
   inquiryCompany?: string;
-  name?: string; // Added for compatibility
+  name?: string; // For compatibility
+  date?: string; // Added for compatibility with different formats
 }
 
 export interface RecommendedDispute {
@@ -47,12 +48,12 @@ export interface RecommendedDispute {
   impact: "High" | "Medium" | "Low";
   severity: string;
   sampleDisputeLanguage?: string;
-  legalBasis?: LegalReference[];
+  legalBasis?: LegalReference[] | string;
   applicability?: string;
 }
 
 export interface IdentifiedIssue {
-  id?: string; // Added id property
+  id?: string;
   type: string;
   title: string;
   description: string;
@@ -60,9 +61,9 @@ export interface IdentifiedIssue {
   impactColor: string;
   account?: CreditReportAccount;
   laws: string[];
-  legalReferences?: string[];  // Added legal references array
-  bureau?: string; // Added bureau property
-  severity?: string; // Added severity property
+  legalReferences?: string[];
+  bureau?: string;
+  severity?: string;
 }
 
 export interface AnalysisResults {
@@ -101,8 +102,8 @@ export interface CreditReportData {
   reportNumber?: string;
   bureau?: string;
   reportDate?: string;
-  isEmergencyFallback?: boolean;  // Added this property to fix the TypeScript error
-  issues?: IdentifiedIssue[]; // Added issues property
+  isEmergencyFallback?: boolean;
+  issues?: IdentifiedIssue[];
 }
 
 export interface PersonalInfo {
@@ -167,10 +168,10 @@ export interface Issue {
   severity: 'high' | 'medium' | 'low';
   details?: Record<string, any>;
   legalReferences?: string[];
-  title?: string; // Added to match IdentifiedIssue
-  impact?: string; // Added to match IdentifiedIssue
-  impactColor?: string; // Added to match IdentifiedIssue
-  laws?: string[]; // Added to match IdentifiedIssue
+  title?: string;
+  impact?: string;
+  impactColor?: string;
+  laws?: string[];
 }
 
 // Define legal references for different issue types

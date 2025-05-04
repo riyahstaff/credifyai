@@ -1,3 +1,4 @@
+
 import { CreditReportData, CreditReportAccount, PersonalInfo, IdentifiedIssue } from '@/utils/creditReport/types';
 import { generateEnhancedDisputeLetter, generateLettersForIssues } from '@/utils/creditReport/disputeLetters';
 import { analyzeReportForIssues } from '@/utils/creditReport/parser/analyzeReportIssues';
@@ -16,8 +17,21 @@ export async function generateAutomaticDisputeLetter(
   if (!reportData) {
     throw new Error('No credit report data provided');
   }
-  
+
   try {
+    // Debug the report data
+    console.log("Report data summary:", {
+      hasAccounts: reportData.accounts && reportData.accounts.length > 0,
+      accountCount: reportData.accounts?.length || 0,
+      firstAccountName: reportData.accounts && reportData.accounts.length > 0 ? 
+        reportData.accounts[0].accountName : 'No accounts',
+      hasRawText: Boolean(reportData.rawText),
+      rawTextLength: reportData.rawText?.length || 0,
+      bureaus: reportData.bureaus,
+      primaryBureau: reportData.primaryBureau || 'Not set',
+      bureau: reportData.bureau || 'Not set'
+    });
+    
     // Find the target account
     let targetAccount: CreditReportAccount | undefined;
     
@@ -25,33 +39,43 @@ export async function generateAutomaticDisputeLetter(
       targetAccount = reportData.accounts.find(
         acc => acc.accountName.toLowerCase().includes(targetAccountName.toLowerCase())
       );
+      console.log("Looking for account:", targetAccountName, "Found:", Boolean(targetAccount));
     }
     
     // If no target account is found, use the first account
     if (!targetAccount && reportData.accounts && reportData.accounts.length > 0) {
       targetAccount = reportData.accounts[0];
+      console.log("Using first account as target:", targetAccount.accountName);
     }
     
     if (!targetAccount) {
-      throw new Error('No account found in credit report data');
+      console.warn('No account found in credit report data, creating placeholder');
+      // Create a placeholder account to avoid errors
+      targetAccount = {
+        accountName: 'Account in Question',
+        accountNumber: 'XXXXXXXXXXXX',
+        bureau: determineBureauFromReport(reportData)
+      };
     }
     
     // Determine which bureau to address the letter to
     const bureau = determineBureauFromReport(reportData);
+    console.log("Determined bureau:", bureau);
     
     // Get user information from params or localStorage
     const userData = {
       name: userInfo?.name || localStorage.getItem('userName') || '[YOUR NAME]',
-      address: userInfo?.address || localStorage.getItem('userAddress'),
-      city: userInfo?.city || localStorage.getItem('userCity'),
-      state: userInfo?.state || localStorage.getItem('userState'),
-      zip: userInfo?.zip || localStorage.getItem('userZip'),
+      address: userInfo?.address || localStorage.getItem('userAddress') || '[YOUR ADDRESS]',
+      city: userInfo?.city || localStorage.getItem('userCity') || '[CITY]',
+      state: userInfo?.state || localStorage.getItem('userState') || '[STATE]',
+      zip: userInfo?.zip || localStorage.getItem('userZip') || '[ZIP]',
     };
+    console.log("User data for letter:", userData);
     
     // Check if the report already has issues identified
     let issues: IdentifiedIssue[] = reportData.issues || [];
     
-    // If not, analyze the report using identifyIssues instead of analyzeReportForIssues
+    // If not, analyze the report using identifyIssues
     if (issues.length === 0) {
       console.log("No issues found in report data, analyzing now...");
       issues = identifyIssues(reportData);
@@ -70,9 +94,9 @@ export async function generateAutomaticDisputeLetter(
         id: issue.id || `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: issue.type,
         description: issue.description,
-        bureau: issue.bureau || reportData.primaryBureau || "Unknown",
-        accountName: issue.account?.accountName,
-        accountNumber: issue.account?.accountNumber,
+        bureau: issue.bureau || reportData.primaryBureau || bureau,
+        accountName: issue.account?.accountName || targetAccount.accountName,
+        accountNumber: issue.account?.accountNumber || targetAccount.accountNumber || "",
         reason: issue.description,
         severity: (issue.severity === 'high' || issue.impact?.includes('High') || issue.impact?.includes('Critical')) ? 'high' : 
                  (issue.severity === 'medium' || issue.impact?.includes('Medium')) ? 'medium' : 'low' as "high" | "medium" | "low",
@@ -120,14 +144,22 @@ export async function generateAutomaticDisputeLetter(
     const hasPersonalInfoIssues = checkForPersonalInfoIssues(reportData);
     const finalIssueType = hasPersonalInfoIssues ? 'personal_info' : issueType;
     
+    console.log("Generating fallback letter with issue type:", finalIssueType);
+    console.log("Target account for letter:", {
+      name: targetAccount.accountName,
+      number: targetAccount.accountNumber,
+      bureau: bureau
+    });
+    
     // Generate letter using our enhanced generator
     const letterContent = await generateEnhancedDisputeLetter(
       finalIssueType,
       {
         accountName: targetAccount.accountName,
-        accountNumber: targetAccount.accountNumber,
+        accountNumber: targetAccount.accountNumber || 'XXXX',
         errorDescription: generateErrorDescription(targetAccount, finalIssueType),
-        bureau: bureau
+        bureau: bureau,
+        relevantReportText: extractRelevantText(reportData, targetAccount)
       },
       userData,
       reportData
@@ -169,6 +201,25 @@ export async function generateAutomaticDisputeLetter(
     console.error('Error generating automatic dispute letter:', error);
     throw error;
   }
+}
+
+/**
+ * Extract relevant text from the report about a specific account
+ */
+function extractRelevantText(reportData: CreditReportData, account: CreditReportAccount): string {
+  if (!reportData.rawText || !account.accountName) {
+    return '';
+  }
+  
+  const accountName = account.accountName;
+  const regex = new RegExp(`(.{0,200}${accountName}.{0,500})`, 'gi');
+  const matches = [...(reportData.rawText.matchAll(regex) || [])];
+  
+  if (matches.length > 0) {
+    return matches.map(m => m[0]).join(' ');
+  }
+  
+  return '';
 }
 
 /**
@@ -305,21 +356,21 @@ function generateErrorDescription(account: CreditReportAccount, issueType: strin
       return "My personal information contains inaccuracies that need to be corrected";
     
     case 'late_payment':
-      return "The payment history for this account contains inaccurate late payment information";
+      return `The payment history for account ${account.accountName}${account.accountNumber ? ` (${account.accountNumber})` : ''} contains inaccurate late payment information`;
     
     case 'collection':
-      return "This collection account is disputed as inaccurate and unverified";
+      return `This collection account ${account.accountName}${account.accountNumber ? ` (${account.accountNumber})` : ''} is disputed as inaccurate and unverified`;
     
     case 'student_loan':
-      return "This student loan appears to be reported multiple times on my credit report with the same or very similar loan amounts";
+      return `This student loan ${account.accountName}${account.accountNumber ? ` (${account.accountNumber})` : ''} appears to be reported multiple times on my credit report with the same or very similar loan amounts`;
     
     case 'bankruptcy':
-      return "This bankruptcy information is inaccurate or outdated";
+      return `This bankruptcy information for ${account.accountName}${account.accountNumber ? ` (${account.accountNumber})` : ''} is inaccurate or outdated`;
     
     case 'inquiry':
-      return "This inquiry was not authorized by me and should be removed";
+      return `This inquiry from ${account.accountName} was not authorized by me and should be removed`;
     
     default:
-      return "This account contains inaccurate information that requires verification";
+      return `The account ${account.accountName}${account.accountNumber ? ` (${account.accountNumber})` : ''} contains inaccurate information that requires verification`;
   }
 }
