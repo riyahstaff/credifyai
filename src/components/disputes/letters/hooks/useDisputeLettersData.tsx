@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { loadLettersFromStorage, saveLettersToStorage, addLetterToStorage, formatLetterFromStorage } from './letterStorageUtils';
+import { useAuth } from '@/contexts/auth';
 
 export interface Letter {
   id: number;
@@ -23,6 +24,7 @@ export function useDisputeLettersData() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const location = useLocation();
+  const { profile } = useAuth(); // Add the profile from the auth context
   
   // Check if we're in a forced reload state
   useEffect(() => {
@@ -218,6 +220,7 @@ export function useDisputeLettersData() {
     addLetter,
     selectedLetter,
     setSelectedLetter,
-    isLoading
+    isLoading,
+    profile // Return the profile from the auth context
   };
 }
