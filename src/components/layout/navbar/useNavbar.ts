@@ -13,13 +13,6 @@ export const useNavbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const { toast } = useToast();
   
-  // Check if we're in test mode
-  const searchParams = new URLSearchParams(location.search);
-  const testMode = searchParams.get('testMode') === 'true';
-  
-  // Check if we have a test mode subscription
-  const hasTestSubscription = sessionStorage.getItem('testModeSubscription') === 'true';
-
   // Setup scroll listener
   useEffect(() => {
     const handleScroll = () => {
@@ -35,20 +28,12 @@ export const useNavbar = () => {
     setIsOpen(false);
   }, [location]);
 
-  // Log test mode status on component mount
-  useEffect(() => {
-    if (testMode) {
-      console.log(`Navbar detected test mode: ${testMode}`);
-      console.log(`Test subscription status: ${hasTestSubscription ? 'active' : 'inactive'}`);
-    }
-  }, [testMode, hasTestSubscription]);
-
-  // Add testMode parameter to nav links if in test mode
+  // Create nav links without test mode parameters
   const navLinks: NavLinkType[] = [
     { name: 'Home', path: '/' },
-    { name: 'Dashboard', path: '/dashboard' + (testMode ? '?testMode=true' : '') },
-    { name: 'Upload Report', path: '/upload-report' + (testMode ? '?testMode=true' : '') },
-    { name: 'Dispute Letters', path: '/dispute-letters' + (testMode ? '?testMode=true' : '') },
+    { name: 'Dashboard', path: '/dashboard' },
+    { name: 'Upload Report', path: '/upload-report' },
+    { name: 'Dispute Letters', path: '/dispute-letters' },
     { name: 'Education', path: '/education' },
   ];
 
@@ -114,34 +99,8 @@ export const useNavbar = () => {
     }
   };
 
-  // Toggle test mode function
-  const toggleTestMode = () => {
-    const currentPath = location.pathname;
-    if (testMode) {
-      // Turn off test mode
-      sessionStorage.removeItem('testModeSubscription');
-      navigate(currentPath);
-      toast({
-        title: "Test Mode Disabled",
-        description: "Returning to standard mode",
-        duration: 3000,
-      });
-    } else {
-      // Turn on test mode
-      navigate(`${currentPath}?testMode=true`);
-      toast({
-        title: "Test Mode Enabled",
-        description: "Premium features unlocked for testing",
-        duration: 3000,
-      });
-    }
-  };
-
-  // Check if current route requires subscription
-  const isPremiumRoute = location.pathname === '/dispute-letters';
-  
-  // In test mode, consider the user subscribed if they have the test subscription flag
-  const hasSubscription = profile?.has_subscription === true || (testMode && hasTestSubscription);
+  // Check if user has subscription from profile
+  const hasSubscription = profile?.has_subscription === true;
 
   return {
     user,
@@ -149,12 +108,12 @@ export const useNavbar = () => {
     navLinks,
     isOpen,
     scrolled,
-    testMode,
+    testMode: false, // Set this to false to disable test mode everywhere
     hasSubscription,
-    isPremiumRoute,
+    isPremiumRoute: location.pathname === '/dispute-letters',
     setIsOpen,
     isActive,
     handleLogout,
-    toggleTestMode
+    toggleTestMode: () => {} // Empty function as we're removing test mode
   };
 };

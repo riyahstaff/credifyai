@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Beaker, LogIn, LogOut, User, CreditCard, Shield } from 'lucide-react';
+import { LogIn, LogOut, User, CreditCard, Shield } from 'lucide-react';
 import { Profile } from '@/lib/supabase/client';
 import { NavLinkType } from './types';
 
@@ -22,9 +22,7 @@ const MobileMenu = ({
   navLinks,
   user,
   profile,
-  testMode,
   hasSubscription,
-  toggleTestMode,
   handleLogout,
   isActive,
 }: MobileMenuProps) => {
@@ -51,22 +49,7 @@ const MobileMenu = ({
               </Link>
             ))}
             
-            {/* Test Mode Toggle Button for Mobile */}
-            <button
-              onClick={toggleTestMode}
-              className={`w-full py-2 mt-2 rounded-lg text-left ${
-                testMode 
-                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' 
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-1.5 px-2">
-                <Beaker size={16} />
-                <span className="font-medium">{testMode ? "Disable Test Mode" : "Enable Test Mode"}</span>
-              </div>
-            </button>
-            
-            {!hasSubscription && !testMode && (
+            {!hasSubscription && (
               <Link
                 to="/subscription"
                 className="block py-2 mt-2 bg-gradient-to-r from-credify-teal to-credify-teal-dark text-white rounded-lg hover:opacity-90 transition-opacity text-center"
@@ -79,10 +62,10 @@ const MobileMenu = ({
             )}
             
             <div className="pt-4 pb-2 space-y-3 border-t border-gray-200 dark:border-gray-700/30 mt-2">
-              {(hasSubscription || testMode) && (
+              {hasSubscription && (
                 <div className="flex items-center gap-2 py-2">
                   <Shield size={18} className="text-credify-teal" />
-                  <span className="font-medium text-credify-teal">{testMode ? "Test Mode Active" : "Premium Member"}</span>
+                  <span className="font-medium text-credify-teal">Premium Member</span>
                 </div>
               )}
               
@@ -104,21 +87,6 @@ const MobileMenu = ({
           <>
             <Link to="/" className="block py-2 font-medium text-credify-navy dark:text-white/80">Home</Link>
             <Link to="/education" className="block py-2 font-medium text-credify-navy dark:text-white/80">Education</Link>
-            
-            {/* Test Mode Toggle Button for Mobile */}
-            <button
-              onClick={toggleTestMode}
-              className={`w-full py-2 rounded-lg text-left ${
-                testMode 
-                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' 
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-1.5 px-2">
-                <Beaker size={16} />
-                <span className="font-medium">{testMode ? "Disable Test Mode" : "Enable Test Mode"}</span>
-              </div>
-            </button>
             
             <div className="pt-4 pb-2 space-y-3 border-t border-gray-200 dark:border-gray-700/30 mt-2">
               <Link to="/login" className="block py-2 font-medium text-credify-navy dark:text-white/90 flex items-center gap-2">

@@ -32,19 +32,6 @@ const DisputeLetterHeader: React.FC<DisputeLetterHeaderProps> = ({ testMode = fa
         return storedName;
       }
       
-      // Fourth priority: stored user profile from localStorage
-      try {
-        const storedProfile = localStorage.getItem('userProfile');
-        if (storedProfile) {
-          const parsedProfile = JSON.parse(storedProfile);
-          if (parsedProfile.full_name) {
-            return parsedProfile.full_name;
-          }
-        }
-      } catch (error) {
-        console.error("Error parsing stored profile:", error);
-      }
-      
       // Default fallback
       return 'User';
     };
@@ -69,7 +56,7 @@ const DisputeLetterHeader: React.FC<DisputeLetterHeaderProps> = ({ testMode = fa
           className="flex items-center gap-2 bg-credify-teal/10 text-credify-teal dark:bg-credify-teal/20 border-credify-teal/30"
           asChild
         >
-          <Link to={`/upload-report${testMode ? '?testMode=true' : ''}`}>
+          <Link to="/upload-report">
             <Plus size={16} />
             <span>Generate New Letter</span>
           </Link>

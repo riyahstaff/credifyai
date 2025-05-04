@@ -35,12 +35,6 @@ const App: React.FC = () => {
     // Log when App component mounts to verify initialization
     console.log('App component mounted');
     
-    // For preview environments, automatically enable test mode
-    if (window.location.host.includes('lovableproject.com')) {
-      sessionStorage.setItem('testModeSubscription', 'true');
-      console.log('Preview environment detected, test mode enabled');
-    }
-    
     // Listen for logout-specific events
     const handleBeforeUnload = () => {
       if (document.body.classList.contains('logout-in-progress') || document.body.classList.contains('logging-out')) {

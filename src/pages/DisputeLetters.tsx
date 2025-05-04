@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import DisputeLettersPage from '../components/disputes/letters/DisputeLettersPage';
@@ -311,7 +310,7 @@ ${userInfo.name}`;
   }
 
   return (
-    <DisputeLettersPage testMode={false} requirePayment={true} />
+    <DisputeLettersPage requirePayment={true} />
   );
 };
 

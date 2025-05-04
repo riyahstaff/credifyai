@@ -22,7 +22,7 @@ interface DisputeLettersPageProps {
   requirePayment?: boolean;
 }
 
-const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = false, requirePayment = false }) => {
+const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ requirePayment = false }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { clearStoredReport } = useReportStorage();
@@ -36,7 +36,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
     isLoading,
     saveLetter,
     profile
-  } = useDisputeLettersData(testMode);
+  } = useDisputeLettersData(false); // Always pass false for testMode
   
   const [navHeight, setNavHeight] = useState<number>(0);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
@@ -99,7 +99,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
       duration: 3000,
     });
     
-    navigate('/upload-report' + (testMode ? '?testMode=true' : ''));
+    navigate('/upload-report');
   };
   
   // Reset session storage and retry loading
@@ -144,7 +144,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
         style={{ marginTop: navHeight > 0 ? `${navHeight}px` : undefined }}
       >
         <div className="container mx-auto px-4 md:px-6">
-          <DisputeLetterHeader testMode={testMode} />
+          <DisputeLetterHeader />
           
           {/* Loading Timeout Error Message */}
           {loadingTimeout && isLoading && (
@@ -218,7 +218,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
                 onSelectLetter={handleSelectLetter}
                 isLoading={isLoading}
                 onCreateLetter={handleCreateLetterFromIssues}
-                testMode={testMode}
+                testMode={false}
                 userProfile={profile as Profile}
               />
             </div>
@@ -227,7 +227,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
               <DisputeLetterViewer 
                 letter={selectedLetter}
                 isLoading={isLoading}
-                testMode={testMode}
+                testMode={false}
                 userProfile={profile as Profile}
               />
             </div>
