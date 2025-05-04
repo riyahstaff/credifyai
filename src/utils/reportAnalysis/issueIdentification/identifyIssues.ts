@@ -1,4 +1,3 @@
-
 import { CreditReportData, IdentifiedIssue, Issue, LegalReference } from '@/utils/creditReport/types';
 import { analyzeReportForIssues } from '@/utils/creditReport/parser/analyzeReportIssues';
 
@@ -56,7 +55,7 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
       }
       
       // Determine impact value that conforms to the allowed values
-      let impactValue: 'High Impact' | 'Critical Impact' | 'Medium Impact' | 'Low Impact';
+      let impactValue: 'High Impact' | 'Medium Impact' | 'Low Impact';
       
       if (issue.severity === 'high' || (issue.impact && issue.impact.toLowerCase().includes('high'))) {
         impactValue = 'High Impact';
@@ -67,7 +66,7 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
       }
       
       // Set color based on impact
-      const impactColor = impactValue === 'High Impact' || impactValue === 'Critical Impact' ? 'red' : 
+      const impactColor = impactValue === 'High Impact' ? 'red' : 
                          impactValue === 'Medium Impact' ? 'orange' : 'yellow';
       
       return {
