@@ -1,5 +1,4 @@
 
-
 import { CreditReportData, IdentifiedIssue } from '@/utils/creditReport/types';
 import { analyzeReportForIssues } from '@/utils/creditReport/parser/analyzeReportIssues';
 
@@ -32,12 +31,16 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
         accountName: issue.accountName,
         accountNumber: issue.accountNumber
       } : undefined,
-      // Convert legalBasis to string[] with proper type handling
+      // Correctly handle the legalBasis conversion to string[] with proper type safety
       laws: Array.isArray(issue.legalBasis) ? 
         (typeof issue.legalBasis[0] === 'string' ? 
           issue.legalBasis as string[] : 
-          // First convert to unknown, then to array of objects with required structure
-          ((issue.legalBasis as unknown) as { law?: string }[]).map(ref => ref?.law || "")) : 
+          // Handle LegalReference[] by explicitly extracting the law property
+          issue.legalBasis.map(ref => {
+            // Use type assertion with unknown first
+            const legalRef = ref as unknown as { law?: string };
+            return legalRef?.law || "";
+          })) : 
         (typeof issue.legalBasis === 'string' ? [issue.legalBasis] : []),
       bureau: issue.bureau,
       severity: issue.severity
@@ -51,4 +54,3 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
     return [];
   }
 }
-
