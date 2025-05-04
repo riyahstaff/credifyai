@@ -32,6 +32,7 @@ export interface CreditReportInquiry {
   bureau?: string;
   type?: string;
   inquiryCompany?: string;
+  name?: string; // Added for compatibility
 }
 
 export interface RecommendedDispute {
@@ -139,6 +140,7 @@ export interface CreditReportPublicRecord {
   reference: string;
   status: string;
   bureau?: string;
+  name?: string; // Added for compatibility
 }
 
 export interface UserInfo {

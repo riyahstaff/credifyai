@@ -1,5 +1,5 @@
 
-import { CreditReportData, Issue } from '@/utils/creditReport/types';
+import { CreditReportData, Issue, LegalReference } from '@/utils/creditReport/types';
 
 /**
  * Analyze a credit report for issues
@@ -34,7 +34,7 @@ export function analyzeReportForIssues(reportData: CreditReportData): Issue[] {
             accountName: account.accountName,
             accountNumber: account.accountNumber,
             bureau: reportData.primaryBureau || "Unknown",
-            legalBasis: ["15 USC 1681e(b)", "15 USC 1681i"]
+            legalBasis: ["15 USC 1681e(b)", "15 USC 1681i"] as unknown as LegalReference[]
           });
         }
         
@@ -49,7 +49,7 @@ export function analyzeReportForIssues(reportData: CreditReportData): Issue[] {
             accountName: account.accountName,
             accountNumber: account.accountNumber,
             bureau: reportData.primaryBureau || "Unknown",
-            legalBasis: ["15 USC 1681e(b)", "15 USC 1681i"]
+            legalBasis: ["15 USC 1681e(b)", "15 USC 1681i"] as unknown as LegalReference[]
           });
         }
         
@@ -69,7 +69,7 @@ export function analyzeReportForIssues(reportData: CreditReportData): Issue[] {
                 accountName: account.accountName,
                 accountNumber: account.accountNumber,
                 bureau: reportData.primaryBureau || "Unknown",
-                legalBasis: ["15 USC 1681e(b)"]
+                legalBasis: ["15 USC 1681e(b)"] as unknown as LegalReference[]
               });
             }
           }
@@ -85,7 +85,7 @@ export function analyzeReportForIssues(reportData: CreditReportData): Issue[] {
       
       reportData.inquiries.forEach(inquiry => {
         // Focus on recent inquiries (last 90 days)
-        const inquiryDate = inquiry.date ? new Date(inquiry.date) : null;
+        const inquiryDate = inquiry.inquiryDate ? new Date(inquiry.inquiryDate) : null;
         const now = new Date();
         const ninetyDaysAgo = new Date();
         ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
@@ -94,11 +94,11 @@ export function analyzeReportForIssues(reportData: CreditReportData): Issue[] {
           issues.push({
             id: `inquiry-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: 'inquiry',
-            description: `Recent credit inquiry from: ${inquiry.name}`,
+            description: `Recent credit inquiry from: ${inquiry.creditor || inquiry.inquiryBy || inquiry.inquiryCompany || "Unknown"}`,
             severity: 'low',
-            accountName: inquiry.name,
+            accountName: inquiry.creditor || inquiry.inquiryBy || inquiry.inquiryCompany || "Unknown",
             bureau: reportData.primaryBureau || "Unknown",
-            legalBasis: ["15 USC 1681b"]
+            legalBasis: ["15 USC 1681b"] as unknown as LegalReference[]
           });
         }
       });
@@ -116,7 +116,7 @@ export function analyzeReportForIssues(reportData: CreditReportData): Issue[] {
           severity: 'high',
           accountName: record.name || 'Public Record',
           bureau: reportData.primaryBureau || "Unknown",
-          legalBasis: ["15 USC 1681e(b)", "15 USC 1681i"]
+          legalBasis: ["15 USC 1681e(b)", "15 USC 1681i"] as unknown as LegalReference[]
         });
       });
     }
@@ -133,3 +133,4 @@ export function analyzeReportForIssues(reportData: CreditReportData): Issue[] {
     return [];
   }
 }
+

@@ -1,5 +1,5 @@
 
-import { CreditReportData, IdentifiedIssue } from '@/utils/creditReport/types';
+import { CreditReportData, IdentifiedIssue, Issue } from '@/utils/creditReport/types';
 import { analyzeReportForIssues } from '@/utils/creditReport/parser/analyzeReportIssues';
 
 /**
@@ -33,30 +33,41 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
     }
     
     // Convert Issue[] to IdentifiedIssue[] by ensuring all required fields are present
-    const identifiedIssues: IdentifiedIssue[] = issues.map(issue => ({
-      id: issue.id || `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      type: issue.type,
-      title: issue.type.charAt(0).toUpperCase() + issue.type.slice(1).replace('_', ' '),
-      description: issue.description,
-      impact: issue.severity === 'high' ? 'High Impact' : 
-             issue.severity === 'medium' ? 'Medium Impact' : 'Low Impact',
-      impactColor: issue.severity === 'high' ? 'red' : 
-                  issue.severity === 'medium' ? 'orange' : 'yellow',
-      account: issue.accountName ? { 
-        accountName: issue.accountName,
-        accountNumber: issue.accountNumber
-      } : undefined,
-      // Correctly handle the legalBasis conversion to string[] with proper type safety
-      laws: Array.isArray(issue.legalBasis) ? 
-        (typeof issue.legalBasis[0] === 'string' ? 
-          issue.legalBasis as unknown as string[] : 
-          // Handle LegalReference[] by explicitly extracting the law property
-          (issue.legalBasis as unknown as Array<{law?: string}>).map(ref => 
-            ref?.law || "")) : 
-        (typeof issue.legalBasis === 'string' ? [issue.legalBasis] : []),
-      bureau: issue.bureau,
-      severity: issue.severity
-    }));
+    const identifiedIssues: IdentifiedIssue[] = issues.map(issue => {
+      // Convert legalBasis to string array safely
+      let laws: string[] = [];
+      
+      if (Array.isArray(issue.legalBasis)) {
+        // Check if elements appear to be LegalReference objects
+        if (typeof issue.legalBasis[0] === 'object' && issue.legalBasis[0] !== null) {
+          laws = (issue.legalBasis as any[]).map(ref => 
+            typeof ref.law === 'string' ? ref.law : "");
+        } else {
+          // Assume array of strings
+          laws = issue.legalBasis as unknown as string[];
+        }
+      } else if (typeof issue.legalBasis === 'string') {
+        laws = [issue.legalBasis];
+      }
+      
+      return {
+        id: issue.id || `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        type: issue.type,
+        title: issue.type.charAt(0).toUpperCase() + issue.type.slice(1).replace('_', ' '),
+        description: issue.description,
+        impact: issue.severity === 'high' ? 'High Impact' : 
+              issue.severity === 'medium' ? 'Medium Impact' : 'Low Impact',
+        impactColor: issue.severity === 'high' ? 'red' : 
+                    issue.severity === 'medium' ? 'orange' : 'yellow',
+        account: issue.accountName ? { 
+          accountName: issue.accountName,
+          accountNumber: issue.accountNumber
+        } : undefined,
+        laws: laws,
+        bureau: issue.bureau,
+        severity: issue.severity
+      };
+    });
     
     console.log(`Found ${identifiedIssues.length} issues in credit report`);
     
@@ -70,8 +81,8 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
 /**
  * Extract potential issues from raw text when the structured analyzer fails
  */
-function extractIssuesFromRawText(rawText: string): any[] {
-  const potentialIssues = [];
+function extractIssuesFromRawText(rawText: string): Issue[] {
+  const potentialIssues: Issue[] = [];
   
   // Common keywords that indicate potential issues
   const issueKeywords = [
@@ -134,11 +145,11 @@ function extractIssuesFromRawText(rawText: string): any[] {
         id: `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: issue.type,
         description: `Potential issue found: ${match[1].trim()}`,
-        severity: issue.severity,
+        severity: issue.severity as 'high' | 'medium' | 'low',
         accountName: accountName || undefined,
         accountNumber: undefined,
         bureau: extractBureauFromContext(context) || "Unknown",
-        legalBasis: ["15 USC 1681e(b)"] // Basic FCRA reference
+        legalBasis: ["15 USC 1681e(b)"] as unknown as string
       });
     }
   }

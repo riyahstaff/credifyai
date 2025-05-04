@@ -21,6 +21,7 @@ export const extractInquiries = (
     inquiryDate: string;
     creditor: string;
     bureau: string;
+    inquiryCompany?: string; // Added to match CreditReportInquiry
   }> = [];
   
   // First try to find the inquiry section
@@ -99,7 +100,8 @@ export const extractInquiries = (
           inquiries.push({
             inquiryDate,
             creditor,
-            bureau
+            bureau,
+            inquiryCompany: creditor // Adding inquiryCompany for compatibility
           });
           
           console.log(`Found inquiry: ${creditor} on ${inquiryDate} (${bureau})`);
