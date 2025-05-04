@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../layout/Navbar';
@@ -24,7 +25,7 @@ interface DisputeLettersPageProps {
 const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = false, requirePayment = false }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { clearAllLetterData } = useReportStorage();
+  const { clearStoredReport } = useReportStorage();
   
   const { 
     letters, 
@@ -40,22 +41,23 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
   const [navHeight, setNavHeight] = useState<number>(0);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   
-  // Clear any old letters on mount
+  // FIXED: Don't automatically clear letters on mount, only check for stale data
   useEffect(() => {
-    console.log("DisputeLettersPage: Checking for stale data");
-    const hasFreshReport = sessionStorage.getItem('reportReadyForLetters') === 'true';
+    console.log("DisputeLettersPage: Checking for navigation flags");
     
     // Break navigation loops by clearing flags
     sessionStorage.removeItem('navigationInProgress');
     sessionStorage.removeItem('redirectInProgress');
     sessionStorage.removeItem('shouldNavigateToLetters');
     
-    if (!hasFreshReport && letters.length === 0) {
-      // If we don't have a fresh report and no letters, clear ALL letter data
-      clearAllLetterData();
-      console.log("No fresh report data available, cleared all letter data");
+    // Only mark report as not ready if we explicitly don't have letters
+    if (sessionStorage.getItem('hasDisputeLetters') !== 'true') {
+      console.log("No dispute letters found in storage");
+      sessionStorage.removeItem('reportReadyForLetters');
+    } else {
+      console.log("Dispute letters are present, keeping storage intact");
     }
-  }, [clearAllLetterData, letters.length]);
+  }, []);
   
   // Effect to measure navbar height
   useEffect(() => {

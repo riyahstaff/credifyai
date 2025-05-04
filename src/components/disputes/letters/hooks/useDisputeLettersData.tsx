@@ -78,59 +78,6 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
     }
   }, [isLoading, letters.length, toast]);
 
-  // Check if there's credit report data that should trigger letter generation
-  useEffect(() => {
-    const checkForCreditReport = async () => {
-      console.log("Checking for credit report data...");
-      
-      const reportData = sessionStorage.getItem('creditReportData');
-      const forceGeneration = sessionStorage.getItem('forceLetterGeneration') === 'true';
-      const isReportReady = sessionStorage.getItem('reportReadyForLetters') === 'true';
-      
-      if (reportData && (forceGeneration || isReportReady)) {
-        // If we're here, we should generate a letter if one doesn't exist
-        if (!sessionStorage.getItem('pendingDisputeLetter') && !sessionStorage.getItem('generatedDisputeLetters')) {
-          console.log("Credit report found with force generation flag, but no letter exists - generating one now");
-          
-          try {
-            // Import the letter generator dynamically
-            const { generateAutomaticDisputeLetter } = await import('@/components/ai/services/disputes/automaticLetterGenerator');
-            
-            // Generate a letter using the report data
-            const parsedData = JSON.parse(reportData);
-            
-            // Get target account if specified
-            const targetAccountJSON = sessionStorage.getItem('disputeTargetAccount');
-            let accountName: string | undefined = undefined;
-            
-            if (targetAccountJSON) {
-              try {
-                const targetAccount = JSON.parse(targetAccountJSON);
-                accountName = targetAccount.accountName;
-              } catch (e) {
-                console.error("Error parsing target account:", e);
-              }
-            }
-            
-            await generateAutomaticDisputeLetter(parsedData, accountName);
-            console.log("Generated letter from credit report data on letters page");
-            
-            // Clear the force generation flag
-            sessionStorage.removeItem('forceLetterGeneration');
-          } catch (error) {
-            console.error("Error auto-generating letter:", error);
-          }
-        } else {
-          console.log("Credit report found but letter already exists - not generating");
-          // Clear the force generation flag
-          sessionStorage.removeItem('forceLetterGeneration');
-        }
-      }
-    };
-    
-    checkForCreditReport();
-  }, []);
-
   // Load letters from storage on component mount
   useEffect(() => {
     const loadLetters = async () => {
@@ -173,6 +120,9 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
                 setSelectedLetter(formattedLetters[0]);
               }
               
+              // IMPORTANT: Set flag to indicate we have letters
+              sessionStorage.setItem('hasDisputeLetters', 'true');
+              
               toast({
                 title: testMode ? "Test Letters Loaded" : "Dispute Letters Loaded",
                 description: `${formattedLetters.length} dispute ${formattedLetters.length === 1 ? 'letter has' : 'letters have'} been loaded.`,
@@ -212,6 +162,9 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
             setLetters([formattedLetter]);
             setSelectedLetter(formattedLetter);
             
+            // IMPORTANT: Set flag to indicate we have letters
+            sessionStorage.setItem('hasDisputeLetters', 'true');
+            
             toast({
               title: testMode ? "Test Letter Loaded" : "Dispute Letter Loaded",
               description: "Your dispute letter has been loaded from session storage.",
@@ -250,6 +203,9 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
             setLetters([formattedLetter]);
             setSelectedLetter(formattedLetter);
             
+            // IMPORTANT: Set flag to indicate we have letters
+            sessionStorage.setItem('hasDisputeLetters', 'true');
+            
             toast({
               title: testMode ? "Test Letter Loaded" : "Dispute Letter Loaded",
               description: "Your dispute letter has been loaded from session storage.",
@@ -263,58 +219,9 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
           }
         }
         
-        // If no letters found, try to generate one from credit report data one last time
-        const reportData = sessionStorage.getItem('creditReportData');
-        if (reportData) {
-          try {
-            console.log("No letters found but credit report data exists, attempting to generate letter");
-            
-            // Import the letter generator dynamically
-            const { generateAutomaticDisputeLetter } = await import('@/components/ai/services/disputes/automaticLetterGenerator');
-            
-            // Generate a letter using the report data
-            const parsedData = JSON.parse(reportData);
-            await generateAutomaticDisputeLetter(parsedData);
-            
-            // Now check for the letter again (it should be in storage now)
-            const newAutoLetterJSON = sessionStorage.getItem('autoGeneratedLetter');
-            if (newAutoLetterJSON) {
-              const newAutoLetter = JSON.parse(newAutoLetterJSON);
-              
-              const formattedLetter = {
-                id: newAutoLetter.id || Date.now(),
-                title: newAutoLetter.title || `${newAutoLetter.errorType || 'Dispute'} (${newAutoLetter.accountName || 'Account'})`,
-                recipient: newAutoLetter.bureau || newAutoLetter.recipient || 'Credit Bureau',
-                createdAt: newAutoLetter.createdAt || new Date().toLocaleDateString('en-US', { 
-                  month: 'short', day: 'numeric', year: 'numeric' 
-                }),
-                status: newAutoLetter.status || 'ready',
-                bureaus: newAutoLetter.bureaus || [newAutoLetter.bureau || 'Unknown'],
-                content: newAutoLetter.letterContent || newAutoLetter.content || "",
-                accountName: newAutoLetter.accountName || "Unknown Account",
-                accountNumber: newAutoLetter.accountNumber || "",
-                errorType: newAutoLetter.errorType || "General Dispute"
-              };
-              
-              setLetters([formattedLetter]);
-              setSelectedLetter(formattedLetter);
-              
-              toast({
-                title: "Letter Generated",
-                description: "A dispute letter has been generated from your credit report.",
-                duration: 3000,
-              });
-              
-              setIsLoading(false);
-              return;
-            }
-          } catch (error) {
-            console.error("Error generating letter from report data:", error);
-          }
-        }
-        
-        // If still no letters found, show empty state
+        // If we get here, we didn't find any letters
         console.log("No letters found in session storage");
+        sessionStorage.removeItem('hasDisputeLetters');
         setLetters([]);
         setIsLoading(false);
         
@@ -333,13 +240,14 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
     
     loadLetters();
   }, [toast, testMode, location.pathname, selectedLetter]);
-  
+
   // Function to add a new letter
   const addLetter = (newLetter: Letter) => {
     setLetters(prevLetters => {
       const updatedLetters = [...prevLetters, newLetter];
       try {
         sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(updatedLetters));
+        sessionStorage.setItem('hasDisputeLetters', 'true'); // Mark that we have letters
       } catch (error) {
         console.error("Error storing updated letters:", error);
       }
@@ -355,6 +263,11 @@ export function useDisputeLettersData(testMode: boolean = false): UseDisputeLett
     setLetters(updatedLetters);
     try {
       sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(updatedLetters));
+      if (updatedLetters.length > 0) {
+        sessionStorage.setItem('hasDisputeLetters', 'true');
+      } else {
+        sessionStorage.removeItem('hasDisputeLetters');
+      }
     } catch (error) {
       console.error("Error storing updated letters:", error);
     }
