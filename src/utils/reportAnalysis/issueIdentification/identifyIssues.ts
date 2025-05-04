@@ -84,7 +84,7 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
         laws: laws.filter(law => law), // Remove empty strings
         bureau: issue.bureau || reportData.primaryBureau || reportData.bureau || "Unknown",
         severity: issue.severity || (
-          impactValue === 'High Impact' || impactValue === 'Critical Impact' ? 'high' :
+          impactValue === 'High Impact' ? 'high' :
           impactValue === 'Medium Impact' ? 'medium' : 'low'
         )
       };

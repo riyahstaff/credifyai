@@ -23,3 +23,6 @@ I am disputing this collection account because it appears to be a duplicate of a
 Under the Fair Credit Reporting Act section 15 USC 1681e(b), credit reporting agencies must maintain reasonable procedures to ensure accuracy, which includes preventing duplicate reporting of the same account.
   `
 };
+
+// For backward compatibility
+export const collectionAccountDisputeTemplate = collectionAccountTemplates.validation;

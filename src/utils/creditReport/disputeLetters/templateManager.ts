@@ -1,10 +1,9 @@
-
 /**
  * Letter Template Manager
  * Handles loading, storing, and retrieving letter templates
  */
 
-import { collectionAccountDisputeTemplate } from './templates/collection_account_disputes';
+import { collectionAccountTemplates } from './templates/collection_account_disputes';
 import { supabase } from '@/lib/supabase/client';
 
 // Define types
@@ -58,7 +57,7 @@ function getBuiltInTemplate(templateType: string): LetterTemplate | null {
   const templateMap: Record<string, { content: string, name: string }> = {
     'collection_account': {
       name: 'Collection Account Dispute',
-      content: collectionAccountDisputeTemplate
+      content: collectionAccountTemplates.validation
     },
     // Add more templates here as they are created
   };
@@ -155,7 +154,7 @@ function getBuiltInTemplates(): LetterTemplate[] {
       id: 'built-in-collection_account',
       name: 'Collection Account Dispute',
       type: 'collection_account',
-      content: collectionAccountDisputeTemplate
+      content: collectionAccountTemplates.validation
     }
     // Add more built-in templates as they are created
   ];
