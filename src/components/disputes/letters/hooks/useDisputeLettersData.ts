@@ -13,4 +13,5 @@ export {
   formatLetterFromStorage 
 } from './letterStorageUtils';
 
-export { getSampleLetters } from './sampleLettersData';
+// REMOVE THE SAMPLE LETTERS COMPLETELY
+// export { getSampleLetters } from './sampleLettersData';

@@ -16,6 +16,12 @@ export const createFallbackLetter = (reportData?: any) => {
     throw new Error("Cannot create letter with no accounts in credit report");
   }
   
+  console.log("Creating fallback letter with actual report data:", {
+    accountCount: accounts.length,
+    firstAccount: accounts[0] ? accounts[0].accountName : "None",
+    hasPersonalInfo: !!reportData.personalInfo
+  });
+  
   // Get user information from report data ONLY
   let userName = "";
   let userAddress = "";
@@ -153,7 +159,11 @@ Thank you for your prompt attention to this matter.
 Sincerely,
 
 ${userName ? userName : ""}`;
-    
+
+  // Save that we used the fallback letter creator
+  sessionStorage.setItem('fallbackLetterUsed', 'true');
+  
+  // Return the letter with ONLY real data from the report
   return {
     bureau: bureau,
     accountName: accounts && accounts.length > 0 ? accounts[0].accountName : "",
@@ -162,7 +172,10 @@ ${userName ? userName : ""}`;
     explanation: "I am disputing information in my credit report that may be inaccurate or incomplete under my rights provided by the Fair Credit Reporting Act.",
     accounts: accounts,
     letterContent: letterContent,
+    content: letterContent, // Include in both fields to ensure it's displayed correctly
+    title: `Dispute Letter to ${bureau}`,
     timestamp: new Date().toISOString(),
+    createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     status: 'ready'
   };
 };
