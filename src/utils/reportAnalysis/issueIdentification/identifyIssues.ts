@@ -35,8 +35,8 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
       laws: Array.isArray(issue.legalBasis) ? 
         (typeof issue.legalBasis[0] === 'string' ? 
           issue.legalBasis as string[] : 
-          // Use a type assertion to unknown first, then map to extract the law property
-          ((issue.legalBasis as unknown) as Array<{law: string}>).map(ref => ref.law)) : 
+          // First cast to any to bypass TypeScript's type checking, then map to extract the law property
+          (issue.legalBasis as any[]).map(ref => ref.law || "")) : 
         (typeof issue.legalBasis === 'string' ? [issue.legalBasis] : []),
       bureau: issue.bureau,
       severity: issue.severity
