@@ -68,8 +68,11 @@ export function useDisputeLettersData() {
               const fallbackLetter = createFallbackLetter(report);
               
               if (fallbackLetter) {
+                // Generate a unique ID for the fallback letter
+                const letterId = Date.now();
+                
                 const formattedLetter = {
-                  id: fallbackLetter.id || Date.now(),
+                  id: letterId,
                   title: fallbackLetter.title || "Credit Report Dispute",
                   recipient: fallbackLetter.bureau || "Credit Bureau",
                   createdAt: fallbackLetter.createdAt || new Date().toLocaleDateString('en-US', { 
