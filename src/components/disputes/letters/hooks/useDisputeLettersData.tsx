@@ -80,7 +80,7 @@ export function useDisputeLettersData() {
                   }),
                   status: fallbackLetter.status || 'draft',
                   bureaus: [fallbackLetter.bureau] || ["Unknown"],
-                  content: fallbackLetter.content || fallbackLetter.letterContent,
+                  content: fallbackLetter.content || fallbackLetter.letterContent || '',
                   accountName: fallbackLetter.accountName,
                   accountNumber: fallbackLetter.accountNumber,
                   errorType: fallbackLetter.errorType
