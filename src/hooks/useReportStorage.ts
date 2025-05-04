@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import { CreditReportData, CreditReportAccount } from '@/utils/creditReport/types';
-import { clearAllLetterData } from '@/utils/creditReport/clearLetterData';
+import { clearAllLetterData, hasLetterData } from '@/utils/creditReport/clearLetterData';
 
 /**
  * Hook to manage storage of credit report data for dispute generation
