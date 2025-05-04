@@ -1,11 +1,15 @@
 
 import { CreditReportData } from '@/utils/creditReportParser';
+import { clearAllLetterData } from '@/utils/creditReport/clearLetterData';
 
 /**
  * Store report data in session storage
  */
 export const storeReportData = (enhancedData: CreditReportData): boolean => {
   try {
+    // CRITICAL: Clear any existing letters first to prevent reusing old letters
+    clearAllLetterData();
+    
     const slimReportData = {
       personalInfo: enhancedData.personalInfo,
       accounts: enhancedData.accounts?.slice(0, 5) || [],

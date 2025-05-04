@@ -14,4 +14,3 @@ export {
 } from './letterStorageUtils';
 
 // REMOVE THE SAMPLE LETTERS COMPLETELY
-// export { getSampleLetters } from './sampleLettersData';

@@ -18,6 +18,7 @@ export const clearAllLetterData = (): void => {
     sessionStorage.removeItem('hasDisputeLetters');
     sessionStorage.removeItem('forceLettersReload');
     sessionStorage.removeItem('forceLetterGeneration');
+    sessionStorage.removeItem('reportReadyForLetters');
     
     // Clear template data
     sessionStorage.removeItem('letterTemplate');
@@ -27,6 +28,7 @@ export const clearAllLetterData = (): void => {
     // Clear navigation flags
     sessionStorage.removeItem('navigationInProgress');
     sessionStorage.removeItem('shouldNavigateToLetters');
+    sessionStorage.removeItem('redirectInProgress');
     
     console.log("Successfully cleared all letter-related data");
   } catch (error) {

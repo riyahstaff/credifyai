@@ -5,6 +5,7 @@ import FileUploader from '@/components/disputes/uploader/FileUploader';
 import AnalysisStateHandler from '@/components/disputes/uploader/AnalysisStateHandler';
 import AnalysisError from '@/components/disputes/uploader/AnalysisError';
 import BackendUploadSection from './BackendUploadSection';
+import { clearAllLetterData } from '@/utils/creditReport/clearLetterData';
 
 interface UploadReportContentProps {
   fileUploaded: boolean;
@@ -47,6 +48,18 @@ const UploadReportContent: React.FC<UploadReportContentProps> = ({
   useBackend = true,
   testMode
 }) => {
+  // Clear letter data on mount to ensure clean uploads
+  useEffect(() => {
+    console.log("UploadReportContent: Clearing old letter data on mount");
+    clearAllLetterData();
+    
+    // Clear any navigation flags to prevent loops
+    sessionStorage.removeItem('navigationInProgress');
+    sessionStorage.removeItem('shouldNavigateToLetters');
+    sessionStorage.removeItem('forceLetterGeneration');
+    sessionStorage.removeItem('forceLettersReload');
+  }, []);
+  
   // Ensure test mode subscription is set when in test mode
   useEffect(() => {
     if (testMode) {

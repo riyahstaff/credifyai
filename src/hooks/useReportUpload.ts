@@ -8,6 +8,7 @@ import { useReportNavigation } from './report-upload/useReportNavigation';
 import { generateAutomaticDisputeLetter } from '@/components/ai/services/disputes/automaticLetterGenerator';
 import { analyzeReportForIssues } from '@/utils/creditReport/parser/analyzeReportIssues';
 import { identifyIssues } from '@/utils/reportAnalysis/issueIdentification/identifyIssues';
+import { clearAllLetterData } from '@/utils/creditReport/clearLetterData';
 
 export const useReportUpload = () => {
   const { toast } = useToast();
@@ -26,7 +27,7 @@ export const useReportUpload = () => {
   const analysisCompleted = useRef(false);
   
   // Import report storage hooks
-  const { storeForDispute, checkPendingLetters, clearStoredReport, clearAllLetterData } = useReportStorage();
+  const { storeForDispute, checkPendingLetters, clearStoredReport } = useReportStorage();
   
   // Import navigation hook
   const { triggerNavigation } = useReportNavigation();
@@ -56,18 +57,21 @@ export const useReportUpload = () => {
     setAnalysisError(null);
     setLetterGenerated(false);
     analysisCompleted.current = false;
-    clearStoredReport(); // Clear any stored report data
-    clearAllLetterData(); // Clear ALL letter data
+    
+    // Clear ALL data - both report and letters
+    clearStoredReport();
+    clearAllLetterData();
     
     console.log("Reset complete - cleared all report data and letters");
-  }, [clearStoredReport, clearAllLetterData]);
+  }, [clearStoredReport]);
   
   // Handle file upload
   const handleFile = useCallback((file: File) => {
     console.log("File selected:", file.name, "size:", file.size);
     
-    // IMPORTANT: Clear ALL existing letters first to prevent reusing old letters
+    // IMPORTANT: Clear ALL existing letters and data first
     clearAllLetterData();
+    clearStoredReport();
     
     // Reset any existing state
     resetUpload();
@@ -85,7 +89,7 @@ export const useReportUpload = () => {
       title: "File uploaded",
       description: `${file.name} uploaded successfully. Click "Analyze Report" to continue.`,
     });
-  }, [resetUpload, toast, clearAllLetterData]);
+  }, [resetUpload, toast, clearStoredReport]);
   
   // Effect to check if we should automatically generate a letter after analysis
   useEffect(() => {
@@ -157,10 +161,14 @@ export const useReportUpload = () => {
           } else {
             console.error("Letter generation failed or produced insufficient content");
             
-            // Try a backup approach - set flags for the dispute letters page to generate on load
-            sessionStorage.setItem('forceLetterGeneration', 'true');
+            // Break navigation loops - don't set multiple flags
+            sessionStorage.removeItem('navigationInProgress');
+            sessionStorage.removeItem('shouldNavigateToLetters');
+            sessionStorage.removeItem('forceLettersReload');
+            sessionStorage.removeItem('forceLetterGeneration');
+            
+            // Set single flag for letter generation
             sessionStorage.setItem('reportReadyForLetters', 'true');
-            sessionStorage.setItem('shouldNavigateToLetters', 'true');
             
             // Force navigation after a delay
             setTimeout(() => {
@@ -177,10 +185,13 @@ export const useReportUpload = () => {
         } catch (error) {
           console.error("Error in automatic letter generation:", error);
           
-          // Set flags for the dispute letters page to handle fallback
-          sessionStorage.setItem('forceLetterGeneration', 'true');
+          // Break navigation loops - don't set multiple flags
+          sessionStorage.removeItem('navigationInProgress');
+          sessionStorage.removeItem('shouldNavigateToLetters');
+          sessionStorage.removeItem('forceLettersReload');
+          
+          // Set single flag for letter generation
           sessionStorage.setItem('reportReadyForLetters', 'true');
-          sessionStorage.setItem('shouldNavigateToLetters', 'true');
           
           // Force navigation after a delay
           setTimeout(() => {
@@ -210,7 +221,7 @@ export const useReportUpload = () => {
       });
       return false;
     }
-  }, [reportData, storeForDispute, toast, triggerNavigation, clearAllLetterData]);
+  }, [reportData, storeForDispute, toast, triggerNavigation]);
   
   return {
     fileUploaded,
