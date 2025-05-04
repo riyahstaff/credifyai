@@ -43,6 +43,9 @@ const DisputeLetterHeader: React.FC<DisputeLetterHeaderProps> = () => {
   }, [profile, user]);
 
   const handleCompleteReset = () => {
+    // First clear the "already loaded" flag to ensure we can reload letters
+    sessionStorage.removeItem('lettersAlreadyLoaded');
+    
     toast({
       title: "Completely Resetting",
       description: "Clearing all data and reloading the page...",

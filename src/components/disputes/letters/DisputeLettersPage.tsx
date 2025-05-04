@@ -53,6 +53,11 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ requirePayment 
     } else {
       console.log("Dispute letters are present, keeping storage intact");
     }
+
+    // When component unmounts or before it refreshes, clear the "alreadyLoaded" flag
+    return () => {
+      sessionStorage.removeItem('lettersAlreadyLoaded');
+    };
   }, [profile]);
   
   // Effect to measure navbar height
@@ -85,6 +90,9 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ requirePayment 
     // CRITICAL: Clear all existing letters before creating new ones
     clearAllLetterData();
     
+    // Also clear the "already loaded" flag to ensure we can load new letters
+    sessionStorage.removeItem('lettersAlreadyLoaded');
+    
     // Also clear report data to force a fresh analysis
     clearStoredReport();
     
@@ -101,6 +109,9 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ requirePayment 
   const handleResetAndRetry = () => {
     // Clear ALL session storage related to letters
     clearAllLetterData();
+    
+    // Also clear the "already loaded" flag to ensure we can load new letters
+    sessionStorage.removeItem('lettersAlreadyLoaded');
     
     // Also clear the report data
     clearStoredReport();

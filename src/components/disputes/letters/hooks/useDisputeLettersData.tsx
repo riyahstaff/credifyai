@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +24,7 @@ export function useDisputeLettersData() {
   const { toast } = useToast();
   const location = useLocation();
   const { profile } = useAuth(); // Add the profile from the auth context
+  const [toastDisplayed, setToastDisplayed] = useState(false); // Add flag to track if toast was displayed
   
   // Check if we're in a forced reload state
   useEffect(() => {
@@ -42,6 +42,14 @@ export function useDisputeLettersData() {
       try {
         setIsLoading(true);
         console.log("Loading dispute letters...");
+        
+        // Check if we've already loaded letters in this session to prevent duplicates
+        const alreadyLoaded = sessionStorage.getItem('lettersAlreadyLoaded');
+        if (alreadyLoaded === 'true' && letters.length > 0) {
+          console.log("Letters already loaded in this session, skipping");
+          setIsLoading(false);
+          return;
+        }
         
         // Check for storage state for debugging
         const generatedLettersJSON = sessionStorage.getItem('generatedDisputeLetters');
@@ -79,12 +87,18 @@ export function useDisputeLettersData() {
               
               setLetters(formattedLetters);
               
-              // Toast notification about loaded letters
-              toast({
-                title: "Dispute Letters Loaded",
-                description: `${formattedLetters.length} dispute ${formattedLetters.length === 1 ? 'letter has' : 'letters have'} been loaded.`,
-                duration: 5000,
-              });
+              // Mark as loaded to prevent duplicate loading
+              sessionStorage.setItem('lettersAlreadyLoaded', 'true');
+              
+              // Toast notification about loaded letters (only once)
+              if (!toastDisplayed) {
+                toast({
+                  title: "Dispute Letters Loaded",
+                  description: `${formattedLetters.length} dispute ${formattedLetters.length === 1 ? 'letter has' : 'letters have'} been loaded.`,
+                  duration: 3000, // Shorter duration
+                });
+                setToastDisplayed(true);
+              }
               
               setIsLoading(false);
               return;
@@ -118,12 +132,18 @@ export function useDisputeLettersData() {
             
             setLetters([formattedLetter]);
             
-            // Toast notification
-            toast({
-              title: "Dispute Letter Loaded",
-              description: "Your dispute letter has been loaded from session storage.",
-              duration: 5000,
-            });
+            // Mark as loaded to prevent duplicate loading
+            sessionStorage.setItem('lettersAlreadyLoaded', 'true');
+            
+            // Toast notification (only once)
+            if (!toastDisplayed) {
+              toast({
+                title: "Dispute Letter Loaded",
+                description: "Your dispute letter has been loaded from session storage.",
+                duration: 3000, // Shorter duration
+              });
+              setToastDisplayed(true);
+            }
             
             setIsLoading(false);
             return;
@@ -156,12 +176,18 @@ export function useDisputeLettersData() {
             
             setLetters([formattedLetter]);
             
-            // Toast notification
-            toast({
-              title: "Auto-Generated Letter Loaded",
-              description: "Your auto-generated dispute letter has been loaded.",
-              duration: 5000,
-            });
+            // Mark as loaded to prevent duplicate loading
+            sessionStorage.setItem('lettersAlreadyLoaded', 'true');
+            
+            // Toast notification (only once)
+            if (!toastDisplayed) {
+              toast({
+                title: "Auto-Generated Letter Loaded",
+                description: "Your auto-generated dispute letter has been loaded.",
+                duration: 3000, // Shorter duration
+              });
+              setToastDisplayed(true);
+            }
             
             setIsLoading(false);
             return;
@@ -180,16 +206,26 @@ export function useDisputeLettersData() {
         setLetters([]);
         setIsLoading(false);
         
-        toast({
-          title: "Error Loading Letters",
-          description: "There was a problem loading your dispute letters.",
-          variant: "destructive",
-        });
+        // Only show error toast if we haven't shown any other toast
+        if (!toastDisplayed) {
+          toast({
+            title: "Error Loading Letters",
+            description: "There was a problem loading your dispute letters.",
+            variant: "destructive",
+            duration: 3000, // Shorter duration
+          });
+          setToastDisplayed(true);
+        }
       }
     };
     
     loadLetters();
-  }, [toast, location.pathname]);
+    
+    // Clear toast flag when component unmounts
+    return () => {
+      // Keep the lettersAlreadyLoaded flag as it should persist across navigation
+    };
+  }, [toast, location.pathname, toastDisplayed]);
   
   // Function to add a new letter
   const addLetter = (newLetter: Letter) => {

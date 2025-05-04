@@ -19,6 +19,7 @@ export const clearAllLetterData = (): void => {
   sessionStorage.removeItem('generationComplete');
   sessionStorage.removeItem('hasDisputeLetters');
   sessionStorage.removeItem('fallbackLetterUsed');
+  sessionStorage.removeItem('lettersAlreadyLoaded'); // Add our new flag
   
   // Clear any flags that might trigger letter generation
   sessionStorage.removeItem('shouldNavigateToLetters');
@@ -77,4 +78,3 @@ export const hasLetterData = (): boolean => {
     localStorage.getItem('disputeLetters')
   );
 };
-
