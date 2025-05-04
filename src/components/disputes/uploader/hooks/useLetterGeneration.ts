@@ -17,11 +17,14 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
 
   const handleGenerateAllLetters = async (issues: Array<any>) => {
     if (reportData) {
-      // Clear any existing letters first
+      // IMPORTANT: Clear any existing letters first to ensure fresh generation
       clearAllLetterData();
       
       // Store report data for use in letter generation
       sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
+      
+      // Add a timestamp to ensure we don't reuse cached data
+      sessionStorage.setItem('letterGenerationTime', Date.now().toString());
       
       toast({
         title: "Generating letters",
@@ -42,7 +45,11 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
           const normalizedLetters = generatedLetters.map(letter => ({
             ...letter,
             content: letter.content || letter.letterContent || '',
-            letterContent: letter.letterContent || letter.content || ''
+            letterContent: letter.letterContent || letter.content || '',
+            id: letter.id || `letter-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            createdAt: letter.createdAt || new Date().toLocaleDateString('en-US', { 
+              month: 'short', day: 'numeric', year: 'numeric' 
+            }),
           }));
           
           const stored = storeGeneratedLetters(normalizedLetters);
@@ -55,6 +62,7 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
             
             // Set flag to force reload on letters page
             sessionStorage.setItem('forceLettersReload', 'true');
+            sessionStorage.setItem('hasDisputeLetters', 'true');
             
             // Break navigation loops
             sessionStorage.removeItem('navigationInProgress');
@@ -80,6 +88,7 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
           // Ensure the fallback letter has content in both fields
           letters[0].content = letters[0].letterContent || letters[0].content;
           letters[0].letterContent = letters[0].content || letters[0].letterContent;
+          letters[0].id = letters[0].id || `letter-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
           
           const stored = storeGeneratedLetters(letters);
           
@@ -91,6 +100,7 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
             
             // Set flag to force reload on letters page
             sessionStorage.setItem('forceLettersReload', 'true');
+            sessionStorage.setItem('hasDisputeLetters', 'true');
             
             // Break navigation loops
             sessionStorage.removeItem('navigationInProgress');

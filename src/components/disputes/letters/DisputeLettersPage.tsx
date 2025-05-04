@@ -6,11 +6,11 @@ import Footer from '../../layout/Footer';
 import { useDisputeLettersData, Letter } from './hooks/useDisputeLettersData';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { FileText, AlertTriangle, RefreshCw, RotateCw } from 'lucide-react';
+import { FileText, AlertTriangle, RefreshCw, RotateCw, FilePlus } from 'lucide-react';
 import { Profile } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useReportStorage } from '@/hooks/useReportStorage';
-import { clearAllLetterData } from '@/utils/creditReport/clearLetterData';
+import { clearAllLetterData, forceClearAndReload } from '@/utils/creditReport/clearLetterData';
 
 // Import existing components
 import DisputeLettersList from './DisputeLettersList';  
@@ -41,7 +41,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
   const [navHeight, setNavHeight] = useState<number>(0);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   
-  // FIXED: Don't automatically clear letters on mount, only check for stale data
+  // Don't automatically clear letters on mount, only check for stale data
   useEffect(() => {
     console.log("DisputeLettersPage: Checking for navigation flags");
     
@@ -84,16 +84,21 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
   // Create letter from issues found in the credit report
   const handleCreateLetterFromIssues = () => {
     // Add debug logging to track navigation
-    console.log("Navigating to upload report page");
+    console.log("Navigating to upload report page to create new letters");
     
     // CRITICAL: Clear all existing letters before creating new ones
+    // This is essential to prevent reusing old letters
     clearAllLetterData();
+    
+    // Also clear report data to force a fresh analysis
+    clearStoredReport();
     
     toast({
       title: "Creating New Letter",
       description: "Redirecting to credit report upload...",
       duration: 3000,
     });
+    
     navigate('/upload-report' + (testMode ? '?testMode=true' : ''));
   };
   
@@ -101,6 +106,9 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
   const handleResetAndRetry = () => {
     // Clear ALL session storage related to letters
     clearAllLetterData();
+    
+    // Also clear the report data
+    clearStoredReport();
     
     toast({
       title: "Retrying",
@@ -111,15 +119,15 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
     navigate('/upload-report');
   };
 
-  // Force reload the page
+  // Force reload the page and clear data
   const handleForceReload = () => {
     toast({
-      title: "Reloading Page",
-      description: "Refreshing the dispute letters page...",
+      title: "Force Reset",
+      description: "Clearing all data and refreshing the page...",
     });
     
-    // Force hard reload
-    window.location.reload();
+    // Use the nuclear option to clear everything and reload
+    forceClearAndReload();
   };
 
   // Function to handle letter selection that converts the type properly
@@ -154,8 +162,8 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
                   className="bg-background border-border hover:bg-accent flex items-center gap-2"
                   onClick={handleForceReload}
                 >
-                  <RotateCw size={16} />
-                  Reload Page
+                  <RefreshCw size={16} />
+                  Force Reset
                 </Button>
                 <Button 
                   variant="destructive" 
@@ -179,11 +187,11 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ testMode = fals
               </AlertDescription>
               <Button 
                 variant="outline" 
-                className="mt-3 bg-background dark:bg-background border-amber-300 dark:border-amber-800/50 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                className="mt-3 bg-background dark:bg-background border-amber-300 dark:border-amber-800/50 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 flex items-center gap-2"
                 onClick={handleCreateLetterFromIssues}
               >
-                <FileText className="mr-2 h-4 w-4" />
-                Upload Credit Report
+                <FilePlus className="h-4 w-4" />
+                Create New Dispute Letter
               </Button>
             </Alert>
           )}

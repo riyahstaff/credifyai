@@ -1,141 +1,119 @@
 
 import { useToast } from '@/hooks/use-toast';
 import { NavigateFunction } from 'react-router-dom';
+import { clearAllLetterData } from '@/utils/creditReport/clearLetterData';
 
 /**
- * Stores generated dispute letters in session storage
- * @param letters The letters to store
- * @returns Boolean indicating success
+ * Store generated letters in session storage
  */
-export function storeGeneratedLetters(letters: any[]): boolean {
+export const storeGeneratedLetters = (letters: any[]): boolean => {
   try {
-    if (!letters || letters.length === 0) {
-      console.error("No letters provided to store");
-      return false;
-    }
+    // Generate unique IDs for each letter if not already present
+    const lettersWithIds = letters.map((letter, index) => ({
+      ...letter,
+      id: letter.id || Date.now() + index
+    }));
     
-    console.log(`Storing ${letters.length} generated letters`);
+    // Store the letters in session storage
+    sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(lettersWithIds));
     
-    // Check if letters have proper content
-    for (const letter of letters) {
-      if (!letter.content || letter.content.length < 10) {
-        console.error("Letter is missing content:", letter);
-      }
-    }
-    
-    // Store the letters
-    sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(letters));
-    
-    // Also store the first letter as a pending letter for compatibility
-    if (letters[0]) {
-      sessionStorage.setItem('pendingDisputeLetter', JSON.stringify({
-        ...letters[0],
-        status: 'ready'
-      }));
-    }
-    
-    // Set a flag to indicate we have fresh letters
+    // Mark that we have dispute letters
     sessionStorage.setItem('hasDisputeLetters', 'true');
     
-    // Verify storage succeeded
-    const storedLetters = JSON.parse(sessionStorage.getItem('generatedDisputeLetters') || 'null');
-    
-    if (!storedLetters || storedLetters.length !== letters.length) {
-      console.error("Verification failed after storing letters");
-      return false;
-    }
-    
-    console.log("Successfully stored dispute letters");
+    console.log(`Stored ${lettersWithIds.length} letters in session storage`);
     return true;
   } catch (error) {
     console.error("Error storing generated letters:", error);
     return false;
   }
-}
+};
 
 /**
- * Creates a fallback letter when letter generation fails
+ * Create a fallback letter when letter generation fails
  */
-export function createFallbackLetter(): any {
-  // Get user name from storage
-  let userName = '[YOUR NAME]';
-  try {
-    userName = localStorage.getItem('userName') || 
-               sessionStorage.getItem('userName') ||
-               JSON.parse(localStorage.getItem('userProfile') || '{}')?.full_name ||
-               '[YOUR NAME]';
-  } catch (e) {
-    console.error("Error getting user name:", e);
-  }
-  
-  console.log("Creating fallback letter for user:", userName);
-  
-  return {
-    id: Date.now(),
-    title: "Credit Report Dispute",
-    bureau: "Credit Bureau",
-    accountName: "Account in Question",
-    accountNumber: "",
-    content: "Dear Credit Bureau,\n\nI am writing to dispute information in my credit report. After reviewing my credit report, I have identified information that I believe to be inaccurate.\n\nAs per my rights under the Fair Credit Reporting Act, I request that you investigate this matter and correct the disputed information. If you cannot verify this information, please remove it from my credit report.\n\nSincerely,\n" + userName,
-    letterContent: "Dear Credit Bureau,\n\nI am writing to dispute information in my credit report. After reviewing my credit report, I have identified information that I believe to be inaccurate.\n\nAs per my rights under the Fair Credit Reporting Act, I request that you investigate this matter and correct the disputed information. If you cannot verify this information, please remove it from my credit report.\n\nSincerely,\n" + userName,
-    createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    status: "ready",
-    errorType: "General Dispute",
-    recipient: "Credit Bureau",
-    bureaus: ["Credit Bureau"]
-  };
-}
-
-/**
- * Handles errors during letter generation
- */
-export function handleLetterGenerationError(error: any, toast: ReturnType<typeof useToast>['toast'], navigate: NavigateFunction): void {
-  console.error("Error in letter generation process:", error);
-
-  // Display error toast
-  toast({
-    title: "Error Generating Letter",
-    description: "Unable to generate dispute letter. Creating a basic template instead.",
-    variant: "destructive",
-    duration: 5000,
+export const createFallbackLetter = (): any => {
+  // Get current date in a formatted string
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
   
-  try {
-    // Create and store a fallback letter
-    console.log("Creating fallback letter due to error");
-    const fallbackLetter = createFallbackLetter();
-    const stored = storeGeneratedLetters([fallbackLetter]);
-    
-    if (stored) {
-      // Set flag to force reload on letters page
-      sessionStorage.setItem('forceLettersReload', 'true');
-      
-      toast({
-        title: "Basic Letter Created",
-        description: "A simple template has been created that you can customize.",
-        duration: 3000,
-      });
-      
-      // Navigate to letters page after a slight delay
-      setTimeout(() => {
-        console.log("Navigating to dispute letters page after error recovery");
-        window.location.href = '/dispute-letters';
-      }, 1500);
-    } else {
-      toast({
-        title: "Error Creating Letter",
-        description: "Unable to create even a basic letter template. Please try again.",
-        variant: "destructive",
-        duration: 5000,
-      });
-    }
-  } catch (fallbackError) {
-    console.error("Error creating fallback letter:", fallbackError);
-    toast({
-      title: "Critical Error",
-      description: "Unable to create any letter templates. Please reload and try again.",
-      variant: "destructive",
-      duration: 5000,
-    });
-  }
-}
+  // Create a simple letter template
+  return {
+    id: `fallback-${Date.now()}`,
+    title: "Credit Report Dispute Letter",
+    content: `
+${currentDate}
+
+Credit Bureau
+Dispute Department
+P.O. Box 12345
+City, State 12345
+
+Re: Dispute of Inaccurate Information on My Credit Report
+
+To Whom It May Concern:
+
+I am writing to dispute inaccurate information on my credit report. I have the right to dispute inaccurate information under the Fair Credit Reporting Act, Section 611 [15 USC §1681i].
+
+After reviewing my credit report, I have identified items that require your investigation and correction. Please investigate these disputed items, and upon completion, provide me with an updated copy of my credit report.
+
+Sincerely,
+
+[Your Name]
+    `,
+    letterContent: `
+${currentDate}
+
+Credit Bureau
+Dispute Department
+P.O. Box 12345
+City, State 12345
+
+Re: Dispute of Inaccurate Information on My Credit Report
+
+To Whom It May Concern:
+
+I am writing to dispute inaccurate information on my credit report. I have the right to dispute inaccurate information under the Fair Credit Reporting Act, Section 611 [15 USC §1681i].
+
+After reviewing my credit report, I have identified items that require your investigation and correction. Please investigate these disputed items, and upon completion, provide me with an updated copy of my credit report.
+
+Sincerely,
+
+[Your Name]
+    `,
+    bureau: "Credit Bureau",
+    accountName: "All Accounts",
+    errorType: "General Dispute",
+    createdAt: new Date().toLocaleDateString('en-US', { 
+      month: 'short', day: 'numeric', year: 'numeric' 
+    }),
+    status: 'ready'
+  };
+};
+
+/**
+ * Handle letter generation errors gracefully
+ */
+export const handleLetterGenerationError = (
+  error: unknown,
+  toast: ReturnType<typeof useToast>['toast'],
+  navigate: NavigateFunction
+) => {
+  console.error("Error in letter generation:", error);
+  
+  // Clear any partial data to prevent future issues
+  clearAllLetterData();
+  
+  toast({
+    title: "Error generating letters",
+    description: "There was a problem creating your dispute letters. Please try again.",
+    variant: "destructive"
+  });
+  
+  // Navigate back to upload page
+  setTimeout(() => {
+    navigate('/upload-report');
+  }, 2000);
+};
