@@ -14,16 +14,14 @@ const Navbar = () => {
     navLinks,
     isOpen,
     scrolled,
-    testMode,
     hasSubscription,
     setIsOpen,
     isActive,
-    handleLogout,
-    toggleTestMode
+    handleLogout
   } = useNavbar();
 
   return (
-    <nav className={`fixed w-full top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/80 dark:bg-credify-dark/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/30 py-3' : 'py-5'}`}>
+    <nav className={`fixed w-full top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/80 dark:bg-credify-dark/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/30 py-3' : 'py-5'}`} id="main-navbar">
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex justify-between items-center">
           <Logo />
@@ -33,9 +31,7 @@ const Navbar = () => {
             profile={profile as Profile}
             navLinks={navLinks}
             isActive={isActive}
-            testMode={testMode}
             hasSubscription={hasSubscription}
-            toggleTestMode={toggleTestMode}
             handleLogout={handleLogout}
           />
 
@@ -53,9 +49,9 @@ const Navbar = () => {
         navLinks={navLinks}
         user={user}
         profile={profile as Profile}
-        testMode={testMode}
+        testMode={false}
         hasSubscription={hasSubscription}
-        toggleTestMode={toggleTestMode}
+        toggleTestMode={() => {}}
         handleLogout={handleLogout}
         isActive={isActive}
       />
