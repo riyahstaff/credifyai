@@ -1,274 +1,123 @@
 
+import { LegalReference } from '@/utils/creditReport/types';
+
 /**
- * Issue-specific templates for dispute letters
+ * Mapping of issue types to template text
  */
-
-// Generic dispute template for any issue type
-export const generalDisputeTemplate = `{{CONSUMER_NAME}}
-{{CONSUMER_ADDRESS}}
-
-{{DATE}}
-
-{{BUREAU_NAME}}
-{{BUREAU_ADDRESS}}
-
-RE: Dispute of Inaccurate Information in Credit Report
-
-To Whom It May Concern:
-
-I am writing to dispute information in my credit report that I believe to be inaccurate. After reviewing my credit report, I have identified the following items that require investigation:
-
-{{ACCOUNT_DETAILS}}
-
-I am disputing this information because: {{ISSUE_DESCRIPTION}}
-
-I am disputing this information under the following laws and regulations:
-{{LEGAL_REFERENCES}}
-
-Please conduct a thorough investigation of all items I am disputing, as required by the Fair Credit Reporting Act. If you cannot verify this information, please remove it from my credit report.
-
-I understand that according to the Fair Credit Reporting Act, you are required to forward all relevant information to the information provider and to respond to my dispute within 30 days of receipt.
-
-In accordance with Metro 2® reporting guidelines, I request that you properly code this account as "disputed by consumer" (compliance code XB) during your investigation.
-
-Thank you for your prompt attention to this matter.
-
-Sincerely,
-
-{{CONSUMER_NAME}}`;
-
-// Personal information dispute template
-export const personalInfoTemplate = `{{CONSUMER_NAME}}
-{{CONSUMER_ADDRESS}}
-
-{{DATE}}
-
-{{BUREAU_NAME}}
-{{BUREAU_ADDRESS}}
-
-RE: Dispute of Inaccurate Personal Information in Credit Report
-
-To Whom It May Concern:
-
-I am writing to dispute personal information in my credit report. After reviewing my report, I found the following incorrect personal information:
-
-{{ISSUE_DESCRIPTION}}
-
-Under the Fair Credit Reporting Act (FCRA), specifically under:
-{{LEGAL_REFERENCES}}
-
-I request that you investigate this matter and correct my personal information. Inaccurate personal information can lead to potential identity confusion issues and incorrect data linkage in my credit file.
-
-Please update my personal information with the correct details as follows:
-[Insert correct information here]
-
-I understand that according to the Fair Credit Reporting Act, you are required to investigate this dispute and respond within 30 days of receipt.
-
-Thank you for your prompt attention to this matter.
-
-Sincerely,
-
-{{CONSUMER_NAME}}`;
-
-// Late payment dispute template
-export const latePaymentTemplate = `{{CONSUMER_NAME}}
-{{CONSUMER_ADDRESS}}
-
-{{DATE}}
-
-{{BUREAU_NAME}}
-{{BUREAU_ADDRESS}}
-
-RE: Dispute of Inaccurate Late Payment Information
-
-To Whom It May Concern:
-
-I am writing to dispute late payment information reported on my credit report. After reviewing my credit report, I found the following account contains late payment information that I believe is inaccurate:
-
-{{ACCOUNT_DETAILS}}
-
-I have always made payments on this account on time, and this reported late payment is incorrect. This error is harming my credit score and does not reflect my actual payment history.
-
-Under the Fair Credit Reporting Act (FCRA), specifically:
-{{LEGAL_REFERENCES}}
-
-Furnishers are prohibited from reporting information they know to be inaccurate, and credit bureaus must follow reasonable procedures to assure maximum possible accuracy.
-
-Please investigate this matter and remove the incorrect late payment information from my credit report. I have records of my payments that I can provide if needed.
-
-I understand that according to the FCRA, you are required to investigate this dispute and respond within 30 days of receipt. During the investigation, this account should be marked as "disputed by consumer" using Metro 2® compliance code XB.
-
-Thank you for your prompt attention to this matter.
-
-Sincerely,
-
-{{CONSUMER_NAME}}`;
-
-// Collection account dispute template
-export const collectionTemplate = `{{CONSUMER_NAME}}
-{{CONSUMER_ADDRESS}}
-
-{{DATE}}
-
-{{BUREAU_NAME}}
-{{BUREAU_ADDRESS}}
-
-RE: Dispute of Collection Account
-
-To Whom It May Concern:
-
-I am writing to dispute a collection account on my credit report. After reviewing my credit report, I found the following collection account that I believe is inaccurate or unverifiable:
-
-{{ACCOUNT_DETAILS}}
-
-I dispute this collection account for the following reasons:
-{{ISSUE_DESCRIPTION}}
-
-Under the Fair Credit Reporting Act (FCRA) and the Fair Debt Collection Practices Act (FDCPA), specifically:
-{{LEGAL_REFERENCES}}
-
-I request that you:
-1. Verify that the collection agency has provided complete and accurate documentation proving the validity of this debt
-2. Verify that the collection agency has the legal right to collect this debt
-3. Provide me with copies of all documentation related to this debt
-4. Remove this collection account if it cannot be fully verified
-
-If the debt cannot be properly verified with complete documentation, it must be removed from my credit report pursuant to the FCRA.
-
-I understand that according to the FCRA, you are required to investigate this dispute and respond within 30 days of receipt. During the investigation, this account should be marked as "disputed by consumer" using Metro 2® compliance code XB.
-
-Thank you for your prompt attention to this matter.
-
-Sincerely,
-
-{{CONSUMER_NAME}}`;
-
-// Inquiry dispute template
-export const inquiryTemplate = `{{CONSUMER_NAME}}
-{{CONSUMER_ADDRESS}}
-
-{{DATE}}
-
-{{BUREAU_NAME}}
-{{BUREAU_ADDRESS}}
-
-RE: Dispute of Unauthorized Credit Inquiry
-
-To Whom It May Concern:
-
-I am writing to dispute an inquiry on my credit report. After reviewing my credit report, I found the following inquiry that I believe was not authorized by me:
-
-{{ACCOUNT_DETAILS}}
-
-I do not recall authorizing this inquiry, nor have I had any business relationship with this company that would justify accessing my credit information. This unauthorized inquiry represents improper access to my credit file.
-
-Under the Fair Credit Reporting Act (FCRA), specifically:
-{{LEGAL_REFERENCES}}
-
-Credit inquiries can only be made with proper authorization or for explicitly permitted purposes. Unauthorized inquiries must be removed.
-
-Please investigate this matter and remove this inquiry from my credit report if it cannot be verified as properly authorized.
-
-I understand that according to the FCRA, you are required to investigate this dispute and respond within 30 days of receipt.
-
-Thank you for your prompt attention to this matter.
-
-Sincerely,
-
-{{CONSUMER_NAME}}`;
-
-// Student loan dispute template
-export const studentLoanTemplate = `{{CONSUMER_NAME}}
-{{CONSUMER_ADDRESS}}
-
-{{DATE}}
-
-{{BUREAU_NAME}}
-{{BUREAU_ADDRESS}}
-
-RE: Dispute of Duplicate Student Loan Accounts
-
-To Whom It May Concern:
-
-I am writing to dispute duplicate student loan accounts on my credit report. After reviewing my credit report, I found the following student loan accounts that appear to be duplicates:
-
-{{ACCOUNT_DETAILS}}
-
-These loans appear to be the same loan reported multiple times. This duplicate reporting is artificially inflating my debt levels and negatively impacting my credit score.
-
-Under the Fair Credit Reporting Act (FCRA), specifically:
-{{LEGAL_REFERENCES}}
-
-Credit reporting agencies must follow reasonable procedures to assure maximum accuracy, which includes preventing duplicate accounts from appearing.
-
-Please investigate this matter and remove the duplicate accounts from my credit report. The correct loan information should only appear once on my report.
-
-I understand that according to the FCRA, you are required to investigate this dispute and respond within 30 days of receipt. During the investigation, these accounts should be marked as "disputed by consumer" using Metro 2® compliance code XB.
-
-Thank you for your prompt attention to this matter.
-
-Sincerely,
-
-{{CONSUMER_NAME}}`;
-
-// Bankruptcy dispute template
-export const bankruptcyTemplate = `{{CONSUMER_NAME}}
-{{CONSUMER_ADDRESS}}
-
-{{DATE}}
-
-{{BUREAU_NAME}}
-{{BUREAU_ADDRESS}}
-
-RE: Dispute of Bankruptcy Information
-
-To Whom It May Concern:
-
-I am writing to dispute bankruptcy information on my credit report. After reviewing my credit report, I found the following bankruptcy information that I believe is outdated or inaccurate:
-
-{{ACCOUNT_DETAILS}}
-
-Under the Fair Credit Reporting Act (FCRA), specifically:
-{{LEGAL_REFERENCES}}
-
-Bankruptcy information should not be reported beyond the legally permitted timeframe, which is generally 10 years from the date of filing for Chapter 7 bankruptcies and 7 years for Chapter 13 bankruptcies.
-
-Please investigate this matter and remove this outdated bankruptcy information from my credit report.
-
-I understand that according to the FCRA, you are required to investigate this dispute and respond within 30 days of receipt.
-
-Thank you for your prompt attention to this matter.
-
-Sincerely,
-
-{{CONSUMER_NAME}}`;
-
-// Map issue types to their appropriate templates
 export const issueTemplateMapping: Record<string, string> = {
-  'general': generalDisputeTemplate,
-  'personal_info': personalInfoTemplate,
-  'late_payment': latePaymentTemplate,
-  'collection': collectionTemplate,
-  'inquiry': inquiryTemplate,
-  'student_loan': studentLoanTemplate,
-  'bankruptcy': bankruptcyTemplate
+  'late_payment': `
+I am disputing the late payment reported on this account because it is inaccurate. I have always made my payments on time as evidenced by my bank statements and receipt records.
+
+Under the Fair Credit Reporting Act (FCRA), specifically section 15 USC 1681e(b), you are required to follow "reasonable procedures to assure maximum possible accuracy" of the information in my credit report. The payment status being reported is incorrect and does not accurately reflect my payment history.
+  `,
+  
+  'collection_account': `
+I am disputing this collection account as it appears to be inaccurate or unverified. I have no record of owing this debt, and the alleged creditor has failed to provide proper validation as required by law.
+
+Under the Fair Debt Collection Practices Act (FDCPA) section 15 USC 1692g and the Fair Credit Reporting Act (FCRA) section 15 USC 1681i, this debt must be properly verified or removed from my credit report.
+  `,
+  
+  'inquiry': `
+I am disputing this inquiry as I did not authorize access to my credit report by this company. Under the Fair Credit Reporting Act section 15 USC 1681b, access to a consumer's credit report is limited to those with a permissible purpose.
+
+Please investigate this unauthorized inquiry and remove it from my credit report as it represents an unauthorized access to my personal financial information.
+  `,
+  
+  'personal_info': `
+I am disputing the personal information listed on my credit report as it contains inaccuracies. The correct information is provided in this letter.
+
+Under the Fair Credit Reporting Act section 15 USC 1681i(a)(1)(A), you are required to "conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate" and record the correct information in my file.
+  `,
+  
+  'identity_theft': `
+I am disputing this account as it is the result of identity theft. I did not open this account and have filed a police report regarding this fraudulent activity (see attached documentation).
+
+Under the Fair Credit Reporting Act section 15 USC 1681c-2, I am requesting that this fraudulent information be blocked from my credit report as it resulted from identity theft.
+  `,
+  
+  'duplicate_account': `
+I am disputing this account because it appears to be a duplicate of another account already listed on my credit report. This double reporting unfairly impacts my credit score and creates confusion in my credit history.
+
+Under the Fair Credit Reporting Act section 15 USC 1681e(b), credit reporting agencies must maintain reasonable procedures to ensure accuracy, which includes preventing duplicate reporting of the same account.
+  `,
+  
+  'bankruptcy_discharge': `
+I am disputing this account as it has been discharged in bankruptcy but is not being reported as such. The bankruptcy discharge was on [DATE] under case number [CASE NUMBER].
+
+Under the Fair Credit Reporting Act section 15 USC 1681c, once a debt has been discharged in bankruptcy, it must be reported accurately to reflect this legal status.
+  `,
+  
+  'general': `
+I am disputing information in my credit report that appears to be inaccurate. After reviewing my report, I have identified discrepancies that require investigation.
+
+Under the Fair Credit Reporting Act section 15 USC 1681i, you are required to conduct a reasonable investigation into disputed information and verify its accuracy with the original sources. If the disputed information cannot be verified, it must be removed from my credit report.
+  `
 };
 
-// Mapping for bureau addresses
+/**
+ * Bureau address mapping
+ */
 export const bureauAddressMapping: Record<string, string> = {
-  'Experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
-  'Equifax': 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374',
-  'TransUnion': 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016',
-  'Unknown': '[BUREAU ADDRESS]'
+  'experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
+  'equifax': 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374',
+  'transunion': 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016'
 };
 
-// Legal references by issue type
-export const legalReferences = {
-  'personal_info': ['15 USC 1681c', '15 USC 1681g'],
-  'late_payment': ['15 USC 1681s-2(a)(3)', '15 USC 1681e(b)'],
-  'collection': ['15 USC 1692c', '15 USC 1681s-2(a)(3)'],
-  'inquiry': ['15 USC 1681b(a)(2)', '15 USC 1681m'],
-  'student_loan': ['15 USC 1681e(b)', '15 USC 1681i'],
-  'bankruptcy': ['15 USC 1681c', '15 USC 1681i', '15 USC 1681e(b)'],
-  'general': ['15 USC 1681e(b)', '15 USC 1681i']
+/**
+ * Legal references by issue type
+ */
+export const legalReferences: Record<string, LegalReference[]> = {
+  'late_payment': [
+    {
+      law: 'FCRA',
+      section: '15 USC 1681s-2(a)(3)',
+      title: 'Duty to provide notice of dispute',
+      text: 'If the completeness or accuracy of any information furnished by any person to any consumer reporting agency is disputed by the consumer, that person may not furnish the information to any consumer reporting agency without notice that such information is disputed by the consumer.'
+    },
+    {
+      law: 'FCRA',
+      section: '15 USC 1681e(b)',
+      title: 'Accuracy of report',
+      text: 'Whenever a consumer reporting agency prepares a consumer report it shall follow reasonable procedures to assure maximum possible accuracy of the information concerning the individual about whom the report relates.'
+    }
+  ],
+  
+  'collection_account': [
+    {
+      law: 'FDCPA',
+      section: '15 USC 1692g',
+      title: 'Validation of debts',
+      text: 'Within five days after the initial communication with a consumer in connection with the collection of any debt, a debt collector shall, unless the following information is contained in the initial communication or the consumer has paid the debt, send the consumer a written notice containing the amount of the debt, the name of the creditor to whom the debt is owed, and statements regarding disputing the debt.'
+    },
+    {
+      law: 'FCRA',
+      section: '15 USC 1681i',
+      title: 'Procedure in case of disputed accuracy',
+      text: 'If the completeness or accuracy of any item of information contained in a consumer's file at a consumer reporting agency is disputed by the consumer, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate.'
+    }
+  ],
+  
+  'inquiry': [
+    {
+      law: 'FCRA',
+      section: '15 USC 1681b',
+      title: 'Permissible purposes of consumer reports',
+      text: 'A consumer reporting agency may furnish a consumer report only under specific circumstances, such as in accordance with the written instructions of the consumer, for employment purposes, or in connection with a credit transaction.'
+    }
+  ],
+  
+  'general': [
+    {
+      law: 'FCRA',
+      section: '15 USC 1681i(a)(1)(A)',
+      title: 'Reinvestigation of disputed information',
+      text: 'If the completeness or accuracy of any item of information contained in a consumer's file at a consumer reporting agency is disputed by the consumer and the consumer notifies the agency directly, or indirectly through a reseller, of such dispute, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate and record the current status of the disputed information, or delete the item from the file.'
+    },
+    {
+      law: 'FCRA',
+      section: '15 USC 1681e(b)',
+      title: 'Accuracy of report',
+      text: 'Whenever a consumer reporting agency prepares a consumer report it shall follow reasonable procedures to assure maximum possible accuracy of the information concerning the individual about whom the report relates.'
+    }
+  ]
 };

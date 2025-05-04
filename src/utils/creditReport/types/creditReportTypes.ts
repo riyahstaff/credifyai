@@ -161,6 +161,10 @@ export interface Issue {
   severity: 'high' | 'medium' | 'low';
   details?: Record<string, any>;
   legalReferences?: string[];
+  title?: string;
+  impact?: string;
+  impactColor?: string;
+  laws?: string[];
 }
 
 // Define legal references for different issue types

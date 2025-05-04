@@ -310,3 +310,57 @@ function determineBureauFromReport(reportData?: CreditReportData): string {
   
   return 'Credit Bureau';
 }
+
+/**
+ * Generate a single dispute letter
+ */
+export function generateDisputeLetter(
+  issueType: string,
+  disputeDetails: {
+    accountName: string;
+    accountNumber?: string;
+    errorDescription: string;
+    bureau: string;
+    relevantReportText?: string;
+  },
+  userInfo: any,
+  reportData?: CreditReportData
+): Promise<string> {
+  // This is just a wrapper around generateEnhancedDisputeLetter for backward compatibility
+  return generateEnhancedDisputeLetter(issueType, disputeDetails, userInfo, reportData);
+}
+
+/**
+ * Generate and store multiple dispute letters
+ */
+export async function generateAndStoreDisputeLetters(
+  issues: Issue[],
+  reportData: CreditReportData | null,
+  userInfo: any
+): Promise<Array<{ bureau: string, content: string }>> {
+  // Generate letters for all issues
+  const letters = await generateLettersForIssues(issues, userInfo, reportData || undefined);
+  
+  // Store the letters in session storage for later use
+  try {
+    const formattedLetters = letters.map((letterData, index) => ({
+      id: `letter-${Date.now()}-${index}`,
+      title: `Dispute Letter to ${letterData.bureau}`,
+      content: letterData.content,
+      letterContent: letterData.content,
+      bureau: letterData.bureau,
+      accountName: issues[0]?.accountName || "Multiple Accounts",
+      accountNumber: issues[0]?.accountNumber || "",
+      errorType: "dispute",
+      status: "ready",
+      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    }));
+    
+    sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(formattedLetters));
+    console.log(`Stored ${formattedLetters.length} letters in session storage`);
+  } catch (error) {
+    console.error("Error storing generated letters:", error);
+  }
+  
+  return letters;
+}

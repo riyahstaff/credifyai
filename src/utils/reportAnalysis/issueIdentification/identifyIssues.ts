@@ -55,15 +55,28 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
         laws = [...laws, ...issue.legalReferences];
       }
       
+      // Determine impact value that conforms to the allowed values
+      let impactValue: 'High Impact' | 'Critical Impact' | 'Medium Impact' | 'Low Impact';
+      
+      if (issue.severity === 'high' || (issue.impact && issue.impact.toLowerCase().includes('high'))) {
+        impactValue = 'High Impact';
+      } else if (issue.severity === 'medium' || (issue.impact && issue.impact.toLowerCase().includes('medium'))) {
+        impactValue = 'Medium Impact';
+      } else {
+        impactValue = 'Low Impact';
+      }
+      
+      // Set color based on impact
+      const impactColor = impactValue === 'High Impact' || impactValue === 'Critical Impact' ? 'red' : 
+                         impactValue === 'Medium Impact' ? 'orange' : 'yellow';
+      
       return {
         id: issue.id || `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         type: issue.type,
         title: issue.title || issue.type.charAt(0).toUpperCase() + issue.type.slice(1).replace(/_/g, ' '),
         description: issue.description,
-        impact: issue.impact || (issue.severity === 'high' ? 'High Impact' : 
-                issue.severity === 'medium' ? 'Medium Impact' : 'Low Impact'),
-        impactColor: issue.impactColor || (issue.severity === 'high' ? 'red' : 
-                    issue.severity === 'medium' ? 'orange' : 'yellow'),
+        impact: impactValue,
+        impactColor: impactColor,
         account: issue.accountName ? { 
           accountName: issue.accountName,
           accountNumber: issue.accountNumber
@@ -71,8 +84,8 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
         laws: laws.filter(law => law), // Remove empty strings
         bureau: issue.bureau || reportData.primaryBureau || reportData.bureau || "Unknown",
         severity: issue.severity || (
-          issue.impact && issue.impact.toLowerCase().includes('high') ? 'high' :
-          issue.impact && issue.impact.toLowerCase().includes('medium') ? 'medium' : 'low'
+          impactValue === 'High Impact' || impactValue === 'Critical Impact' ? 'high' :
+          impactValue === 'Medium Impact' ? 'medium' : 'low'
         )
       };
     });
@@ -139,7 +152,7 @@ function extractIssuesFromRawText(rawText: string, reportData: CreditReportData)
           accountName: account.accountName,
           accountNumber: account.accountNumber,
           bureau: account.bureau || determineBureauFromReport(reportData),
-          legalBasis: ["15 USC 1681e(b)"]
+          legalBasis: "15 USC 1681e(b)" as string // Convert to string to match the expected type
         });
       }
     }
@@ -198,7 +211,7 @@ function extractIssuesFromRawText(rawText: string, reportData: CreditReportData)
         accountName: accountName || undefined,
         accountNumber: accountName ? 'XXXX' : undefined,
         bureau: determineBureauFromReport(reportData),
-        legalBasis: ["15 USC 1681e(b)"]
+        legalBasis: "15 USC 1681e(b)" as string // Convert to string to match the expected type
       });
     }
   }
