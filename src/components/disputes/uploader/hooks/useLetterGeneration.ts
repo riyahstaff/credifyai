@@ -74,7 +74,7 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
         } else {
           console.warn("No letters were generated, creating a fallback letter");
           
-          const fallbackLetter = createFallbackLetter(reportData);
+          const fallbackLetter = createFallbackLetter();
           const letters = [fallbackLetter];
           
           // Ensure the fallback letter has content in both fields
