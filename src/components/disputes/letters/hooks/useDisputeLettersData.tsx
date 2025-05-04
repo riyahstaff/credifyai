@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -46,8 +45,8 @@ export function useDisputeLettersData() {
         console.log("Loading dispute letters...");
         
         // Check if we've already loaded letters in this session to prevent duplicates
-        const alreadyLoaded = sessionStorage.getItem('lettersAlreadyLoaded');
-        if (alreadyLoaded === 'true' && letters.length > 0) {
+        const alreadyLoaded = sessionStorage.getItem('lettersAlreadyLoaded') === 'true';
+        if (alreadyLoaded && letters.length > 0) {
           console.log("Letters already loaded in this session, skipping");
           setIsLoading(false);
           return;

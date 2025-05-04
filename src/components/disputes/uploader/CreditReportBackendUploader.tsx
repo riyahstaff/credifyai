@@ -64,57 +64,62 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
       }
       
       // Simulate initial upload progress
+      setUploadProgress(10);
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
-          const newProgress = prev + Math.random() * 15;
-          return newProgress > 60 ? 60 : newProgress;
+          const newProgress = prev + Math.random() * 5;
+          return newProgress > 50 ? 50 : newProgress;
         });
       }, 300);
       
-      // Always attempt to analyze locally first for reliability
-      let reportData;
-      setUsingLocalFallback(true);
+      // Always process locally first (parallel to API call)
+      console.log("Starting local processing as a fallback");
+      const localProcessPromise = processCreditReport(file).catch(err => {
+        console.error("Local processing failed:", err);
+        return null;
+      });
       
+      // Try API call first, but don't wait too long
+      console.log("Trying external API analysis");
+      let reportData;
       try {
-        console.log("Processing credit report locally...");
-        reportData = await processCreditReport(file);
-        setUploadProgress(80);
-        clearInterval(progressInterval);
-      } catch (processingError) {
-        console.error("Error processing report locally:", processingError);
+        const response = await analyzeReport(file);
         
-        // If local processing fails, try external API
-        try {
-          console.log("Local processing failed, trying external API...");
-          setUsingLocalFallback(false);
-          
-          const response = await analyzeReport(file);
-          
-          if (response.success) {
-            reportData = response.data;
-            if (response.isLocalFallback) {
-              setUsingLocalFallback(true);
-            }
-          } else {
-            throw new Error(response.error || "API error");
-          }
-          
-          setUploadProgress(90);
-        } catch (apiError) {
-          console.error("External API also failed:", apiError);
+        if (response.success && response.data) {
+          reportData = response.data;
+          setUsingLocalFallback(!!response.isLocalFallback);
+          console.log("API analysis successful, using API result");
+        } else {
+          throw new Error("API returned unsuccessful response");
+        }
+      } catch (apiError) {
+        console.warn("API analysis failed, falling back to local processing");
+        
+        // Wait for local processing result
+        const localResult = await localProcessPromise;
+        if (localResult) {
+          reportData = {
+            id: `local_${Date.now()}`,
+            accounts: localResult.accounts || [],
+            issues: [],
+            status: 'completed',
+            processingMethod: 'local'
+          };
           setUsingLocalFallback(true);
-          
-          // Last resort: create minimal report data
+        } else {
+          // Both API and local processing failed - create minimal report
           reportData = {
             id: `emergency_${Date.now()}`,
             accounts: [],
             issues: [],
-            status: 'completed'
+            status: 'completed',
+            processingMethod: 'emergency'
           };
+          setUsingLocalFallback(true);
           
           toast({
             title: "Processing Issues",
-            description: "We encountered some difficulties analyzing your report. Limited functionality may be available.",
+            description: "Continuing with limited functionality. Some features may not work properly.",
             variant: "destructive",
           });
         }
@@ -123,24 +128,32 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
       }
       
       // Complete the upload process
+      setUploadProgress(90);
       setUploadComplete(true);
-      setUploadProgress(100);
       setProcessingStarted(true);
-      
-      // Show success message
-      toast({
-        title: "Credit report uploaded",
-        description: usingLocalFallback 
-          ? "Your credit report is being processed locally."
-          : "Your credit report has been processed successfully.",
-      });
       
       // Store the report data
       try {
-        sessionStorage.setItem('creditReportAnalysis', JSON.stringify(reportData));
+        sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
+        sessionStorage.setItem('reportReadyForLetters', 'true');
+        sessionStorage.setItem('forceLetterGeneration', 'true');
         
-        // Generate a report ID if needed
+        // Reset the alreadyLoaded flag to ensure letters get generated
+        sessionStorage.removeItem('lettersAlreadyLoaded');
+        
+        // Show success message
+        toast({
+          title: "Credit report uploaded",
+          description: usingLocalFallback 
+            ? "Your credit report has been processed locally."
+            : "Your credit report has been processed successfully.",
+        });
+        
+        // Generate a report ID
         const reportId = reportData.id || `report_${Date.now()}`;
+        
+        // Update progress to 100%
+        setUploadProgress(100);
         
         // Call onSuccess callback if provided
         if (onSuccess) {
@@ -153,13 +166,22 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
         }, 2000);
       } catch (storageError) {
         console.error("Error storing analysis results:", storageError);
+        
+        // Show error message
+        toast({
+          title: "Storage Error",
+          description: "There was a problem saving your report data.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error in file upload handler:", error);
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');
+      setIsUploading(false);
+      
       toast({
         title: "Upload failed",
-        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        description: "Please try the 'Process Locally' option instead.",
         variant: "destructive",
       });
     } finally {

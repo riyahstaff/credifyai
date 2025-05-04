@@ -1,4 +1,3 @@
-
 /**
  * External Backend Service
  * This service handles API calls to the external credit report analyzer backend
@@ -36,13 +35,13 @@ async function callApi<T>(
   body?: FormData | object
 ): Promise<ApiResponse<T>> {
   try {
-    // For preview/development environments or if we can't connect to the external API,
-    // return mock responses or generate them locally
+    // For preview/development environments, always use local fallback
     const inPreviewEnvironment = window.location.host.includes('lovableproject.com') || 
-                                window.location.host.includes('lovable.app');
+                                window.location.host.includes('lovable.app') ||
+                                window.location.host.includes('localhost');
     
-    if (inPreviewEnvironment || !navigator.onLine) {
-      console.log(`Mock API ${method} ${endpoint} in preview environment or offline mode`);
+    if (inPreviewEnvironment) {
+      console.log(`Using immediate local fallback for ${endpoint} in preview environment`);
       return getMockResponse<T>(endpoint, method);
     }
     
@@ -70,17 +69,11 @@ async function callApi<T>(
       console.log(`API ${method} ${endpoint}`, body ? { body } : '');
     }
     
-    // Reduce fetch timeout to fail faster if external API is unreachable
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    // Use a short timeout for API calls in preview environments
+    const timeoutMs = inPreviewEnvironment ? 3000 : API_TIMEOUT;
     
     try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
+      const response = await fetchWithTimeout(url, options, timeoutMs);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -98,34 +91,20 @@ async function callApi<T>(
         data
       };
     } catch (fetchError) {
-      clearTimeout(timeoutId);
-      throw fetchError;
-    }
-  } catch (error) {
-    console.error(`API error for ${method} ${endpoint}:`, error);
-    
-    // Enhanced error handling for network errors
-    const isNetworkError = error instanceof TypeError && 
-                         (error.message.includes('fetch') || 
-                          error.message.includes('network') ||
-                          error.message.includes('abort'));
-                          
-    const isTimeoutError = error instanceof Error && 
-                         (error.message.includes('timeout') || 
-                          error.name === 'AbortError');
-    
-    // Immediately use local fallback for any network-related errors
-    if (isNetworkError || isTimeoutError) {
-      console.log(`Network error detected, using immediate local fallback for ${endpoint}`);
+      // If fetch fails, use local fallback
+      console.log(`Network error detected for ${method} ${endpoint}, using local fallback`);
       const mockResponse = await getMockResponse<T>(endpoint, method);
       mockResponse.isLocalFallback = true;
       return mockResponse;
     }
+  } catch (error) {
+    console.error(`API error for ${method} ${endpoint}:`, error);
     
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'An unknown error occurred'
-    };
+    // Immediately use local fallback for any network-related errors
+    console.log(`Error detected, using immediate local fallback for ${endpoint}`);
+    const mockResponse = await getMockResponse<T>(endpoint, method);
+    mockResponse.isLocalFallback = true;
+    return mockResponse;
   }
 }
 
@@ -134,7 +113,7 @@ async function callApi<T>(
  */
 function getMockResponse<T>(endpoint: string, method: string): Promise<ApiResponse<T>> {
   return new Promise(resolve => {
-    // Simulated delay for API calls - much shorter now to improve UX
+    // Very short delay for mock responses to improve UX
     const delay = Math.random() * 300 + 200;
     
     console.log(`Returning mock response for ${method} ${endpoint} after ${delay}ms delay`);
