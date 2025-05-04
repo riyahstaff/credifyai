@@ -54,11 +54,11 @@ export function useDisputeLettersData() {
         }
         
         // Force a generation of new letter if report is ready but no letters exist
-        const reportReady = sessionStorage.getItem('reportReadyForLetters');
-        const forceGeneration = sessionStorage.getItem('forceLetterGeneration');
+        const reportReady = sessionStorage.getItem('reportReadyForLetters') === 'true';
+        const forceGeneration = sessionStorage.getItem('forceLetterGeneration') === 'true';
         const reportData = sessionStorage.getItem('creditReportData');
         
-        if ((reportReady === 'true' || forceGeneration === 'true') && reportData && !alreadyLoaded) {
+        if ((reportReady || forceGeneration) && reportData && !alreadyLoaded) {
           console.log("Report ready but no letters loaded yet - attempting to create one");
           
           try {
@@ -79,7 +79,8 @@ export function useDisputeLettersData() {
                     month: 'short', day: 'numeric', year: 'numeric' 
                   }),
                   status: fallbackLetter.status || 'draft',
-                  bureaus: [fallbackLetter.bureau] || ["Unknown"],
+                  // Fix for the error - properly handle the bureau array
+                  bureaus: fallbackLetter.bureau ? [fallbackLetter.bureau] : ["Unknown"],
                   content: fallbackLetter.content || fallbackLetter.letterContent || '',
                   accountName: fallbackLetter.accountName,
                   accountNumber: fallbackLetter.accountNumber,
