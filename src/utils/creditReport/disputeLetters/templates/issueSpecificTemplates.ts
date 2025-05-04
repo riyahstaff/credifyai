@@ -93,7 +93,7 @@ export const legalReferences: Record<string, LegalReference[]> = {
       law: 'FCRA',
       section: '15 USC 1681i',
       title: 'Procedure in case of disputed accuracy',
-      text: 'If the completeness or accuracy of any item of information contained in a consumer's file at a consumer reporting agency is disputed by the consumer, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate.'
+      text: 'If the completeness or accuracy of any item of information contained in a consumer\'s file at a consumer reporting agency is disputed by the consumer, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate.'
     }
   ],
   
@@ -111,7 +111,7 @@ export const legalReferences: Record<string, LegalReference[]> = {
       law: 'FCRA',
       section: '15 USC 1681i(a)(1)(A)',
       title: 'Reinvestigation of disputed information',
-      text: 'If the completeness or accuracy of any item of information contained in a consumer's file at a consumer reporting agency is disputed by the consumer and the consumer notifies the agency directly, or indirectly through a reseller, of such dispute, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate and record the current status of the disputed information, or delete the item from the file.'
+      text: 'If the completeness or accuracy of any item of information contained in a consumer\'s file at a consumer reporting agency is disputed by the consumer and the consumer notifies the agency directly, or indirectly through a reseller, of such dispute, the agency shall, free of charge, conduct a reasonable reinvestigation to determine whether the disputed information is inaccurate and record the current status of the disputed information, or delete the item from the file.'
     },
     {
       law: 'FCRA',
@@ -121,3 +121,6 @@ export const legalReferences: Record<string, LegalReference[]> = {
     }
   ]
 };
+
+// Export a general dispute template for backward compatibility
+export const generalDisputeTemplate = issueTemplateMapping.general;
