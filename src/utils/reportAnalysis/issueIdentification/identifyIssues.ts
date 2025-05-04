@@ -34,13 +34,10 @@ export function identifyIssues(reportData: CreditReportData): IdentifiedIssue[] 
       // Correctly handle the legalBasis conversion to string[] with proper type safety
       laws: Array.isArray(issue.legalBasis) ? 
         (typeof issue.legalBasis[0] === 'string' ? 
-          issue.legalBasis as string[] : 
+          issue.legalBasis as unknown as string[] : 
           // Handle LegalReference[] by explicitly extracting the law property
-          issue.legalBasis.map(ref => {
-            // Use type assertion with unknown first
-            const legalRef = ref as unknown as { law?: string };
-            return legalRef?.law || "";
-          })) : 
+          (issue.legalBasis as unknown as Array<{law?: string}>).map(ref => 
+            ref?.law || "")) : 
         (typeof issue.legalBasis === 'string' ? [issue.legalBasis] : []),
       bureau: issue.bureau,
       severity: issue.severity
