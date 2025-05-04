@@ -1,3 +1,4 @@
+
 import { CreditReportAccount, CreditReportData, IdentifiedIssue, FCRA_LAWS } from "@/utils/creditReport/types";
 import { 
   generateLettersForIssues, 
@@ -20,6 +21,16 @@ export const generateDisputeLetters = async (
     const userInfo = getUserInfoFromStorage();
     console.log("User info retrieved:", userInfo.name);
     
+    // Debug the issues we're using to generate letters
+    console.log("Issue details for letter generation:", 
+      issues.map(i => ({
+        type: i.type,
+        description: i.description,
+        account: i.account,
+        bureau: i.bureau
+      }))
+    );
+    
     // Convert IdentifiedIssue[] to the format expected by generateAndStoreDisputeLetters
     const convertedIssues = issues.map(issue => ({
       id: issue.id || `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
@@ -29,20 +40,41 @@ export const generateDisputeLetters = async (
       accountName: issue.account?.accountName,
       accountNumber: issue.account?.accountNumber,
       reason: issue.description,
-      severity: (issue.severity === 'high' || issue.impact.includes('High') || issue.impact.includes('Critical')) ? 'high' : 
-                (issue.severity === 'medium' || issue.impact.includes('Medium')) ? 'medium' : 'low' as "high" | "medium" | "low",
-      legalBasis: issue.laws.join(', ')
+      severity: (issue.severity === 'high' || issue.impact?.includes('High') || issue.impact?.includes('Critical')) ? 'high' : 
+                (issue.severity === 'medium' || issue.impact?.includes('Medium')) ? 'medium' : 'low' as "high" | "medium" | "low",
+      legalBasis: issue.laws?.join(', ') || "15 USC 1681e(b)"
     }));
+    
+    // Check if we have extracted actual issues from the report
+    if (convertedIssues.length === 0) {
+      console.warn("No issues found for letter generation, creating fallback issue");
+      // Create a generic issue if none were found
+      const fallbackIssue = {
+        id: `fallback-${Date.now()}`,
+        type: 'inaccurate_information',
+        description: 'Potential inaccurate information found in credit report',
+        bureau: reportData.primaryBureau || "Unknown",
+        accountName: reportData.accounts && reportData.accounts.length > 0 ? 
+          reportData.accounts[0].accountName : 'Unknown Account',
+        accountNumber: reportData.accounts && reportData.accounts.length > 0 ? 
+          reportData.accounts[0].accountNumber : '',
+        reason: 'Information appears to be inaccurate and requires verification',
+        severity: 'medium' as "medium",
+        legalBasis: "15 USC 1681e(b)"
+      };
+      convertedIssues.push(fallbackIssue);
+    }
     
     // Use our enhanced letter generation system
     const letters = await generateAndStoreDisputeLetters(convertedIssues, reportData, userInfo);
     
     if (letters && letters.length > 0) {
       console.log(`Successfully generated ${letters.length} letters`);
+      console.log("First letter content sample:", letters[0].content?.substring(0, 100));
       return letters;
     } else {
       console.warn("No letters were generated, creating generic letter");
-      const genericLetter = await createGenericLetter(reportData);
+      const genericLetter = await createGenericLetterWithDetails(reportData);
       
       // Store the generic letter
       try {
@@ -58,7 +90,7 @@ export const generateDisputeLetters = async (
     console.error("Error generating dispute letters:", error);
     
     // Create and store a fallback letter
-    const fallbackLetter = await createGenericLetter(reportData);
+    const fallbackLetter = await createGenericLetterWithDetails(reportData);
     try {
       sessionStorage.setItem('generatedDisputeLetters', JSON.stringify([fallbackLetter]));
     } catch (storageError) {
@@ -118,8 +150,9 @@ function getUserInfoFromStorage(): { name: string; address?: string; city?: stri
 
 /**
  * Create a generic dispute letter when no specific issues are found
+ * This enhanced version extracts more details from the report data
  */
-export async function createGenericLetter(reportData: CreditReportData): Promise<any> {
+export async function createGenericLetterWithDetails(reportData: CreditReportData): Promise<any> {
   // Get user information from storage
   const userInfo = getUserInfoFromStorage();
   
@@ -145,36 +178,53 @@ export async function createGenericLetter(reportData: CreditReportData): Promise
   const letterId = Date.now();
   const letterDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   
-  // Find an account to use in the letter - prefer problematic accounts
-  let accountName = "Multiple Accounts";
-  let accountNumber = "";
+  // Find accounts to use in the letter
+  let accountsText = "";
   
   if (reportData.accounts && reportData.accounts.length > 0) {
-    // Try to find a problematic account first
-    const problematicAccount = findProblematicAccount(reportData.accounts);
-    accountName = problematicAccount.accountName;
-    accountNumber = problematicAccount.accountNumber || "";
-    console.log(`Using account for letter: ${accountName}, number: ${accountNumber || 'not available'}`);
+    // Get up to 3 accounts to include
+    const accountsToInclude = reportData.accounts.slice(0, 3);
+    
+    accountsText = accountsToInclude.map(account => {
+      return `
+Account Name: ${account.accountName}
+${account.accountNumber ? `Account Number: ${account.accountNumber}\n` : ''}${account.currentBalance ? `Current Balance: $${account.currentBalance}\n` : ''}${account.paymentStatus ? `Status: ${account.paymentStatus}\n` : ''}`;
+    }).join("\n");
+    
+    console.log(`Including ${accountsToInclude.length} accounts in letter`);
+  } else {
+    accountsText = "Multiple accounts on my credit report";
   }
   
   // Generate a proper letter using our generator
   let letterContent;
   try {
+    // Try to find an account for the letter
+    const firstAccount = reportData.accounts && reportData.accounts.length > 0 
+      ? reportData.accounts[0] : null;
+    
     letterContent = await generateDisputeLetter(
       'general',
       {
-        accountName,
-        accountNumber,
-        bureau: bureauName
+        accountName: firstAccount?.accountName || "Multiple Accounts",
+        accountNumber: firstAccount?.accountNumber || "",
+        errorDescription: "Information appears to be inaccurate",
+        bureau: bureauName,
+        relevantReportText: reportData.rawText?.substring(0, 1000) || ""
       },
       userInfo,
       reportData
     );
+    
+    if (!letterContent || letterContent.length < 200) {
+      throw new Error("Generated letter content is too short or empty");
+    }
   } catch (error) {
     console.error("Error generating letter from template:", error);
-    // If letter generation fails, use a basic fallback template
-    letterContent = `${userInfo.name}
-${userInfo.address ? userInfo.address + '\n' : ''}${userInfo.city ? userInfo.city + ', ' : ''}${userInfo.state || ''} ${userInfo.zip || ''}
+    
+    // If letter generation fails, create a detailed fallback template
+    letterContent = `${userInfo.name || '[YOUR NAME]'}
+${userInfo.address ? userInfo.address + '\n' : ''}${userInfo.city ? userInfo.city + ', ' : ''}${userInfo.state || '[STATE]'} ${userInfo.zip || '[ZIP]'}
 
 ${letterDate}
 
@@ -182,13 +232,21 @@ ${bureauName}
 ${getBureauAddress(bureauName)}
 
 RE: Dispute of Inaccurate Information in Credit Report
+${reportData.personalInfo?.ssn ? `\nSSN: ${reportData.personalInfo.ssn}` : ''}
 
 To Whom It May Concern:
 
 I am writing to dispute information in my credit report that I believe to be inaccurate. After reviewing my credit report, I have identified several discrepancies that require investigation.
 
-Account Name: ${accountName}
-${accountNumber ? `Account Number: ${accountNumber}\n` : ''}
+I am disputing the following accounts:
+
+${accountsText}
+
+These items appear to be inaccurate because:
+- The information does not belong to me
+- The account details are incorrectly reported
+- The payment history contains errors
+- Other information appears to be inaccurate
 
 I am disputing this information under the following laws and regulations:
 
@@ -196,99 +254,57 @@ I am disputing this information under the following laws and regulations:
 2. 15 USC 1681i(a)(1): Requires credit reporting agencies to conduct a reasonable investigation of disputed information.
 3. 15 USC 1681s-2(a)(3): Prohibits furnishers from continuing to report information that is discovered to be inaccurate.
 
-Please conduct a thorough investigation of all items I am disputing, as required by the Fair Credit Reporting Act. If you cannot verify this information, please remove it from my credit report.
+Please conduct a thorough investigation of all items I am disputing, as required by the Fair Credit Reporting Act. If you cannot verify this information with the original creditors, please remove it from my credit report.
 
 I understand that according to the Fair Credit Reporting Act, you are required to forward all relevant information to the information provider and to respond to my dispute within 30 days of receipt.
-
-In accordance with Metro 2 reporting guidelines, I request that you properly code this account as "disputed by consumer" (compliance code XB) during your investigation.
 
 Thank you for your prompt attention to this matter.
 
 Sincerely,
 
-${userInfo.name}`;
+${userInfo.name || '[YOUR NAME]'}`;
   }
   
   return {
-    id: letterId,
-    title: "Credit Report Dispute",
-    bureau: bureauName,
-    recipient: bureauName,
-    accountName: accountName,
-    accountNumber: accountNumber,
+    id: `letter-${Date.now()}`,
+    title: `Dispute Letter to ${bureauName}`,
     content: letterContent,
     letterContent: letterContent,
-    bureaus: [bureauName],
-    createdAt: letterDate,
+    bureau: bureauName,
+    accountName: reportData.accounts?.[0]?.accountName || "Multiple Accounts",
+    accountNumber: reportData.accounts?.[0]?.accountNumber || "",
+    errorType: "general_dispute",
     status: "ready",
-    errorType: "Data Inaccuracy"
+    createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   };
+}
+
+/**
+ * Find an account with issues to focus on in the letter
+ */
+function findProblematicAccount(accounts: CreditReportAccount[]): CreditReportAccount {
+  // Look for accounts with late payments or collections first
+  const problematicAccount = accounts.find(account => 
+    (account.paymentStatus && account.paymentStatus.toLowerCase().includes('late')) ||
+    (account.accountType && account.accountType.toLowerCase().includes('collection')) ||
+    (account.accountName && account.accountName.toLowerCase().includes('collection'))
+  );
+  
+  return problematicAccount || accounts[0];
 }
 
 /**
  * Get the address for a credit bureau
  */
 function getBureauAddress(bureau: string): string {
-  // Normalize bureau name for better matching
-  const normalizedBureau = bureau.toLowerCase().trim();
-  
-  if (normalizedBureau.includes('experian')) {
-    return 'P.O. Box 4500\nAllen, TX 75013';
-  } else if (normalizedBureau.includes('equifax')) {
-    return 'P.O. Box 740256\nAtlanta, GA 30374';
-  } else if (normalizedBureau.includes('transunion') || normalizedBureau.includes('trans union')) {
-    return 'Consumer Dispute Center\nP.O. Box 2000\nChester, PA 19016';
-  } else {
-    return '[BUREAU ADDRESS]';
+  switch (bureau.toLowerCase()) {
+    case 'experian':
+      return 'Experian\nP.O. Box 4500\nAllen, TX 75013';
+    case 'equifax':
+      return 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374';
+    case 'transunion':
+      return 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016';
+    default:
+      return 'P.O. Box 4500\nAllen, TX 75013';
   }
-}
-
-/**
- * Find an account with potential issues for disputing
- */
-function findProblematicAccount(accounts: CreditReportAccount[]): CreditReportAccount {
-  // First try to find accounts with negative statuses
-  const negativeStatusAccount = accounts.find(account => {
-    const status = (account.paymentStatus || account.status || '').toLowerCase();
-    return status.includes('late') || 
-           status.includes('past due') || 
-           status.includes('delinq') || 
-           status.includes('charge') || 
-           status.includes('collection');
-  });
-  
-  if (negativeStatusAccount) {
-    return negativeStatusAccount;
-  }
-  
-  // Next look for collection agencies or debt buyers
-  const collectionAccount = accounts.find(account => {
-    const name = (account.accountName || '').toLowerCase();
-    return name.includes('collect') || 
-           name.includes('recovery') || 
-           name.includes('asset') || 
-           name.includes('portfolio') ||
-           name.includes('lvnv') ||
-           name.includes('midland');
-  });
-  
-  if (collectionAccount) {
-    return collectionAccount;
-  }
-  
-  // Next look for accounts with high balances
-  const accountsWithBalance = accounts
-    .filter(a => a.balance || a.currentBalance)
-    .sort((a, b) => {
-      const balA = parseFloat(String(a.balance || a.currentBalance || 0));
-      const balB = parseFloat(String(b.balance || b.currentBalance || 0));
-      return balB - balA; // Descending order
-    });
-    
-  if (accountsWithBalance.length > 0) {
-    return accountsWithBalance[0];
-  }
-  
-  // Just return the first account if nothing else is found
-  return accounts[0];
 }
