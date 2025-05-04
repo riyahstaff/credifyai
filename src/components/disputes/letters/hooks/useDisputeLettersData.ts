@@ -12,5 +12,3 @@ export {
   addLetterToStorage,
   formatLetterFromStorage 
 } from './letterStorageUtils';
-
-// REMOVE THE SAMPLE LETTERS COMPLETELY
