@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { Profile } from '@/lib/supabase/client';
+import { useAuth } from '@/contexts/auth';
 
 export interface Letter {
   id: number;
@@ -22,6 +24,7 @@ export function useDisputeLettersData(testMode: boolean = false) {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const location = useLocation();
+  const { profile } = useAuth();
   
   // Load letters from storage on component mount
   useEffect(() => {
@@ -157,7 +160,7 @@ export function useDisputeLettersData(testMode: boolean = false) {
     
     loadLetters();
     sessionStorage.setItem('lettersAlreadyLoaded', 'true');
-  }, [toast, testMode, location.pathname]);
+  }, [toast, testMode, location.pathname, selectedLetter]);
   
   // Function to add a new letter
   const addLetter = (newLetter: Letter) => {
@@ -188,6 +191,7 @@ export function useDisputeLettersData(testMode: boolean = false) {
     addLetter,
     selectedLetter,
     setSelectedLetter,
-    isLoading
+    isLoading,
+    profile
   };
 }

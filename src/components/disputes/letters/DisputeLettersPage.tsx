@@ -11,6 +11,7 @@ import { Profile } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useReportStorage } from '@/hooks/useReportStorage';
 import { clearAllLetterData, forceClearAndReload } from '@/utils/creditReport/clearLetterData';
+import { useAuth } from '@/contexts/auth';
 
 // Import existing components
 import DisputeLettersList from './DisputeLettersList';  
@@ -25,13 +26,13 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ requirePayment 
   const navigate = useNavigate();
   const { toast } = useToast();
   const { clearStoredReport } = useReportStorage();
+  const { profile } = useAuth();
   
   const { 
     letters, 
     selectedLetter, 
     setSelectedLetter, 
-    isLoading,
-    profile
+    isLoading 
   } = useDisputeLettersData(); 
   
   const [navHeight, setNavHeight] = useState<number>(0);

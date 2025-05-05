@@ -9,7 +9,8 @@ export {
   generateDisputeLetter,
   generateLettersForIssues,
   generateEnhancedDisputeLetter,
-  generateAndStoreDisputeLetters
+  generateAndStoreDisputeLetters,
+  generateDisputeLetters
 } from './letterGenerator';
 
 // Export templates
