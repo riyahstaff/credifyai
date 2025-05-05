@@ -28,6 +28,12 @@ const DisputeLetters = () => {
       if (profile.full_name) {
         localStorage.setItem('userName', profile.full_name);
       }
+    } else if (user && user.email) {
+      // If we have a user but no profile, store the email as a fallback
+      localStorage.setItem('userName', user.email.split('@')[0]);
+      console.log("No profile found, using email username as fallback:", user.email.split('@')[0]);
+    } else {
+      console.log("No user profile or email available");
     }
     
     const loadLetters = async () => {
@@ -186,7 +192,7 @@ const DisputeLetters = () => {
           
           // Extract user info from profile or localStorage
           const userInfo = {
-            name: profile?.full_name || localStorage.getItem('userName') || '[YOUR NAME]',
+            name: profile?.full_name || localStorage.getItem('userName') || (user?.email ? user.email.split('@')[0] : '[YOUR NAME]'),
             address: localStorage.getItem('userAddress') || '',
             city: localStorage.getItem('userCity') || '',
             state: localStorage.getItem('userState') || '',
@@ -227,7 +233,7 @@ const DisputeLetters = () => {
       console.log("[DisputeLetters] Generating fallback letter");
       
       const userInfo = {
-        name: profile?.full_name || localStorage.getItem('userName') || '[YOUR NAME]',
+        name: profile?.full_name || localStorage.getItem('userName') || (user?.email ? user.email.split('@')[0] : '[YOUR NAME]'),
         address: localStorage.getItem('userAddress') || '',
         city: localStorage.getItem('userCity') || '',
         state: localStorage.getItem('userState') || '',

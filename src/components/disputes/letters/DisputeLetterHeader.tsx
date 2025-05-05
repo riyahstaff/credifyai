@@ -30,9 +30,24 @@ const DisputeLetterHeader: React.FC<DisputeLetterHeaderProps> = () => {
         return storedName;
       }
       
-      // Try user email without domain
+      // Try userProfile in localStorage
+      try {
+        const userProfileStr = localStorage.getItem('userProfile');
+        if (userProfileStr) {
+          const userProfile = JSON.parse(userProfileStr);
+          if (userProfile && userProfile.full_name) {
+            return userProfile.full_name;
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing user profile from localStorage:", e);
+      }
+      
+      // Try user email without domain as fallback
       if (user?.email) {
-        return user.email.split('@')[0];
+        const username = user.email.split('@')[0];
+        // Capitalize first letter of username
+        return username.charAt(0).toUpperCase() + username.slice(1);
       }
       
       return 'User';
@@ -40,6 +55,12 @@ const DisputeLetterHeader: React.FC<DisputeLetterHeaderProps> = () => {
     
     const name = getUserName();
     console.log("Setting user name in DisputeLetterHeader:", name);
+    
+    // Also save to localStorage for use in letter generation
+    if (name && name !== 'User') {
+      localStorage.setItem('userName', name);
+    }
+    
     setUserName(name);
   }, [profile, user]);
 

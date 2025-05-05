@@ -47,14 +47,28 @@ Issue: The information reported for this account appears to be inaccurate
   }
   
   // Format address only with real data - NO PLACEHOLDERS
-  let addressBlock = userInfo.name ? `${userInfo.name}\n` : '';
+  let addressBlock = '';
   
-  if (userInfo.address) {
-    addressBlock += `${userInfo.address}\n`;
+  // Only include user name if it's not a placeholder
+  if (userInfo.name && userInfo.name !== '[YOUR NAME]' && userInfo.name !== 'YOUR NAME') {
+    addressBlock += `${userInfo.name}\n`;
+  } else {
+    addressBlock += `YOUR NAME\n`;
   }
   
-  if (userInfo.city && userInfo.state) {
-    addressBlock += `${userInfo.city}, ${userInfo.state} ${userInfo.zip || ''}\n`;
+  // Add address if available
+  if (userInfo.address && userInfo.address !== '[YOUR ADDRESS]' && userInfo.address !== 'YOUR ADDRESS') {
+    addressBlock += `${userInfo.address}\n`;
+  } else {
+    addressBlock += `YOUR ADDRESS\n`;
+  }
+  
+  // Add city, state, zip if available
+  if ((userInfo.city && userInfo.city !== '[CITY]' && userInfo.city !== 'CITY') || 
+      (userInfo.state && userInfo.state !== '[STATE]' && userInfo.state !== 'STATE')) {
+    addressBlock += `${userInfo.city || 'CITY'}, ${userInfo.state || 'STATE'} ${userInfo.zip || 'ZIP'}\n`;
+  } else {
+    addressBlock += `CITY, STATE ZIP\n`;
   }
   
   addressBlock += `\n${currentDate}\n\n`;
