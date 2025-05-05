@@ -44,8 +44,8 @@ export async function generateAutomaticDisputeLetter(
         
         // Look for issues specific to this account
         targetIssue = issues.find(issue => 
-          issue.account?.accountName === targetAccount?.accountName ||
-          issue.accountName === targetAccount?.accountName
+          (issue.account?.accountName === targetAccount?.accountName) ||
+          (issue.account && issue.account.accountName === targetAccount?.accountName)
         );
       }
     }

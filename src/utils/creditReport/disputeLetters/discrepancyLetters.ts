@@ -59,7 +59,7 @@ Issue: The information reported for this account appears to be inaccurate
   
   addressBlock += `\n${currentDate}\n\n`;
   
-  // Generate letter content
+  // Generate letter content with specific dispute language
   const letterContent = `${addressBlock}${bureauAddress}\n\n` +
     `Re: Dispute of Inaccurate Information in Credit Report\n\n` +
     `To Whom It May Concern:\n\n` +
