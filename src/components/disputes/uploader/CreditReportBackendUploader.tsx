@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '@/lib/supabase/client';
 import { analyzeReport } from '@/services/externalBackendService';
 import { processCreditReport } from '@/utils/creditReport/processor';
+import { generateDisputeLetters } from '@/utils/creditReport/disputeLetters/letterGenerator';
 
 interface CreditReportBackendUploaderProps {
   onSuccess?: (reportId: string) => void;
@@ -101,7 +102,7 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
           reportData = {
             id: `local_${Date.now()}`,
             accounts: localResult.accounts || [],
-            issues: [],
+            issues: localResult.issues || [],
             status: 'completed',
             processingMethod: 'local'
           };
@@ -132,48 +133,117 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
       setUploadComplete(true);
       setProcessingStarted(true);
       
-      // Store the report data
-      try {
-        sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
-        sessionStorage.setItem('reportReadyForLetters', 'true');
-        sessionStorage.setItem('forceLetterGeneration', 'true');
-        
-        // Reset the alreadyLoaded flag to ensure letters get generated
-        sessionStorage.removeItem('lettersAlreadyLoaded');
-        
-        // Show success message
-        toast({
-          title: "Credit report uploaded",
-          description: usingLocalFallback 
-            ? "Your credit report has been processed locally."
-            : "Your credit report has been processed successfully.",
-        });
-        
-        // Generate a report ID
-        const reportId = reportData.id || `report_${Date.now()}`;
-        
-        // Update progress to 100%
-        setUploadProgress(100);
-        
-        // Call onSuccess callback if provided
-        if (onSuccess) {
-          onSuccess(reportId);
+      // Generate dispute letters directly
+      const generateLetters = async () => {
+        try {
+          console.log("Generating dispute letters from report data");
+          
+          // Clear any existing letters first
+          sessionStorage.removeItem('generatedDisputeLetters');
+          sessionStorage.removeItem('pendingDisputeLetter');
+          
+          // Store the report data for future use
+          sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
+          sessionStorage.setItem('reportReadyForLetters', 'true');
+          
+          // Generate letters for issues or accounts if no issues found
+          let letters = [];
+          if (reportData.issues && reportData.issues.length > 0) {
+            console.log(`Generating letters for ${reportData.issues.length} issues`);
+            letters = await generateDisputeLetters(reportData);
+          } else if (reportData.accounts && reportData.accounts.length > 0) {
+            console.log(`No issues found, generating sample letter for account`);
+            // Generate a sample letter for the first account
+            const sampleIssue = {
+              id: `sample_${Date.now()}`,
+              type: 'inaccurate_information',
+              description: 'Potentially inaccurate account information',
+              accountName: reportData.accounts[0].accountName,
+              accountNumber: reportData.accounts[0].accountNumber,
+              bureau: 'equifax',
+              severity: 'medium'
+            };
+            
+            reportData.issues = [sampleIssue];
+            letters = await generateDisputeLetters(reportData);
+          }
+          
+          if (letters && letters.length > 0) {
+            console.log(`Successfully generated ${letters.length} dispute letters`);
+            sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(letters));
+            
+            toast({
+              title: "Dispute Letters Generated",
+              description: `Successfully generated ${letters.length} dispute letters.`,
+            });
+          } else {
+            console.warn("No letters were generated");
+            // Create a fallback letter
+            const fallbackLetter = {
+              id: Date.now(),
+              title: "General Dispute Letter",
+              recipient: "Credit Bureau",
+              createdAt: new Date().toLocaleDateString(),
+              status: "draft",
+              bureaus: ["equifax"],
+              content: `
+Dear Credit Bureau,
+
+I am writing to dispute information in my credit report. After reviewing my credit report, I have found inaccuracies that I would like to be investigated and corrected.
+
+In accordance with the Fair Credit Reporting Act, please investigate the following information and remove it from my credit report:
+
+[DESCRIBE SPECIFIC ACCOUNTS OR INFORMATION TO DISPUTE]
+
+Please investigate these matters and correct my credit report accordingly.
+
+Sincerely,
+[YOUR NAME]
+              `.trim(),
+              accountName: reportData.accounts?.[0]?.accountName || "Unknown Account",
+              accountNumber: reportData.accounts?.[0]?.accountNumber || "",
+              errorType: "inaccurate_information"
+            };
+            
+            sessionStorage.setItem('pendingDisputeLetter', JSON.stringify(fallbackLetter));
+            console.log("Stored fallback letter in session storage");
+            
+            toast({
+              title: "Basic Dispute Letter Created",
+              description: "A template letter has been created. You'll need to customize it with your specific dispute information.",
+            });
+          }
+          
+          // Force letter generation flag
+          sessionStorage.setItem('forceLetterGeneration', 'true');
+          sessionStorage.removeItem('lettersAlreadyLoaded');
+          
+          // Update progress to 100%
+          setUploadProgress(100);
+          
+          // Call onSuccess callback if provided
+          if (onSuccess) {
+            onSuccess(reportData.id);
+          }
+          
+          // Navigate to the dispute letters page after a delay
+          setTimeout(() => {
+            navigate(APP_ROUTES.DISPUTE_LETTERS);
+          }, 2000);
+          
+        } catch (error) {
+          console.error("Error generating dispute letters:", error);
+          toast({
+            title: "Error Generating Letters",
+            description: "There was a problem generating dispute letters.",
+            variant: "destructive",
+          });
         }
-        
-        // Navigate to the dispute letters page after a delay
-        setTimeout(() => {
-          navigate(APP_ROUTES.DISPUTE_LETTERS);
-        }, 2000);
-      } catch (storageError) {
-        console.error("Error storing analysis results:", storageError);
-        
-        // Show error message
-        toast({
-          title: "Storage Error",
-          description: "There was a problem saving your report data.",
-          variant: "destructive",
-        });
-      }
+      };
+      
+      // Start letter generation process
+      generateLetters();
+      
     } catch (error) {
       console.error("Error in file upload handler:", error);
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');
@@ -184,8 +254,6 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
         description: "Please try the 'Process Locally' option instead.",
         variant: "destructive",
       });
-    } finally {
-      setIsUploading(false);
     }
   };
   

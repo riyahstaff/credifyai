@@ -1,9 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { loadLettersFromStorage, saveLettersToStorage, addLetterToStorage, formatLetterFromStorage } from './letterStorageUtils';
-import { useAuth } from '@/contexts/auth';
-import { createFallbackLetter } from '@/components/disputes/uploader/handlers/fallbackLetterCreator';
 
 export interface Letter {
   id: number;
@@ -18,24 +16,12 @@ export interface Letter {
   errorType?: string;
 }
 
-export function useDisputeLettersData() {
+export function useDisputeLettersData(testMode: boolean = false) {
   const [letters, setLetters] = useState<Letter[]>([]);
   const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const location = useLocation();
-  const { profile } = useAuth(); // Add the profile from the auth context
-  const [toastDisplayed, setToastDisplayed] = useState(false); // Add flag to track if toast was displayed
-  
-  // Check if we're in a forced reload state
-  useEffect(() => {
-    const forceReload = sessionStorage.getItem('forceReload');
-    if (forceReload === 'true') {
-      console.log("Force reload detected, clearing flag");
-      sessionStorage.removeItem('forceReload');
-      // The page has already been reloaded by this point
-    }
-  }, []);
   
   // Load letters from storage on component mount
   useEffect(() => {
@@ -44,82 +30,19 @@ export function useDisputeLettersData() {
         setIsLoading(true);
         console.log("Loading dispute letters...");
         
-        // Check if we've already loaded letters in this session to prevent duplicates
-        const alreadyLoaded = sessionStorage.getItem('lettersAlreadyLoaded') === 'true';
-        if (alreadyLoaded && letters.length > 0) {
-          console.log("Letters already loaded in this session, skipping");
-          setIsLoading(false);
-          return;
-        }
-        
-        // Force a generation of new letter if report is ready but no letters exist
-        const reportReady = sessionStorage.getItem('reportReadyForLetters') === 'true';
-        const forceGeneration = sessionStorage.getItem('forceLetterGeneration') === 'true';
-        const reportData = sessionStorage.getItem('creditReportData');
-        
-        if ((reportReady || forceGeneration) && reportData && !alreadyLoaded) {
-          console.log("Report ready but no letters loaded yet - attempting to create one");
-          
-          try {
-            const report = JSON.parse(reportData);
-            if (report) {
-              console.log("Creating a fallback letter from report data");
-              const fallbackLetter = createFallbackLetter(report);
-              
-              if (fallbackLetter) {
-                // Generate a unique ID for the fallback letter
-                const letterId = Date.now();
-                
-                const formattedLetter = {
-                  id: letterId,
-                  title: fallbackLetter.title || "Credit Report Dispute",
-                  recipient: fallbackLetter.bureau || "Credit Bureau",
-                  createdAt: fallbackLetter.createdAt || new Date().toLocaleDateString('en-US', { 
-                    month: 'short', day: 'numeric', year: 'numeric' 
-                  }),
-                  status: fallbackLetter.status || 'draft',
-                  // Fix for the error - properly handle the bureau array
-                  bureaus: fallbackLetter.bureau ? [fallbackLetter.bureau] : ["Unknown"],
-                  content: fallbackLetter.content || fallbackLetter.letterContent || '',
-                  accountName: fallbackLetter.accountName,
-                  accountNumber: fallbackLetter.accountNumber,
-                  errorType: fallbackLetter.errorType
-                };
-                
-                setLetters([formattedLetter]);
-                setSelectedLetter(formattedLetter);
-                saveLettersToStorage([formattedLetter]);
-                sessionStorage.setItem('fallbackLetterUsed', 'true');
-                sessionStorage.setItem('lettersAlreadyLoaded', 'true');
-                sessionStorage.setItem('hasDisputeLetters', 'true');
-                
-                toast({
-                  title: "Letter Created",
-                  description: "A dispute letter has been created based on your credit report.",
-                  duration: 3000,
-                });
-                
-                setIsLoading(false);
-                setToastDisplayed(true);
-                return;
-              }
-            }
-          } catch (error) {
-            console.error("Error creating fallback letter:", error);
-          }
-        }
-        
-        // Check for storage state for debugging
-        const generatedLettersJSON = sessionStorage.getItem('generatedDisputeLetters');
-        const pendingLetterJSON = sessionStorage.getItem('pendingDisputeLetter');
-        const autoLetterJSON = sessionStorage.getItem('autoGeneratedLetter');
-        
+        // For debugging - check what's in storage
         console.log("DisputeLetters page found in storage:", {
-          generatedLetters: generatedLettersJSON ? "present" : "missing",
-          pendingLetter: pendingLetterJSON ? "present" : "missing", 
-          autoLetter: autoLetterJSON ? "present" : "missing"
+          generatedLetters: sessionStorage.getItem('generatedDisputeLetters') ? "present" : "missing",
+          pendingLetter: sessionStorage.getItem('pendingDisputeLetter') ? "present" : "missing",
+          autoLetter: sessionStorage.getItem('autoGeneratedLetter') ? "present" : "missing"
         });
         
+        // First check session storage for automatically generated letters
+        const generatedLettersJSON = sessionStorage.getItem('generatedDisputeLetters');
+        const pendingLetterJSON = sessionStorage.getItem('pendingDisputeLetter');
+        const autoGeneratedLetterJSON = sessionStorage.getItem('autoGeneratedLetter');
+        
+        // Try loading generated letters first (multiple)
         if (generatedLettersJSON) {
           try {
             const parsedLetters = JSON.parse(generatedLettersJSON);
@@ -137,31 +60,25 @@ export function useDisputeLettersData() {
                 }),
                 status: letter.status || 'draft',
                 bureaus: letter.bureaus || [letter.bureau || 'Unknown'],
-                content: letter.letterContent || letter.content,
-                accountName: letter.accountName,
-                accountNumber: letter.accountNumber,
-                errorType: letter.errorType
+                content: letter.letterContent || letter.content || '',
+                accountName: letter.accountName || '',
+                accountNumber: letter.accountNumber || '',
+                errorType: letter.errorType || 'general'
               }));
               
               setLetters(formattedLetters);
               
-              // Set the first letter as selected
-              if (formattedLetters.length > 0) {
+              // Select the first letter by default
+              if (formattedLetters.length > 0 && !selectedLetter) {
                 setSelectedLetter(formattedLetters[0]);
               }
               
-              // Mark as loaded to prevent duplicate loading
-              sessionStorage.setItem('lettersAlreadyLoaded', 'true');
-              
-              // Toast notification about loaded letters (only once)
-              if (!toastDisplayed) {
-                toast({
-                  title: "Dispute Letters Loaded",
-                  description: `${formattedLetters.length} dispute ${formattedLetters.length === 1 ? 'letter has' : 'letters have'} been loaded.`,
-                  duration: 3000, // Shorter duration
-                });
-                setToastDisplayed(true);
-              }
+              // Toast notification about loaded letters
+              toast({
+                title: testMode ? "Test Letters Loaded" : "Dispute Letters Loaded",
+                description: `${formattedLetters.length} dispute ${formattedLetters.length === 1 ? 'letter has' : 'letters have'} been loaded${testMode ? ' in test mode' : ''}.`,
+                duration: 5000,
+              });
               
               setIsLoading(false);
               return;
@@ -172,165 +89,105 @@ export function useDisputeLettersData() {
         } 
         
         // If we don't have multiple letters, check for a single pending letter
-        if (pendingLetterJSON) {
+        if (pendingLetterJSON || autoGeneratedLetterJSON) {
           try {
-            const pendingLetter = JSON.parse(pendingLetterJSON);
-            console.log("Found pending letter in storage:", pendingLetter.title || "Untitled");
+            const pendingLetter = pendingLetterJSON ? JSON.parse(pendingLetterJSON) : JSON.parse(autoGeneratedLetterJSON || '{}');
+            console.log("Found pending letter in session storage");
             
-            // Format the letter
-            const formattedLetter = formatLetterFromStorage(pendingLetter);
-            
-            setLetters([formattedLetter]);
-            setSelectedLetter(formattedLetter);
-            
-            // Save this as a generated letter for consistency
-            saveLettersToStorage([formattedLetter]);
-            
-            // Mark as loaded to prevent duplicate loading
-            sessionStorage.setItem('lettersAlreadyLoaded', 'true');
-            sessionStorage.setItem('hasDisputeLetters', 'true');
-            
-            // Show a toast notification only once
-            if (!toastDisplayed) {
+            if (pendingLetter) {
+              // Create formatted letter
+              const formattedLetter = {
+                id: pendingLetter.id || Date.now(),
+                title: pendingLetter.title || `${pendingLetter.errorType || 'Dispute'} (${pendingLetter.accountName || 'Account'})`,
+                recipient: pendingLetter.bureau || pendingLetter.recipient || 'Credit Bureau',
+                createdAt: pendingLetter.createdAt || new Date().toLocaleDateString('en-US', { 
+                  month: 'short', day: 'numeric', year: 'numeric' 
+                }),
+                status: pendingLetter.status || 'draft',
+                bureaus: pendingLetter.bureaus || [pendingLetter.bureau || 'Unknown'],
+                content: pendingLetter.letterContent || pendingLetter.content || '',
+                accountName: pendingLetter.accountName || '',
+                accountNumber: pendingLetter.accountNumber || '',
+                errorType: pendingLetter.errorType || 'general'
+              };
+              
+              setLetters([formattedLetter]);
+              setSelectedLetter(formattedLetter);
+              
+              // Toast notification
               toast({
-                title: "Dispute Letter Loaded",
-                description: "Your dispute letter has been loaded.",
-                duration: 3000,
+                title: testMode ? "Test Letter Loaded" : "Dispute Letter Loaded",
+                description: "Your dispute letter has been loaded from session storage.",
+                duration: 5000,
               });
-              setToastDisplayed(true);
-            }
-            
-            setIsLoading(false);
-            return;
-          } catch (error) {
-            console.error("Error loading pending letter:", error);
-          }
-        }
-        
-        // Check for auto-generated letter as last resort
-        if (autoLetterJSON) {
-          try {
-            const autoLetter = JSON.parse(autoLetterJSON);
-            console.log("Found auto-generated letter in storage");
-            
-            // Format the letter
-            const formattedLetter = {
-              id: autoLetter.id || Date.now(),
-              title: autoLetter.title || "Automated Dispute",
-              recipient: autoLetter.bureau || "Credit Bureau",
-              createdAt: autoLetter.createdAt || new Date().toLocaleDateString('en-US', { 
-                month: 'short', day: 'numeric', year: 'numeric' 
-              }),
-              status: 'ready',
-              bureaus: [autoLetter.bureau || "Unknown"],
-              content: autoLetter.content || autoLetter.letterContent,
-              accountName: autoLetter.accountName,
-              accountNumber: autoLetter.accountNumber,
-              errorType: autoLetter.errorType || "general_dispute"
-            };
-            
-            setLetters([formattedLetter]);
-            setSelectedLetter(formattedLetter);
-            
-            // Save this as a generated letter for consistency
-            saveLettersToStorage([formattedLetter]);
-            
-            // Mark as loaded to prevent duplicate loading
-            sessionStorage.setItem('lettersAlreadyLoaded', 'true');
-            sessionStorage.setItem('hasDisputeLetters', 'true');
-            
-            if (!toastDisplayed) {
-              toast({
-                title: "Auto-Generated Letter Loaded",
-                description: "Your automated dispute letter has been loaded.",
-                duration: 3000,
-              });
-              setToastDisplayed(true);
-            }
-            
-            setIsLoading(false);
-            return;
-          } catch (error) {
-            console.error("Error loading auto-generated letter:", error);
-          }
-        }
-        
-        // Try to load from localStorage as last resort
-        const localStorageLetters = localStorage.getItem('disputeLetters');
-        if (localStorageLetters) {
-          try {
-            const parsedLetters = JSON.parse(localStorageLetters);
-            if (Array.isArray(parsedLetters) && parsedLetters.length > 0) {
-              console.log(`Found ${parsedLetters.length} letters in local storage`);
-              
-              // Format the letters
-              const formattedLetters = parsedLetters.map(formatLetterFromStorage);
-              
-              setLetters(formattedLetters);
-              if (formattedLetters.length > 0) {
-                setSelectedLetter(formattedLetters[0]);
-              }
-              
-              // Save to session storage for consistency
-              saveLettersToStorage(formattedLetters);
-              
-              // Mark as loaded
-              sessionStorage.setItem('lettersAlreadyLoaded', 'true');
-              sessionStorage.setItem('hasDisputeLetters', 'true');
-              
-              if (!toastDisplayed) {
-                toast({
-                  title: "Letters Restored",
-                  description: `${formattedLetters.length} dispute ${formattedLetters.length === 1 ? 'letter has' : 'letters have'} been restored.`,
-                  duration: 3000,
-                });
-                setToastDisplayed(true);
-              }
               
               setIsLoading(false);
               return;
             }
           } catch (error) {
-            console.error("Error loading letters from local storage:", error);
+            console.error("Error parsing pending letter:", error);
           }
         }
         
-        console.log("No letters found in any storage location");
-        
-        // If we get here, we didn't find any letters
+        // If no letters found in session storage, set empty array
+        console.log("No letters found in session storage");
         setLetters([]);
         setSelectedLetter(null);
         setIsLoading(false);
         
       } catch (error) {
-        console.error("Error loading letters:", error);
+        console.error("Error loading dispute letters:", error);
+        setLetters([]);
         setIsLoading(false);
+        
         toast({
-          title: "Error",
+          title: "Error Loading Letters",
           description: "There was a problem loading your dispute letters.",
           variant: "destructive",
         });
       }
     };
     
-    loadLetters();
-  }, [toast, letters.length, toastDisplayed]);
-  
-  return { 
-    letters, 
-    selectedLetter, 
-    setSelectedLetter, 
-    isLoading,
-    profile,
-    setLetters: (updatedLetters: Letter[]) => {
-      setLetters(updatedLetters);
-      saveLettersToStorage(updatedLetters);
-    },
-    addLetter: (newLetter: Letter) => {
-      const updatedLetters = [...letters, newLetter];
-      setLetters(updatedLetters);
-      setSelectedLetter(newLetter);
-      addLetterToStorage(newLetter);
+    // Load or check if we already loaded in this session
+    const lettersLoaded = sessionStorage.getItem('lettersAlreadyLoaded');
+    if (lettersLoaded === 'true' && letters.length > 0) {
+      console.log("Letters already loaded in this session, skipping");
+      return;
     }
+    
+    loadLetters();
+    sessionStorage.setItem('lettersAlreadyLoaded', 'true');
+  }, [toast, testMode, location.pathname]);
+  
+  // Function to add a new letter
+  const addLetter = (newLetter: Letter) => {
+    setLetters(prevLetters => {
+      const updatedLetters = [...prevLetters, newLetter];
+      try {
+        sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(updatedLetters));
+      } catch (error) {
+        console.error("Error storing updated letters:", error);
+      }
+      return updatedLetters;
+    });
+  };
+  
+  // Function to save changes to letters
+  const updateLetters = (updatedLetters: Letter[]) => {
+    setLetters(updatedLetters);
+    try {
+      sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(updatedLetters));
+    } catch (error) {
+      console.error("Error storing updated letters:", error);
+    }
+  };
+  
+  return {
+    letters,
+    setLetters: updateLetters,
+    addLetter,
+    selectedLetter,
+    setSelectedLetter,
+    isLoading
   };
 }
