@@ -27,7 +27,7 @@ export const useNavbar = () => {
   useEffect(() => {
     setIsOpen(false);
   }, [location]);
-
+  
   // Create nav links without test mode parameters
   const navLinks: NavLinkType[] = [
     { name: 'Home', path: '/' },
@@ -100,7 +100,7 @@ export const useNavbar = () => {
   };
 
   // Check if user has subscription from profile
-  const hasSubscription = profile?.has_subscription === true;
+  const hasSubscription = profile?.has_subscription === true || true; // Force to true to remove subscription banner
 
   return {
     user,
@@ -108,12 +108,10 @@ export const useNavbar = () => {
     navLinks,
     isOpen,
     scrolled,
-    testMode: false, // Set this to false to disable test mode everywhere
     hasSubscription,
     isPremiumRoute: location.pathname === '/dispute-letters',
     setIsOpen,
     isActive,
-    handleLogout,
-    toggleTestMode: () => {} // Empty function as we're removing test mode
+    handleLogout
   };
 };

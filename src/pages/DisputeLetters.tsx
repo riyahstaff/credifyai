@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import DisputeLettersPage from '../components/disputes/letters/DisputeLettersPage';
@@ -17,6 +18,17 @@ const DisputeLetters = () => {
   // Effect to load letters on mount - with proper dependency array
   useEffect(() => {
     console.log("DisputeLetters page: User auth state:", user ? "Logged in" : "Not logged in");
+    console.log("DisputeLetters page: User profile:", profile);
+    
+    // Store profile data for letter generation even before the main component loads
+    if (profile) {
+      console.log("Storing user profile in local storage for letter generation:", profile.full_name);
+      localStorage.setItem('userProfile', JSON.stringify(profile));
+      
+      if (profile.full_name) {
+        localStorage.setItem('userName', profile.full_name);
+      }
+    }
     
     const loadLetters = async () => {
       // Start the loading process
@@ -46,15 +58,6 @@ const DisputeLetters = () => {
         setLettersLoaded(true);
         setIsLoading(false);
         return;
-      }
-      
-      // Store profile data in localStorage for letter generation if not already done in AuthProvider
-      if (profile) {
-        localStorage.setItem('userProfile', JSON.stringify(profile));
-        
-        if (profile.full_name) {
-          localStorage.setItem('userName', profile.full_name);
-        }
       }
       
       // Force completion of loading after 3 seconds max to prevent permanent stuck state
@@ -146,7 +149,9 @@ const DisputeLetters = () => {
               ...letterObj,
               id: letterObj.id || Date.now(),
               title: letterObj.title || "Credit Report Dispute",
-              createdAt: letterObj.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              createdAt: letterObj.createdAt || new Date().toLocaleDateString('en-US', { 
+                month: 'short', day: 'numeric', year: 'numeric' 
+              }),
               status: letterObj.status || "ready"
             }];
             
@@ -179,14 +184,16 @@ const DisputeLetters = () => {
           const targetAccount = JSON.parse(sessionStorage.getItem('disputeTargetAccount') || 
                                            localStorage.getItem('disputeTargetAccount') || 'null');
           
-          // Extract user info
+          // Extract user info from profile or localStorage
           const userInfo = {
-            name: localStorage.getItem('userName') || profile?.full_name || '[YOUR NAME]',
+            name: profile?.full_name || localStorage.getItem('userName') || '[YOUR NAME]',
             address: localStorage.getItem('userAddress') || '',
             city: localStorage.getItem('userCity') || '',
             state: localStorage.getItem('userState') || '',
             zip: localStorage.getItem('userZip') || ''
           };
+          
+          console.log("Generating letter with user info:", userInfo);
           
           const letterContent = await generateAutomaticDisputeLetter(
             parsedReportData,
@@ -220,7 +227,7 @@ const DisputeLetters = () => {
       console.log("[DisputeLetters] Generating fallback letter");
       
       const userInfo = {
-        name: localStorage.getItem('userName') || profile?.full_name || '[YOUR NAME]',
+        name: profile?.full_name || localStorage.getItem('userName') || '[YOUR NAME]',
         address: localStorage.getItem('userAddress') || '',
         city: localStorage.getItem('userCity') || '',
         state: localStorage.getItem('userState') || '',
@@ -309,9 +316,4 @@ ${userInfo.name}`;
     );
   }
 
-  return (
-    <DisputeLettersPage requirePayment={true} />
-  );
-};
-
-export default DisputeLetters;
+  return <DisputeLettersPage />; // Remove the requirePayment prop since we'll handle this in the navbar

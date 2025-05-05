@@ -26,7 +26,7 @@ const DisputeLettersPage: React.FC<DisputeLettersPageProps> = ({ requirePayment 
   const navigate = useNavigate();
   const { toast } = useToast();
   const { clearStoredReport } = useReportStorage();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   
   const { 
     letters, 

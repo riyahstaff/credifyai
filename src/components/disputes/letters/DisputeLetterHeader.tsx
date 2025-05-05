@@ -16,24 +16,25 @@ const DisputeLetterHeader: React.FC<DisputeLetterHeaderProps> = () => {
   const [userName, setUserName] = useState('User');
   const { toast } = useToast();
   
-  // Improved name extraction logic with fallback mechanisms
+  // Improved name extraction logic with better fallbacks
   useEffect(() => {
     const getUserName = () => {
-      // First priority: profile full name from auth context
+      // First try to get the display name from the profile
       if (profile?.full_name) {
-        console.log("Using full name from profile:", profile.full_name);
         return profile.full_name;
       }
       
-      // Second priority: user email from auth context
-      if (user?.email) {
-        // Extract username from email but don't include domain part
-        const username = user.email.split('@')[0];
-        console.log("Using username from email:", username);
-        return username;
+      // Try localStorage as fallback
+      const storedName = localStorage.getItem('userName');
+      if (storedName) {
+        return storedName;
       }
       
-      // Default fallback
+      // Try user email without domain
+      if (user?.email) {
+        return user.email.split('@')[0];
+      }
+      
       return 'User';
     };
     
@@ -43,7 +44,6 @@ const DisputeLetterHeader: React.FC<DisputeLetterHeaderProps> = () => {
   }, [profile, user]);
 
   const handleCompleteReset = () => {
-    // First clear the "already loaded" flag to ensure we can reload letters
     sessionStorage.removeItem('lettersAlreadyLoaded');
     
     toast({
@@ -51,7 +51,6 @@ const DisputeLetterHeader: React.FC<DisputeLetterHeaderProps> = () => {
       description: "Clearing all data and reloading the page...",
     });
     
-    // Use the nuclear option to clear everything and reload
     forceClearAndReload();
   };
 
