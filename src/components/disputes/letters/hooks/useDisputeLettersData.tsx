@@ -160,7 +160,7 @@ export function useDisputeLettersData(testMode: boolean = false) {
     
     loadLetters();
     sessionStorage.setItem('lettersAlreadyLoaded', 'true');
-  }, [toast, testMode, location.pathname, selectedLetter]);
+  }, [toast, testMode, location.pathname, selectedLetter, profile]);
   
   // Function to add a new letter
   const addLetter = (newLetter: Letter) => {

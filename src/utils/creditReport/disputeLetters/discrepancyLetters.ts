@@ -1,26 +1,22 @@
 
-import { CreditReportAccount, CreditReportData } from '../types';
-
 /**
- * Generate a dispute letter specifically for discrepancies in account information
- * @param account The account with discrepancies
- * @param discrepancies Array of discrepancy descriptions
- * @param userInfo User's personal information
- * @param reportData Full credit report data
- * @returns Generated dispute letter
+ * Generate a dispute letter for a specific discrepancy
  */
-export async function generateDisputeLetterForDiscrepancy(
-  account: CreditReportAccount,
-  discrepancies: string[],
-  userInfo: { 
+export function generateDisputeLetterForDiscrepancy(
+  accountDetails: {
+    accountName: string;
+    accountNumber?: string;
+    errorDescription: string;
+    bureau: string;
+  },
+  userInfo: {
     name: string;
     address?: string;
     city?: string;
     state?: string;
     zip?: string;
-  },
-  reportData?: CreditReportData
-): Promise<string> {
+  }
+): string {
   // Format the current date
   const currentDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -28,96 +24,57 @@ export async function generateDisputeLetterForDiscrepancy(
     day: 'numeric'
   });
   
-  // Determine bureau from account or report
-  let bureau = account.bureau;
-  if (!bureau && reportData) {
-    bureau = reportData.primaryBureau || reportData.bureau;
-  }
-  if (!bureau && reportData?.bureaus) {
-    if (reportData.bureaus.experian) bureau = 'Experian';
-    else if (reportData.bureaus.equifax) bureau = 'Equifax';
-    else if (reportData.bureaus.transunion) bureau = 'TransUnion';
-  }
-  
-  // Get bureau info
-  const bureauInfo = getBureauInfo(bureau || 'Unknown');
-  
-  // Format discrepancies
-  const discrepancyList = discrepancies.map((item, index) => 
-    `${index + 1}. ${item}`
-  ).join('\n');
-  
-  // Create letter
-  const letter = `${userInfo.name || '[YOUR NAME]'}
-${userInfo.address || '[YOUR ADDRESS]'}
-${userInfo.city || '[CITY]'}, ${userInfo.state || '[STATE]'} ${userInfo.zip || '[ZIP]'}
-
-${currentDate}
-
-${bureauInfo.name}
-${bureauInfo.address}
-
-RE: Dispute of Account Discrepancies
-
-To Whom It May Concern:
-
-I am writing to dispute information in my credit report regarding the following account:
-
-Account Name: ${account.accountName}
-${account.accountNumber ? `Account Number: ${account.accountNumber}` : ''}
-${account.openDate ? `Date Opened: ${account.openDate}` : ''}
-${account.status ? `Current Status: ${account.status}` : ''}
-
-After reviewing my credit report, I have identified the following discrepancies with this account:
-
-${discrepancyList}
-
-These discrepancies constitute inaccurate reporting under the Fair Credit Reporting Act (FCRA), section 15 USC 1681e(b), which requires you to follow "reasonable procedures to assure maximum possible accuracy" of the information in consumer reports.
-
-Please investigate these discrepancies and update my credit report with the accurate information. If you cannot verify the correct information, please remove this account from my credit report.
-
-I understand that according to the FCRA, you are required to respond to my dispute within 30 days of receipt. Please send me the results of your investigation when complete.
-
-Thank you for your attention to this matter.
-
-Sincerely,
-
-${userInfo.name || '[YOUR NAME]'}
-
-Enclosures:
-- Copy of ID
-- Copy of credit report with disputed items highlighted
-`;
-
-  return letter;
-}
-
-/**
- * Get the bureau-specific information for a letter
- */
-function getBureauInfo(bureauName: string): { name: string, address: string } {
-  const bureau = bureauName.toLowerCase();
-  
-  if (bureau.includes('experian')) {
-    return {
-      name: 'Experian',
-      address: 'P.O. Box 4500\nAllen, TX 75013'
-    };
-  } else if (bureau.includes('equifax')) {
-    return {
-      name: 'Equifax Information Services LLC',
-      address: 'P.O. Box 740256\nAtlanta, GA 30374'
-    };
-  } else if (bureau.includes('transunion') || bureau.includes('trans union')) {
-    return {
-      name: 'TransUnion LLC',
-      address: 'Consumer Dispute Center\nP.O. Box 2000\nChester, PA 19016'
-    };
-  }
-  
-  // Default fallback
-  return {
-    name: 'Credit Bureau',
-    address: 'P.O. Box 4500\nAllen, TX 75013'
+  // Bureau addresses
+  const bureauAddresses: Record<string, string> = {
+    'experian': 'Experian\nP.O. Box 4500\nAllen, TX 75013',
+    'equifax': 'Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374',
+    'transunion': 'TransUnion LLC\nConsumer Dispute Center\nP.O. Box 2000\nChester, PA 19016'
   };
+  
+  // Normalize bureau name for address lookup
+  const bureau = accountDetails.bureau.toLowerCase();
+  const bureauAddress = bureauAddresses[bureau] || accountDetails.bureau;
+  
+  // Format the account section
+  let accountSection = '';
+  if (accountDetails.accountName) {
+    accountSection = `
+DISPUTED ITEM(S):
+Account Name: ${accountDetails.accountName.toUpperCase()}
+${accountDetails.accountNumber ? `Account Number: ${accountDetails.accountNumber}` : ''}
+Issue: The information reported for this account appears to be inaccurate
+`;
+  }
+  
+  // Format address only with real data - NO PLACEHOLDERS
+  let addressBlock = userInfo.name ? `${userInfo.name}\n` : '';
+  
+  if (userInfo.address) {
+    addressBlock += `${userInfo.address}\n`;
+  }
+  
+  if (userInfo.city && userInfo.state) {
+    addressBlock += `${userInfo.city}, ${userInfo.state} ${userInfo.zip || ''}\n`;
+  }
+  
+  addressBlock += `\n${currentDate}\n\n`;
+  
+  // Generate letter content
+  const letterContent = `${addressBlock}${bureauAddress}\n\n` +
+    `Re: Dispute of Inaccurate Information in Credit Report\n\n` +
+    `To Whom It May Concern:\n\n` +
+    `I am writing to dispute information in my credit report that I believe to be inaccurate. After reviewing my credit report, I have identified the following item(s) that require investigation:\n\n` +
+    `${accountSection}\n` +
+    `${accountDetails.errorDescription || "The information appears to be incorrect and should be verified or removed from my credit report."}\n\n` +
+    `Under the Fair Credit Reporting Act (FCRA), specifically section 15 USC 1681i, you are required to conduct a reasonable investigation of the disputed information and verify its accuracy with the original source. If the information cannot be verified, it must be removed from my credit report.\n\n` +
+    `I've attached copies of relevant documentation to assist with your investigation. Please complete your investigation within 30 days as required by the FCRA.\n\n` +
+    `Thank you for your prompt attention to this matter.\n\n` +
+    `Sincerely,\n\n` +
+    `${userInfo.name}\n\n` +
+    `Enclosures:\n` +
+    `- Copy of ID\n` +
+    `- Copy of social security card\n` +
+    `- Proof of address\n`;
+  
+  return letterContent;
 }
