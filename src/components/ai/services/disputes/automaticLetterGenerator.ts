@@ -60,8 +60,7 @@ export async function generateAutomaticDisputeLetter(
         
         // Look for issues specific to this account
         targetIssue = issues.find(issue => 
-          issue.accountName === targetAccount?.accountName ||
-          (issue.account && issue.account.accountName === targetAccount?.accountName)
+          issue.account?.accountName === targetAccount?.accountName
         );
       }
     }
@@ -89,12 +88,10 @@ export async function generateAutomaticDisputeLetter(
       console.log("Generating letter for issue:", targetIssue.type);
       
       const issueType = targetIssue.type || 'inaccurate_information';
-      const accountName = targetIssue.accountName || 
-                         (targetIssue.account?.accountName) || 
+      const accountName = targetIssue.account?.accountName || 
                          (targetAccount?.accountName) || 
                          'Account in Question';
-      const accountNumber = targetIssue.accountNumber || 
-                           (targetIssue.account?.accountNumber) || 
+      const accountNumber = targetIssue.account?.accountNumber || 
                            (targetAccount?.accountNumber) || 
                            '';
       const errorDescription = targetIssue.description || 'Information appears to be inaccurate';
