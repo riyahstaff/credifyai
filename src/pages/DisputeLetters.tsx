@@ -317,3 +317,6 @@ ${userInfo.name}`;
   }
 
   return <DisputeLettersPage />; // Remove the requirePayment prop since we'll handle this in the navbar
+};
+
+export default DisputeLetters;
