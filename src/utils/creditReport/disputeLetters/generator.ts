@@ -1,9 +1,10 @@
 
 import { CreditReportData, Issue, IdentifiedIssue } from '@/utils/creditReport/types';
+import { getDisputeLanguageForType, getDisputeTypeTitle } from './disputeLanguage';
 
 /**
- * Generate an enhanced dispute letter
- * @param disputeType The type of dispute
+ * Generate an enhanced dispute letter with comprehensive issue support
+ * @param disputeType The type of dispute (late_payment, collection_account, inquiry, personal_info, charge_off, etc.)
  * @param accountDetails Details about the account being disputed
  * @param userInfo User's personal information
  * @returns Generated dispute letter
@@ -15,6 +16,9 @@ export function generateEnhancedDisputeLetter(
     accountNumber?: string;
     errorDescription: string;
     bureau: string;
+    balance?: string | number;
+    dateOpened?: string;
+    status?: string;
   },
   userInfo: {
     name: string;
@@ -22,6 +26,7 @@ export function generateEnhancedDisputeLetter(
     city?: string;
     state?: string;
     zip?: string;
+    ssn?: string;
   }
 ): string {
   try {
@@ -61,16 +66,24 @@ export function generateEnhancedDisputeLetter(
     let accountNumber = '';
     if (accountDetails.accountNumber) {
       accountNumber = accountDetails.accountNumber.length > 4 
-        ? 'xx-xxxx-' + accountDetails.accountNumber.slice(-4) 
+        ? 'xxxx-' + accountDetails.accountNumber.slice(-4) 
         : accountDetails.accountNumber;
     }
     
-    // Format the account section with real information ONLY
+    // Get issue-specific dispute language
+    const disputeLanguage = getDisputeLanguageForType(disputeType, accountDetails);
+    
+    // Format the account section with comprehensive details
     const accountSection = accountName ? `
 DISPUTED ITEM(S):
 Account Name: ${accountName.toUpperCase()}
 ${accountNumber ? `Account Number: ${accountNumber}` : ''}
-Reason for Dispute: ${disputeType}
+${accountDetails.balance ? `Current Balance: $${accountDetails.balance}` : ''}
+${accountDetails.dateOpened ? `Date Opened: ${accountDetails.dateOpened}` : ''}
+${accountDetails.status ? `Payment Status: ${accountDetails.status}` : ''}
+
+DISPUTE REASON:
+${disputeLanguage}
 ` : 'I am disputing information in my credit report that may be inaccurate.';
     
     // Format address only with real data - NO PLACEHOLDERS
@@ -82,10 +95,10 @@ Reason for Dispute: ${disputeType}
       locationInfo = `${userInfo.city}, ${userInfo.state} ${userInfo.zip}`;
     }
 
-    // Generate the final letter
+    // Generate the final letter with proper formatting
     let result = '';
     
-    // Only include header and consumer info if available
+    // Consumer Information Header (MUST come first)
     if (userInfo.name) {
       result += `${userInfo.name}\n`;
       
@@ -97,37 +110,49 @@ Reason for Dispute: ${disputeType}
         result += `${locationInfo}\n`;
       }
       
-      result += `${currentDate}\n\n`;
+      result += `\n${currentDate}\n\n`;
     }
     
-    // Only include bureau section if we have it
+    // Bureau Address
     if (bureauAddress) {
       result += `${bureauAddress}\n\n`;
     }
     
-    result += `Re: Dispute of Inaccurate Information - ${disputeType}\n\n`;
-    result += `To Whom It May Concern:\n\n`;
-    result += `I am writing to dispute the following information in my credit report. I have identified the following item(s) that are inaccurate or incomplete:\n\n`;
-    result += `${accountSection}\n\n`;
-    result += `Under the Fair Credit Reporting Act (FCRA), you are required to:\n`;
-    result += `1. Conduct a reasonable investigation into the information I am disputing\n`;
-    result += `2. Forward all relevant information that I provide to the furnisher\n`;
-    result += `3. Review and consider all relevant information\n`;
-    result += `4. Provide me the results of your investigation\n`;
-    result += `5. Delete the disputed information if it cannot be verified\n\n`;
-    result += `I am disputing this information as it is inaccurate and the creditor may be unable to provide adequate verification as required by law.\n\n`;
-    result += `${accountDetails.errorDescription || "The information appears to be incorrect and should be verified or removed from my credit report."}\n\n`;
-    result += `Please investigate this matter and provide me with the results within 30 days as required by the FCRA.\n\n`;
+    // Letter Header with SSN if available
+    result += `Re: Dispute of Credit Information - ${getDisputeTypeTitle(disputeType)}\n`;
+    if (userInfo.ssn) {
+      result += `SSN: ${userInfo.ssn}\n`;
+    }
+    result += `\nTo Whom It May Concern:\n\n`;
+    
+    // Opening paragraph
+    result += `I am writing to formally dispute inaccurate information on my credit report in accordance with the Fair Credit Reporting Act (FCRA), 15 USC § 1681i. After carefully reviewing my credit report, I have identified the following item(s) that require investigation:\n\n`;
+    
+    // Account details section
+    result += `${accountSection}\n`;
+    
+    // Legal requirements section
+    result += `LEGAL REQUIREMENTS:\n`;
+    result += `Under the Fair Credit Reporting Act (FCRA), you are legally required to:\n`;
+    result += `• Conduct a reasonable investigation of all disputed information within 30 days\n`;
+    result += `• Forward all relevant documentation to the furnisher of this information\n`;
+    result += `• Delete any information that cannot be verified as accurate and complete\n`;
+    result += `• Provide written notice of investigation results\n\n`;
+    
+    // Closing paragraph
+    result += `I request that you investigate this matter promptly and remove any information that cannot be verified. Please send me written confirmation of your findings and any changes made to my credit file.\n\n`;
+    result += `Thank you for your immediate attention to this matter.\n\n`;
     result += `Sincerely,\n\n`;
     
     if (userInfo.name) {
-      result += `${userInfo.name}\n\n`;
+      result += `${userInfo.name}\n`;
+      result += `\nSignature: _________________________\n\n`;
     }
     
     result += `Enclosures:\n`;
-    result += `- Copy of ID\n`;
-    result += `- Copy of social security card\n`;
-    result += `- Copy of utility bill\n`;
+    result += `• Copy of government-issued ID\n`;
+    result += `• Proof of address (utility bill)\n`;
+    result += `• Supporting documentation\n`;
 
     console.log("Generated letter content length:", result.length);
     return result;
@@ -155,21 +180,25 @@ export async function generateDisputeLettersFromIssues(
   
   for (const issue of issues) {
     try {
-      // Extract account details if available
+      // Extract comprehensive account details if available
       const accountDetails = {
         accountName: issue.account?.accountName || issue.title || 'Credit Report Issue',
         accountNumber: issue.account?.accountNumber,
         errorDescription: issue.description,
-        bureau: issue.bureau || bureau
+        bureau: issue.bureau || bureau,
+        balance: issue.account?.currentBalance || issue.account?.balance,
+        dateOpened: issue.account?.dateOpened || issue.account?.openDate,
+        status: issue.account?.status || issue.account?.paymentStatus
       };
       
-      // Format user info
+      // Format comprehensive user info
       const userInfo = {
         name: personalInfo?.name || 'Credit Report User',
         address: personalInfo?.address,
         city: personalInfo?.city,
         state: personalInfo?.state,
-        zip: personalInfo?.zip
+        zip: personalInfo?.zip,
+        ssn: personalInfo?.ssn
       };
       
       // Generate the letter content

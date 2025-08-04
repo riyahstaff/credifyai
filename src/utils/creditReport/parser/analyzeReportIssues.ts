@@ -20,36 +20,81 @@ export function analyzeReportForIssues(reportData: CreditReportData): Issue[] {
     if (reportData.accounts && reportData.accounts.length > 0) {
       console.log(`Analyzing ${reportData.accounts.length} accounts`);
       
-      // Analyze each account
+      // Analyze each account for comprehensive issue detection
       reportData.accounts.forEach(account => {
+        const status = (account.status || account.paymentStatus || '').toLowerCase();
+        const accountName = account.accountName || 'Unknown Account';
+        
         // Check for late payments
-        if (account.paymentStatus && 
-            (account.paymentStatus.toLowerCase().includes('late') || 
-             account.paymentStatus.toLowerCase().includes('past due'))) {
+        if (status.includes('late') || status.includes('past due') || status.includes('delinq')) {
           issues.push({
             id: `late-payment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: 'late_payment',
-            description: `Late payment reported on account: ${account.accountName}`,
+            description: `Late payment reported on account: ${accountName}`,
             severity: 'high',
-            accountName: account.accountName,
+            accountName: accountName,
             accountNumber: account.accountNumber,
             bureau: reportData.primaryBureau || "Unknown",
-            legalBasis: ["15 USC 1681e(b)", "15 USC 1681i"] as unknown as LegalReference[]
+            legalBasis: ["15 USC 1681s-2(a)(3)", "15 USC 1681e(b)"] as unknown as LegalReference[]
           });
         }
         
         // Check for collection accounts
         if (account.accountType?.toLowerCase().includes('collection') ||
-            account.accountName?.toLowerCase().includes('collection')) {
+            accountName.toLowerCase().includes('collection') ||
+            status.includes('collection')) {
           issues.push({
             id: `collection-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: 'collection_account',
-            description: `Collection account reported: ${account.accountName}`,
+            description: `Collection account reported: ${accountName}`,
             severity: 'high',
-            accountName: account.accountName,
+            accountName: accountName,
             accountNumber: account.accountNumber,
             bureau: reportData.primaryBureau || "Unknown",
-            legalBasis: ["15 USC 1681e(b)", "15 USC 1681i"] as unknown as LegalReference[]
+            legalBasis: ["15 USC 1692g", "15 USC 1681i"] as unknown as LegalReference[]
+          });
+        }
+        
+        // Check for charge-offs
+        if (status.includes('charge') || status.includes('charged off') || status.includes('chargeoff')) {
+          issues.push({
+            id: `charge-off-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: 'charge_off',
+            description: `Charge-off status reported on account: ${accountName}`,
+            severity: 'high',
+            accountName: accountName,
+            accountNumber: account.accountNumber,
+            bureau: reportData.primaryBureau || "Unknown",
+            legalBasis: ["15 USC 1681s-2(a)(3)", "15 USC 1681e(b)"] as unknown as LegalReference[]
+          });
+        }
+        
+        // Check for incorrect balances (zero balance but showing amount)
+        if (account.currentBalance && parseFloat(account.currentBalance.toString()) > 0 && 
+            (status.includes('paid') || status.includes('closed'))) {
+          issues.push({
+            id: `balance-error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: 'balance_error',
+            description: `Incorrect balance reported for paid account: ${accountName}`,
+            severity: 'medium',
+            accountName: accountName,
+            accountNumber: account.accountNumber,
+            bureau: reportData.primaryBureau || "Unknown",
+            legalBasis: ["15 USC 1681s-2(a)(1)", "15 USC 1681e(b)"] as unknown as LegalReference[]
+          });
+        }
+        
+        // Check for accounts that might not belong to the user (generic check)
+        if (accountName.length < 3 || accountName.toLowerCase().includes('unknown')) {
+          issues.push({
+            id: `unknown-account-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: 'not_my_account',
+            description: `Potentially unrecognized account: ${accountName}`,
+            severity: 'medium',
+            accountName: accountName,
+            accountNumber: account.accountNumber,
+            bureau: reportData.primaryBureau || "Unknown",
+            legalBasis: ["15 USC 1681i", "15 USC 1681e(b)"] as unknown as LegalReference[]
           });
         }
         
@@ -79,29 +124,59 @@ export function analyzeReportForIssues(reportData: CreditReportData): Issue[] {
       console.warn("No accounts found in credit report data");
     }
     
-    // Check for inquiries
+    // Check for inquiries (including potential unauthorized ones)
     if (reportData.inquiries && reportData.inquiries.length > 0) {
       console.log(`Analyzing ${reportData.inquiries.length} inquiries`);
       
       reportData.inquiries.forEach(inquiry => {
-        // Focus on recent inquiries (last 90 days)
+        const inquiryCompany = inquiry.creditor || inquiry.inquiryBy || inquiry.inquiryCompany || "Unknown Company";
         const inquiryDate = inquiry.inquiryDate ? new Date(inquiry.inquiryDate) : null;
         const now = new Date();
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        const twoYearsAgo = new Date();
+        twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
         
-        if (inquiryDate && inquiryDate > ninetyDaysAgo) {
+        // Focus on inquiries within the last 2 years (still affecting credit)
+        if (!inquiryDate || inquiryDate > twoYearsAgo) {
           issues.push({
             id: `inquiry-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: 'inquiry',
-            description: `Recent credit inquiry from: ${inquiry.creditor || inquiry.inquiryBy || inquiry.inquiryCompany || "Unknown"}`,
+            description: `Credit inquiry by ${inquiryCompany}${inquiryDate ? ` on ${inquiryDate.toLocaleDateString()}` : ''}`,
             severity: 'low',
-            accountName: inquiry.creditor || inquiry.inquiryBy || inquiry.inquiryCompany || "Unknown",
+            accountName: inquiryCompany,
             bureau: reportData.primaryBureau || "Unknown",
-            legalBasis: ["15 USC 1681b"] as unknown as LegalReference[]
+            date: inquiryDate?.toISOString(),
+            legalBasis: ["15 USC 1681b(a)(2)", "15 USC 1681m"] as unknown as LegalReference[]
           });
         }
       });
+    }
+    
+    // Check for personal information errors
+    if (reportData.personalInfo) {
+      const personalInfo = reportData.personalInfo;
+      const personalIssues = [];
+      
+      // Check for incomplete personal information
+      if (!personalInfo.name || personalInfo.name.length < 2) {
+        personalIssues.push("Missing or incomplete name");
+      }
+      if (!personalInfo.address) {
+        personalIssues.push("Missing current address");
+      }
+      if (!personalInfo.ssn || personalInfo.ssn.length < 4) {
+        personalIssues.push("Missing or incomplete SSN");
+      }
+      
+      if (personalIssues.length > 0) {
+        issues.push({
+          id: `personal-info-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'personal_info',
+          description: `Personal information issues: ${personalIssues.join(', ')}`,
+          severity: 'medium',
+          bureau: reportData.primaryBureau || "Unknown",
+          legalBasis: ["15 USC 1681i(a)(1)(A)", "15 USC 1681c"] as unknown as LegalReference[]
+        });
+      }
     }
     
     // Check for public records
