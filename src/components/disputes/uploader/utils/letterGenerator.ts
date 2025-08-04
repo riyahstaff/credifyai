@@ -120,20 +120,25 @@ function getUserInfoFromStorage(): { name: string; address?: string; city?: stri
   try {
     console.log("Getting user info from storage");
     
-    // Get user info from report data first
+    // Get user info from report data FIRST - this is the most reliable source
     const reportData = sessionStorage.getItem('creditReportData');
     if (reportData) {
       try {
         const parsedReport = JSON.parse(reportData);
-        if (parsedReport.personalInfo && parsedReport.personalInfo.name) {
-          console.log("Using personal info from report data");
-          return {
-            name: parsedReport.personalInfo.name,
-            address: parsedReport.personalInfo.address,
-            city: parsedReport.personalInfo.city,
-            state: parsedReport.personalInfo.state,
-            zip: parsedReport.personalInfo.zip
-          };
+        if (parsedReport.personalInfo) {
+          const pi = parsedReport.personalInfo;
+          console.log("Using personal info from report data:", pi);
+          
+          // Only return if we have a valid name (not empty or placeholder)
+          if (pi.name && pi.name.trim() && !pi.name.includes('[') && !pi.name.includes('YOUR')) {
+            return {
+              name: pi.name,
+              address: pi.address || '',
+              city: pi.city || '',
+              state: pi.state || '',
+              zip: pi.zip || ''
+            };
+          }
         }
       } catch (e) {
         console.error("Error parsing report data:", e);

@@ -2,6 +2,55 @@
 import { CreditReportData, IdentifiedIssue } from '../types';
 
 /**
+ * Extract user information from report data with fallback to storage
+ */
+function getUserInfoFromReport(reportData: CreditReportData): {
+  name: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+} {
+  console.log("Getting user info from report data");
+  
+  // First try to use personal info from the report data
+  if (reportData?.personalInfo) {
+    const pi = reportData.personalInfo;
+    console.log("Using personal info from report:", pi);
+    
+    return {
+      name: pi.name || '',
+      address: pi.address || '',
+      city: pi.city || '',
+      state: pi.state || '',
+      zip: pi.zip || ''
+    };
+  }
+  
+  // Fallback to storage if no personal info in report
+  console.log("No personal info in report, checking storage");
+  
+  const userName = localStorage.getItem('userName') || 
+                   sessionStorage.getItem('userName') || '';
+  const userAddress = localStorage.getItem('userAddress') || 
+                      sessionStorage.getItem('userAddress') || '';
+  const userCity = localStorage.getItem('userCity') || 
+                   sessionStorage.getItem('userCity') || '';
+  const userState = localStorage.getItem('userState') || 
+                    sessionStorage.getItem('userState') || '';
+  const userZip = localStorage.getItem('userZip') || 
+                  sessionStorage.getItem('userZip') || '';
+  
+  return {
+    name: userName,
+    address: userAddress,
+    city: userCity,
+    state: userState,
+    zip: userZip
+  };
+}
+
+/**
  * Generate a basic dispute letter for a specific issue
  */
 export function generateDisputeLetter(
@@ -96,6 +145,9 @@ export async function generateDisputeLetters(reportData: CreditReportData): Prom
             `- ${issue.description || issue.type} (${issue.severity || 'medium'} severity)`
           ).join('\n');
           
+          // Get user information from the report data FIRST, then fallback to storage
+          const userInfo = getUserInfoFromReport(reportData);
+          
           // Generate the dispute letter content
           const letterContent = await generateEnhancedDisputeLetter(
             sampleIssue.type || 'inaccurate_information',
@@ -105,13 +157,7 @@ export async function generateDisputeLetters(reportData: CreditReportData): Prom
               errorDescription: `Multiple issues found:\n${issuesSummary}`,
               bureau: bureau
             },
-            {
-              name: '[YOUR NAME]',
-              address: '[YOUR ADDRESS]',
-              city: '[CITY]',
-              state: '[STATE]',
-              zip: '[ZIP]'
-            }
+            userInfo
           );
           
           // Create the letter object
