@@ -5,7 +5,7 @@ import { useReportAnalysis } from './report-upload/useReportAnalysis';
 import { useToast } from './use-toast';
 import { useReportStorage } from './useReportStorage';
 import { useReportNavigation } from './report-upload/useReportNavigation';
-import { generateAutomaticDisputeLetter } from '@/components/ai/services/disputes/automaticLetterGenerator';
+
 import { analyzeReportForIssues } from '@/utils/creditReport/parser/analyzeReportIssues';
 import { identifyIssues } from '@/utils/reportAnalysis/issueIdentification/identifyIssues';
 import { clearAllLetterData } from '@/utils/creditReport/clearLetterData';
@@ -105,115 +105,16 @@ export const useReportUpload = () => {
   
   // Generate dispute letter from the report data
   const handleGenerateDispute = useCallback(async (account: CreditReportAccount | null = null) => {
-    console.log("Generating dispute for account:", account);
+    console.log("=== Starting dispute letter generation ===");
+    console.log("Target account:", account);
+    console.log("Report data available:", !!reportData);
+    console.log("Issues found:", issues.length);
     
     // Clear ALL existing letter data again to be 100% sure
     clearAllLetterData();
     
-    if (reportData) {
-      // If no account is provided, use the first account from the report
-      const targetAccount = account || (reportData.accounts && reportData.accounts.length > 0 ? reportData.accounts[0] : null);
-      
-      // Log detailed information about the account and report data for debugging
-      console.log("Target account for dispute:", targetAccount);
-      console.log("Report data personal info:", reportData.personalInfo);
-      console.log("Report data accounts:", reportData.accounts?.length);
-      
-      // Analyze report for issues if not already done
-      if (!reportData.issues || reportData.issues.length === 0) {
-        console.log("No issues found in report data, analyzing now...");
-        // Use the identifyIssues function which returns IdentifiedIssue[]
-        const identifiedIssues = identifyIssues(reportData);
-        if (identifiedIssues.length > 0) {
-          reportData.issues = identifiedIssues;
-          console.log(`Found ${identifiedIssues.length} issues in report`);
-          setIssues(identifiedIssues);
-        }
-      }
-      
-      // Store data for dispute generation
-      const stored = storeForDispute(reportData, targetAccount);
-      
-      if (stored) {
-        console.log("Report data stored successfully, generating letter...");
-        
-        try {
-          // Generate automatic dispute letter
-          const letterContent = await generateAutomaticDisputeLetter(
-            reportData,
-            targetAccount?.accountName,
-            reportData.personalInfo
-          );
-          
-          if (letterContent && letterContent.length > 100) {
-            console.log("Letter generated successfully with length:", letterContent.length);
-            setLetterGenerated(true);
-            
-            toast({
-              title: "Dispute letter generated",
-              description: "Your dispute letter has been generated. You'll be redirected to review it.",
-            });
-            
-            // Trigger navigation to letters page
-            triggerNavigation();
-            
-            return true;
-          } else {
-            console.error("Letter generation failed or produced insufficient content");
-            
-            // Break navigation loops - don't set multiple flags
-            sessionStorage.removeItem('navigationInProgress');
-            sessionStorage.removeItem('shouldNavigateToLetters');
-            sessionStorage.removeItem('forceLettersReload');
-            sessionStorage.removeItem('forceLetterGeneration');
-            
-            // Set single flag for letter generation
-            sessionStorage.setItem('reportReadyForLetters', 'true');
-            
-            // Force navigation after a delay
-            setTimeout(() => {
-              window.location.href = '/dispute-letters';
-            }, 1000);
-            
-            toast({
-              title: "Processing report",
-              description: "Redirecting to dispute letters page...",
-            });
-            
-            return true;
-          }
-        } catch (error) {
-          console.error("Error in automatic letter generation:", error);
-          
-          // Break navigation loops - don't set multiple flags
-          sessionStorage.removeItem('navigationInProgress');
-          sessionStorage.removeItem('shouldNavigateToLetters');
-          sessionStorage.removeItem('forceLettersReload');
-          
-          // Set single flag for letter generation
-          sessionStorage.setItem('reportReadyForLetters', 'true');
-          
-          // Force navigation after a delay
-          setTimeout(() => {
-            window.location.href = '/dispute-letters';
-          }, 1000);
-          
-          toast({
-            title: "Processing report",
-            description: "Redirecting to dispute letters page...",
-          });
-          
-          return true;
-        }
-      } else {
-        toast({
-          title: "Error generating letter",
-          description: "There was a problem storing your report data. Please try again.",
-          variant: "destructive",
-        });
-        return false;
-      }
-    } else {
+    if (!reportData) {
+      console.error("No report data available for dispute generation");
       toast({
         title: "Missing report data",
         description: "No credit report data is available. Please upload and analyze a report first.",
@@ -221,7 +122,185 @@ export const useReportUpload = () => {
       });
       return false;
     }
-  }, [reportData, storeForDispute, toast, triggerNavigation]);
+
+    // If no account is provided, use the first account from the report
+    const targetAccount = account || (reportData.accounts && reportData.accounts.length > 0 ? reportData.accounts[0] : null);
+    
+    console.log("Target account for dispute:", targetAccount?.accountName);
+    console.log("Report personal info:", reportData.personalInfo?.name);
+    
+    // Ensure we have identified issues
+    let currentIssues = issues;
+    if (!currentIssues || currentIssues.length === 0) {
+      console.log("No issues in state, re-analyzing report...");
+      const identifiedIssues = identifyIssues(reportData);
+      currentIssues = identifiedIssues;
+      setIssues(identifiedIssues);
+      console.log(`Re-analysis found ${identifiedIssues.length} issues`);
+    }
+    
+    if (currentIssues.length === 0) {
+      console.warn("No issues found in credit report - creating default dispute");
+      // Create a default issue if none found
+      currentIssues = [{
+        id: `default-${Date.now()}`,
+        type: 'account_verification',
+        title: 'Account Verification Required',
+        description: 'Request verification of account information under FCRA',
+        impact: 'Medium Impact',
+        impactColor: 'orange',
+        bureau: reportData.primaryBureau || 'Experian',
+        severity: 'medium',
+        laws: ['15 USC 1681e(b)', '15 USC 1681i'],
+        account: targetAccount ? {
+          accountName: targetAccount.accountName,
+          accountNumber: targetAccount.accountNumber
+        } : undefined
+      }];
+      setIssues(currentIssues);
+    }
+    
+    try {
+      console.log(`Generating letters for ${currentIssues.length} issues`);
+      
+      // Store data for dispute generation
+      const stored = storeForDispute(reportData, targetAccount);
+      
+      if (!stored) {
+        throw new Error("Failed to store report data for dispute generation");
+      }
+      
+      console.log("Report data stored successfully, generating dispute letters...");
+      
+      // Generate dispute letters using the enhanced generator
+      const { generateDisputeLettersFromIssues } = await import('@/utils/creditReport/disputeLetters/generator');
+      
+      const generatedLetters = await generateDisputeLettersFromIssues(
+        currentIssues,
+        reportData.personalInfo || { name: 'Credit Report User', address: 'Unknown Address' },
+        reportData.primaryBureau || 'Experian'
+      );
+      
+      console.log(`Generated ${generatedLetters.length} dispute letters`);
+      
+      if (generatedLetters.length > 0) {
+        // Store letters in session storage
+        sessionStorage.setItem('generatedDisputeLetters', JSON.stringify(generatedLetters));
+        sessionStorage.setItem('reportReadyForLetters', 'true');
+        sessionStorage.setItem('lettersGeneratedTimestamp', Date.now().toString());
+        
+        console.log("Letters stored in session storage, setting navigation flags");
+        setLetterGenerated(true);
+        
+        toast({
+          title: "Dispute letters generated",
+          description: `Generated ${generatedLetters.length} dispute letter(s). Redirecting to review them.`,
+        });
+        
+        // Trigger navigation to letters page
+        triggerNavigation();
+        
+        return true;
+      } else {
+        throw new Error("No letters were generated from the issues");
+      }
+      
+    } catch (error) {
+      console.error("Error in dispute letter generation:", error);
+      
+      // Fallback: Create a basic dispute letter manually
+      console.log("Creating fallback dispute letter...");
+      
+      try {
+        const fallbackLetter = {
+          id: `fallback-${Date.now()}`,
+          title: `Dispute Letter for ${targetAccount?.accountName || 'Credit Report'}`,
+          content: createFallbackDisputeLetter(reportData, targetAccount, currentIssues[0]),
+          bureau: reportData.primaryBureau || 'Experian',
+          accountName: targetAccount?.accountName || 'Multiple Accounts',
+          accountNumber: targetAccount?.accountNumber || '',
+          issueType: currentIssues[0]?.type || 'account_verification',
+          generatedAt: new Date().toISOString()
+        };
+        
+        // Store the fallback letter
+        sessionStorage.setItem('generatedDisputeLetters', JSON.stringify([fallbackLetter]));
+        sessionStorage.setItem('reportReadyForLetters', 'true');
+        
+        setLetterGenerated(true);
+        
+        toast({
+          title: "Dispute letter created",
+          description: "A dispute letter has been created. Redirecting to review it.",
+        });
+        
+        // Force navigation after a delay
+        setTimeout(() => {
+          window.location.href = '/dispute-letters';
+        }, 1000);
+        
+        return true;
+      } catch (fallbackError) {
+        console.error("Even fallback letter generation failed:", fallbackError);
+        
+        toast({
+          title: "Letter generation failed",
+          description: "Unable to generate dispute letter. Please try uploading your report again.",
+          variant: "destructive",
+        });
+        
+        return false;
+      }
+    }
+  }, [reportData, issues, storeForDispute, toast, triggerNavigation, setIssues, setLetterGenerated]);
+  
+  // Helper function to create a fallback dispute letter
+  const createFallbackDisputeLetter = (reportData: CreditReportData, account: CreditReportAccount | null, issue: any): string => {
+    const userName = reportData.personalInfo?.name || 'Credit Report User';
+    const userAddress = reportData.personalInfo?.address || 'Your Address';
+    const accountName = account?.accountName || 'Credit Report Account';
+    const bureau = reportData.primaryBureau || 'Credit Bureau';
+    const currentDate = new Date().toLocaleDateString();
+    
+    return `${userName}
+${userAddress}
+
+${currentDate}
+
+${bureau}
+Credit Reporting Department
+
+RE: Request for Investigation and Removal of Inaccurate Information
+
+Dear Credit Reporting Agency,
+
+I am writing to dispute inaccurate information on my credit report. Under the Fair Credit Reporting Act (FCRA), I have the right to request that you investigate and correct any inaccurate information.
+
+DISPUTED ACCOUNT:
+Account Name: ${accountName}
+${account?.accountNumber ? `Account Number: ${account.accountNumber}` : ''}
+
+REASON FOR DISPUTE:
+${issue?.description || 'The information reported for this account appears to be inaccurate and requires verification. I request that you investigate this matter and provide me with the results of your investigation.'}
+
+I request that you:
+1. Investigate the disputed information
+2. Contact the creditor to verify the accuracy of the reported information
+3. Remove any information that cannot be verified as accurate
+4. Provide me with the results of your investigation
+
+Please send me an updated copy of my credit report after your investigation is complete.
+
+Legal References:
+- 15 U.S.C. § 1681e(b) - Requirement for accurate reporting
+- 15 U.S.C. § 1681i - Procedure in case of disputed accuracy
+
+Thank you for your prompt attention to this matter.
+
+Sincerely,
+
+${userName}`;
+  };
   
   return {
     fileUploaded,

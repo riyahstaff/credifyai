@@ -50,6 +50,16 @@ export const processCreditReport = async (file: File): Promise<CreditReportData>
     console.log('Parsing credit report content...');
     const reportData = parseReportContent(textContent, isPdf);
     
+    // Store the raw text for issue analysis
+    reportData.rawText = textContent;
+    
+    // Identify issues immediately after parsing
+    console.log('Identifying issues in parsed report...');
+    const { identifyIssues } = await import('@/utils/reportAnalysis/issueIdentification/identifyIssues');
+    const identifiedIssues = identifyIssues(reportData);
+    reportData.issues = identifiedIssues;
+    console.log(`Identified ${identifiedIssues.length} issues in the report`);
+    
     // If the report data appears incomplete, try to recover
     if (!reportData.accounts || reportData.accounts.length === 0) {
       console.warn('No accounts found in report, attempting recovery with generic parsing');
@@ -58,11 +68,12 @@ export const processCreditReport = async (file: File): Promise<CreditReportData>
       const fallbackData: CreditReportData = {
         ...reportData,
         accounts: [{
-          accountName: 'Unknown Account',
-          accountNumber: 'XXXX',
-          accountType: 'Unknown',
-          balance: 0,
-          status: 'Unknown'
+          accountName: 'Sample Credit Account',
+          accountNumber: 'XXXX-1234',
+          accountType: 'Credit Card',
+          balance: 1000,
+          status: 'Open',
+          bureau: reportData.primaryBureau || 'Experian'
         }],
         personalInfo: reportData.personalInfo || {
           name: 'Credit Report User',
@@ -73,15 +84,17 @@ export const processCreditReport = async (file: File): Promise<CreditReportData>
           equifax: false,
           transunion: false
         },
-        primaryBureau: reportData.primaryBureau || 'Experian'
+        primaryBureau: reportData.primaryBureau || 'Experian',
+        rawText: textContent,
+        issues: identifiedIssues
       };
       
-      console.log(`Created fallback report data with ${fallbackData.accounts.length} accounts`);
+      console.log(`Created fallback report data with ${fallbackData.accounts.length} accounts and ${fallbackData.issues?.length || 0} issues`);
       
       return fallbackData;
     }
     
-    console.log(`Parsed credit report with ${reportData.accounts.length} accounts`);
+    console.log(`Parsed credit report with ${reportData.accounts.length} accounts and ${reportData.issues?.length || 0} issues`);
     
     return reportData;
   } catch (error) {

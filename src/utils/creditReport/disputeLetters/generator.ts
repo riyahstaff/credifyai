@@ -1,5 +1,5 @@
 
-import { CreditReportData, Issue } from '@/utils/creditReport/types';
+import { CreditReportData, Issue, IdentifiedIssue } from '@/utils/creditReport/types';
 
 /**
  * Generate an enhanced dispute letter
@@ -135,6 +135,76 @@ Reason for Dispute: ${disputeType}
     console.error("Error generating enhanced dispute letter:", error);
     return "Error generating dispute letter. Please try again.";
   }
+}
+
+/**
+ * Generate dispute letters from identified issues
+ * @param issues Array of identified issues
+ * @param personalInfo User's personal information
+ * @param bureau Primary bureau for the report
+ * @returns Array of generated dispute letters
+ */
+export async function generateDisputeLettersFromIssues(
+  issues: IdentifiedIssue[],
+  personalInfo: any,
+  bureau: string
+): Promise<any[]> {
+  console.log(`Generating letters for ${issues.length} issues`);
+  
+  const generatedLetters = [];
+  
+  for (const issue of issues) {
+    try {
+      // Extract account details if available
+      const accountDetails = {
+        accountName: issue.account?.accountName || issue.title || 'Credit Report Issue',
+        accountNumber: issue.account?.accountNumber,
+        errorDescription: issue.description,
+        bureau: issue.bureau || bureau
+      };
+      
+      // Format user info
+      const userInfo = {
+        name: personalInfo?.name || 'Credit Report User',
+        address: personalInfo?.address,
+        city: personalInfo?.city,
+        state: personalInfo?.state,
+        zip: personalInfo?.zip
+      };
+      
+      // Generate the letter content
+      const letterContent = generateEnhancedDisputeLetter(
+        issue.type.replace(/_/g, ' '),
+        accountDetails,
+        userInfo
+      );
+      
+      // Create the letter object
+      const letter = {
+        id: issue.id || `letter-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        title: `Dispute Letter - ${issue.title}`,
+        content: letterContent,
+        bureau: issue.bureau || bureau,
+        accountName: accountDetails.accountName,
+        accountNumber: accountDetails.accountNumber || '',
+        issueType: issue.type,
+        severity: issue.severity,
+        impact: issue.impact,
+        generatedAt: new Date().toISOString(),
+        laws: issue.laws || []
+      };
+      
+      generatedLetters.push(letter);
+      console.log(`Generated letter for issue: ${issue.title}`);
+      
+    } catch (error) {
+      console.error(`Error generating letter for issue ${issue.id}:`, error);
+      // Continue with other issues
+    }
+  }
+  
+  console.log(`Successfully generated ${generatedLetters.length} letters`);
+  return generatedLetters;
 }
 
 /**
