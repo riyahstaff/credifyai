@@ -1,6 +1,15 @@
 
 import { User, Session } from '@supabase/supabase-js';
-import { Profile } from '@/lib/supabase/client';
+
+// Use a flexible profile type to avoid import conflicts
+export interface Profile {
+  id: string;
+  email: string;
+  full_name?: string;
+  has_subscription?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface AuthState {
   session: Session | null;

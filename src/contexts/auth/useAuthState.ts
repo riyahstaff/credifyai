@@ -1,16 +1,16 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, Profile } from '@/lib/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { fetchUserProfile } from '@/utils/auth/profileUtils';
 import { getSessionWithTimeout } from '@/utils/auth/authUtils';
-import { AuthState } from './types';
+import { AuthState, Profile } from './types';
 
 export function useAuthState(): [
   AuthState, 
   (session: Session | null) => void,
   (user: User | null) => void,
-  (profile: Profile) => void
+  (profile: Profile | null) => void
 ] {
   const [state, setState] = useState<AuthState>({
     session: null,
@@ -39,7 +39,7 @@ export function useAuthState(): [
     setState(prev => ({ ...prev, user }));
   };
 
-  const setProfile = (profile: Profile) => {
+  const setProfile = (profile: Profile | null) => {
     setState(prev => ({ ...prev, profile }));
   };
 
