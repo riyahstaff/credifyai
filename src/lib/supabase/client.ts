@@ -1,9 +1,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Get Supabase URL and anon key from environment variables or use provided values
-const supabaseUrl = 'https://nnpsiyuwlovbngqzyxlg.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ucHNpeXV3bG92Ym5ncXp5eGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwMDE0ODEsImV4cCI6MjA1OTU3NzQ4MX0.dMuHGHCxHsX4ujAoxP4k3GNKuTFFEI5SfT50xWGmmts';
+// Use the correct Supabase credentials that match the integrations client
+const supabaseUrl = 'https://frfeyttlztydgwahjjsw.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZyZmV5dHRsenR5ZGd3YWhqanN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA3MTM5NTIsImV4cCI6MjA1NjI4OTk1Mn0.oQ60NfU_HD9wyqDoGrx763wfIvFWg5CpMixKYvOW1QY';
 
 // Since we have hardcoded credentials, we should not show any error
 // Only show error if we're trying to use env variables but they're missing
