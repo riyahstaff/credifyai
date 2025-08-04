@@ -54,19 +54,19 @@ const TemplateManager: React.FC = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('dispute_letters')
+        .from('letter_templates')
         .select('*')
-        .order('createdAt', { ascending: false });
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      // Map the dispute_letters data to match our Template interface
+      // Map the letter_templates data to match our Template interface
       const mappedTemplates: Template[] = (data || []).map(item => ({
         id: item.id,
-        name: item.title,
-        issue_type: item.errorType,
-        content: item.letterContent,
-        created_at: item.createdAt
+        name: item.name,
+        issue_type: item.issue_type,
+        content: item.content,
+        created_at: item.created_at
       }));
       
       setTemplates(mappedTemplates);
@@ -87,14 +87,11 @@ const TemplateManager: React.FC = () => {
     setSaving(true);
     try {
       const { data, error } = await supabase
-        .from('dispute_letters')
+        .from('letter_templates')
         .insert({
-          title: values.name,
-          errorType: values.issue_type,
-          letterContent: values.content,
-          content: values.content, // duplicating content to match the dispute_letters schema
-          bureau: 'template', // default value since this is required in dispute_letters
-          status: 'draft'
+          name: values.name,
+          issue_type: values.issue_type,
+          content: values.content
         })
         .select();
       
@@ -128,7 +125,7 @@ const TemplateManager: React.FC = () => {
     
     try {
       const { error } = await supabase
-        .from('dispute_letters')
+        .from('letter_templates')
         .delete()
         .eq('id', id);
       

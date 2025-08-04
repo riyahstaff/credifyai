@@ -91,8 +91,8 @@ const DisputeLetters = () => {
           const { data: backendLetters, error } = await supabase
             .from('dispute_letters')
             .select('*')
-            .eq('userId', user.id)
-            .order('createdAt', { ascending: false })
+            .eq('user_id', user.id)
+            .order('generated_at', { ascending: false })
             .limit(10);
             
           if (error) {

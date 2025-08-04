@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
+import SafeHtmlViewer from '../components/ui/SafeHtmlViewer';
 import { 
   ChevronLeft, 
   Clock, 
@@ -838,9 +839,16 @@ const VideoDetail = () => {
             {/* Transcript */}
             <div className="mb-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Video Transcript</h2>
-              <div 
+              <SafeHtmlViewer 
+                htmlContent={video.transcript}
                 className="prose prose-sm max-w-none text-gray-600"
-                dangerouslySetInnerHTML={{ __html: video.transcript }}
+                allowedTags={[
+                  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                  'p', 'div', 'span', 'br', 'hr',
+                  'ul', 'ol', 'li',
+                  'strong', 'b', 'em', 'i', 'u'
+                ]}
+                allowedAttributes={['class']}
               />
             </div>
           </div>

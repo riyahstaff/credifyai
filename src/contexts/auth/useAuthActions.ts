@@ -34,79 +34,39 @@ export function useAuthActions() {
   };
 
   const handleSignOut = async () => {
-    console.log("CRITICAL: Performing logout operation with forced navigation");
-    
-    // Clear all session data before signout
-    sessionStorage.clear();
-    localStorage.removeItem('userProfile');
-    localStorage.removeItem('userName');
-    
-    // Remove any Supabase tokens from localStorage
     try {
-      localStorage.removeItem('sb-frfeyttlztydgwahjjsw-auth-token');
-      localStorage.removeItem('sb-nnpsiyuwlovbngqzyxlg-auth-token');
-      localStorage.removeItem('hasAuthSession');
-      localStorage.removeItem('lastAuthTime');
-      localStorage.removeItem('supabase.auth.token');
-    } catch (e) {
-      console.error("Error clearing localStorage:", e);
-    }
-    
-    // IMPORTANT: Set immediate redirect flag for instant feedback
-    document.body.classList.add('logging-out');
-    
-    // Start a forced redirect with timeout to ensure it happens
-    const forceRedirectTimer = setTimeout(() => {
-      console.log("CRITICAL: Force redirect timer activated");
-      try {
-        // Try multiple methods to ensure navigation happens
-        window.location.href = '/';
-      } catch (e) {
-        console.error("Navigation error:", e);
-        window.location.href = '/';
-      }
-    }, 300); // Very short timeout
-    
-    try {
-      console.log("Starting forceful signout process...");
+      // Clear all session data before signout
+      sessionStorage.clear();
       
-      // Clear token from local storage directly
-      console.log("Removing localStorage key: sb-nnpsiyuwlovbngqzyxlg-auth-token");
-      localStorage.removeItem('sb-nnpsiyuwlovbngqzyxlg-auth-token');
-      
-      console.log("Storage cleared, signing out from Supabase...");
+      // Use Supabase's built-in signout method without manual token manipulation
       const { error } = await signOutUser();
       
       if (error) {
-        console.error("Error during Supabase signout:", error);
-        // Continue with forced navigation despite error
-      } else {
-        console.log("Supabase signout successful");
+        console.error("Error during signout:", error);
+        toast({
+          title: "Signout error",
+          description: "There was an issue signing out. Please try again.",
+          variant: "destructive",
+        });
+        return;
       }
+      
+      toast({
+        title: "Signed out",
+        description: "You have been successfully logged out.",
+        duration: 3000,
+      });
+      
+      // Navigate to home page
+      window.location.href = '/';
     } catch (error) {
       console.error("Exception during signout process:", error);
+      toast({
+        title: "Signout error", 
+        description: "An unexpected error occurred during signout.",
+        variant: "destructive",
+      });
     }
-    
-    clearTimeout(forceRedirectTimer); // Clear the timer if Supabase signout completes quickly
-    
-    // Force a hard refresh to ensure all React state is cleared - MOST IMPORTANT PART
-    console.log("CRITICAL: Forcing immediate hard redirect after logout");
-    try {
-      // Set flag to clear auth on next load - important for handling edge cases
-      localStorage.setItem('clearAuthOnLoad', 'true');
-      
-      // Force navigation to home page
-      window.location.href = '/';
-    } catch (e) {
-      console.error("Navigation error:", e);
-      window.location.href = '/';
-    }
-    
-    toast({
-      title: "Signed out",
-      description: "You have been successfully logged out.",
-      duration: 3000,
-    });
   };
 
   return {

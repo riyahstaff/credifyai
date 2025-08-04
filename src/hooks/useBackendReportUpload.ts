@@ -164,16 +164,16 @@ export const useBackendReportUpload = () => {
           continue;
         }
 
-        // Fix: Check each status case separately instead of combining conditions
-        if (report.status === 'Processed') {
+        // Fix: Check processed status using the correct column name
+        if (report.processed === true && !report.processing_error) {
           // Process "Processed" status separately
           
           // Check if any letters were generated
           const { data: letters, error: lettersError } = await supabase
             .from('dispute_letters')
             .select('*')
-            .eq('userId', user?.id)
-            .order('createdAt', { ascending: false })
+            .eq('user_id', user?.id)
+            .order('generated_at', { ascending: false })
             .limit(10);
           
           if (lettersError) {
@@ -200,21 +200,12 @@ export const useBackendReportUpload = () => {
         }
         
         // Handle error statuses separately
-        if (report.status === 'Error') {
+        if (report.processing_error) {
           return {
             success: false,
             reportId,
-            message: `Error processing report: ${report.status}`,
-            error: report.status
-          };
-        }
-        
-        if (report.status === 'Failed') {
-          return {
-            success: false,
-            reportId,
-            message: `Error processing report: ${report.status}`,
-            error: report.status
+            message: `Error processing report: ${report.processing_error}`,
+            error: report.processing_error
           };
         }
         
@@ -263,8 +254,8 @@ export const useBackendReportUpload = () => {
       const { data: letters } = await supabase
         .from('dispute_letters')
         .select('*')
-        .eq('userId', user.id)
-        .order('createdAt', { ascending: false })
+        .eq('user_id', user.id)
+        .order('generated_at', { ascending: false })
         .limit(10);
       
       if (letters && letters.length > 0) {

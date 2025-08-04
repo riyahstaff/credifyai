@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { Upload, FileUp, X } from 'lucide-react';
+import { Upload, FileUp, X, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { validateFile } from '@/utils/security/fileValidator';
 
 interface FileUploaderProps {
   onFileSelected: (file: File) => void;
@@ -46,19 +47,40 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     }
   };
   
-  const validateAndProcessFile = (file: File) => {
-    // Check if file is valid format
-    const fileExt = file.name.split('.').pop()?.toLowerCase();
-    if (fileExt !== 'pdf' && fileExt !== 'csv' && fileExt !== 'txt') {
+  const validateAndProcessFile = async (file: File) => {
+    try {
+      // Enhanced security validation
+      const validationResult = await validateFile(file);
+      
+      if (!validationResult.isValid) {
+        toast({
+          title: "File validation failed",
+          description: validationResult.error,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Show warnings if any
+      if (validationResult.warnings && validationResult.warnings.length > 0) {
+        validationResult.warnings.forEach(warning => {
+          toast({
+            title: "File warning",
+            description: warning,
+            variant: "default",
+          });
+        });
+      }
+
+      onFileSelected(file);
+    } catch (error) {
+      console.error('File validation error:', error);
       toast({
-        title: "Invalid file format",
-        description: "Please upload a PDF, CSV, or TXT file from one of the credit bureaus.",
+        title: "Validation error",
+        description: "Could not validate file. Please try again.",
         variant: "destructive",
       });
-      return;
     }
-
-    onFileSelected(file);
   };
   
   return (

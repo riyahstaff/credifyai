@@ -3,6 +3,7 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
+import SafeHtmlViewer from '../components/ui/SafeHtmlViewer';
 import { 
   ChevronLeft, 
   Clock, 
@@ -532,10 +533,6 @@ const ArticleDetail = () => {
     );
   }
 
-  // Parse HTML content to React components
-  const createMarkup = () => {
-    return { __html: article.content };
-  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -603,7 +600,18 @@ const ArticleDetail = () => {
         
         {/* Article content */}
         <div className="max-w-4xl mx-auto px-4 pb-12">
-          <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={createMarkup()} />
+          <SafeHtmlViewer 
+            htmlContent={article.content}
+            className="prose prose-lg max-w-none"
+            allowedTags={[
+              'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+              'p', 'div', 'span', 'br', 'hr',
+              'ul', 'ol', 'li',
+              'strong', 'b', 'em', 'i', 'u',
+              'a', 'blockquote', 'code', 'pre'
+            ]}
+            allowedAttributes={['href', 'target', 'class']}
+          />
         </div>
         
         {/* Social share */}
