@@ -61,4 +61,6 @@ export interface UserInfo {
   zip?: string;
   email?: string;
   phone?: string;
+  ssn?: string;
+  dob?: string;
 }

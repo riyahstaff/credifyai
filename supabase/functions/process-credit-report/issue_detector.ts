@@ -10,10 +10,13 @@ export type IssueType =
   'late_payment' | 
   'collection' | 
   'inquiry' | 
-  'account_verification' | 
-  'balance_dispute' | 
+  'balance_error' |
+  'account_status' |
+  'charge_off' |
   'identity_theft' | 
-  'outdated_information' | 
+  'duplicate_account' |
+  'personal_info' |
+  'not_my_account' |
   'general';
 
 export interface Account {
@@ -34,11 +37,31 @@ export interface CreditReportIssue {
   accounts: Account[];
 }
 
-// Advanced account extraction using multiple parsing strategies
+// Enhanced account extraction with better pattern recognition
 function extractAccounts(text: string): Account[] {
-  console.log("Extracting accounts using advanced parsing strategies");
+  console.log("Extracting accounts using enhanced parsing strategies");
   
   const accounts: Account[] = [];
+  const lines = text.split('\n');
+  
+  // Extract known creditors and account patterns
+  const creditorPatterns = [
+    /(?:Capital One|Chase|Citibank|Bank of America|Wells Fargo|American Express|Discover)/gi,
+    /(?:Portfolio Recovery|Midland Credit|LVNV Funding|Enhanced Recovery)/gi,
+    /(?:Synchrony|Barclays|US Bank|HSBC|TD Bank|PNC Bank)/gi
+  ];
+  
+  creditorPatterns.forEach(pattern => {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const creditorName = match[0];
+      const account = extractAccountDetails(creditorName, text, match.index);
+      if (account && !isDuplicate(account, accounts)) {
+        accounts.push(account);
+      }
+    }
+  });
+  
   const accountSections = [];
   
   // Strategy 1: Look for structured account blocks
@@ -620,4 +643,47 @@ function detectIdentityIssues(text: string, bureau: string): CreditReportIssue[]
   }
   
   return issues;
+}
+
+// Helper function to extract account details around a creditor name
+function extractAccountDetails(creditorName: string, text: string, position: number): Account | null {
+  const lines = text.split('\n');
+  const lineIndex = text.substring(0, position).split('\n').length - 1;
+  
+  const account: Account = {
+    accountName: creditorName,
+    accountNumber: '',
+    balance: '',
+    status: '',
+    openDate: '',
+    lastReportedDate: ''
+  };
+  
+  // Look for details in surrounding lines
+  const searchLines = lines.slice(Math.max(0, lineIndex - 3), Math.min(lines.length, lineIndex + 4));
+  
+  searchLines.forEach(line => {
+    const accountNumMatch = line.match(/(\d{4}[\*\-\s\d]{4,})/);
+    if (accountNumMatch && !account.accountNumber) {
+      account.accountNumber = accountNumMatch[1];
+    }
+    
+    const balanceMatch = line.match(/\$?([\d,]+\.?\d*)/);
+    if (balanceMatch && !account.balance && parseFloat(balanceMatch[1].replace(/,/g, '')) > 10) {
+      account.balance = balanceMatch[0];
+    }
+    
+    if (line.match(/charged|collection|late|open|closed/i) && !account.status) {
+      account.status = line.match(/charged|collection|late|open|closed/i)?.[0] || '';
+    }
+  });
+  
+  return account;
+}
+
+// Helper function to check for duplicate accounts
+function isDuplicate(newAccount: Account, accounts: Account[]): boolean {
+  return accounts.some(existing => 
+    existing.accountName.toLowerCase() === newAccount.accountName.toLowerCase()
+  );
 }
