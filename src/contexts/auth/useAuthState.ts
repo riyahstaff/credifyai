@@ -96,12 +96,13 @@ export function useAuthState(): [
           console.warn("Session error, but not logging out:", error);
           setState(prev => ({ ...prev, sessionError: error as Error }));
           
-          // Retry with exponential backoff if this is a timeout error
-          if (retry < 3 && error.message.includes('timeout')) {
-            if (DEBUG_AUTH) console.log(`Retrying auth initialization in ${retryDelay * (retry + 1)}ms`);
-            setTimeout(() => initAuth(retry + 1), retryDelay * (retry + 1));
+          // Limit retries to prevent infinite loading
+          if (retry < 1 && error.message.includes('timeout')) {
+            if (DEBUG_AUTH) console.log(`Retrying auth initialization in ${retryDelay * 2}ms`);
+            setTimeout(() => initAuth(retry + 1), retryDelay * 2);
           } else {
             // If we've exhausted retries, still mark loading as complete to prevent infinite loading
+            if (DEBUG_AUTH) console.log("Max auth retries reached, completing initialization");
             setState(prev => ({ ...prev, isLoading: false }));
           }
         } else {
@@ -134,10 +135,12 @@ export function useAuthState(): [
           isLoading: false  // Make sure to set loading to false even on error
         }));
         
-        // Retry on network errors or timeouts
-        if (retry < 3) {
-          if (DEBUG_AUTH) console.log(`Retrying auth initialization in ${retryDelay * (retry + 1)}ms`);
-          setTimeout(() => initAuth(retry + 1), retryDelay * (retry + 1));
+        // Limit retries to prevent infinite loading
+        if (retry < 1) {
+          if (DEBUG_AUTH) console.log(`Retrying auth initialization in ${retryDelay * 2}ms`);
+          setTimeout(() => initAuth(retry + 1), retryDelay * 2);
+        } else {
+          if (DEBUG_AUTH) console.log("Max auth retries reached, proceeding without authentication");
         }
       } finally {
         if (isActive) {
