@@ -146,27 +146,9 @@ const CreditReportBackendUploader: React.FC<CreditReportBackendUploaderProps> = 
           sessionStorage.setItem('creditReportData', JSON.stringify(reportData));
           sessionStorage.setItem('reportReadyForLetters', 'true');
           
-          // Generate letters for issues or accounts if no issues found
-          let letters = [];
-          if (reportData.issues && reportData.issues.length > 0) {
-            console.log(`Generating letters for ${reportData.issues.length} issues`);
-            letters = await generateDisputeLetters(reportData);
-          } else if (reportData.accounts && reportData.accounts.length > 0) {
-            console.log(`No issues found, generating sample letter for account`);
-            // Generate a sample letter for the first account
-            const sampleIssue = {
-              id: `sample_${Date.now()}`,
-              type: 'inaccurate_information',
-              description: 'Potentially inaccurate account information',
-              accountName: reportData.accounts[0].accountName,
-              accountNumber: reportData.accounts[0].accountNumber,
-              bureau: 'equifax',
-              severity: 'medium'
-            };
-            
-            reportData.issues = [sampleIssue];
-            letters = await generateDisputeLetters(reportData);
-          }
+          // Generate letters using the enhanced system
+          console.log("Generating comprehensive dispute letters");
+          const letters = await generateDisputeLetters(reportData);
           
           if (letters && letters.length > 0) {
             console.log(`Successfully generated ${letters.length} dispute letters`);

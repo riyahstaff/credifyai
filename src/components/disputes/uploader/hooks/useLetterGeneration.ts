@@ -35,7 +35,7 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
       
       try {
         console.log("Generating dispute letters for all issues");
-        const generatedLetters = await generateDisputeLetters(issues, reportData);
+        const generatedLetters = await generateDisputeLetters(reportData);
         
         if (generatedLetters && generatedLetters.length > 0) {
           console.log(`Successfully generated ${generatedLetters.length} dispute letters`);
@@ -154,7 +154,7 @@ export const useLetterGeneration = (reportData: CreditReportData | null) => {
         
         const singleIssueArray = [targetIssue];
         
-        const generatedLetters = await generateDisputeLetters(singleIssueArray, reportData);
+        const generatedLetters = await generateDisputeLetters(reportData);
         
         if (generatedLetters && generatedLetters.length > 0) {
           console.log("Successfully generated letter for selected issue:", generatedLetters);

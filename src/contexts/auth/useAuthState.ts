@@ -142,7 +142,6 @@ export function useAuthState(): [
       } finally {
         if (isActive) {
           if (DEBUG_AUTH) console.log("Auth initialization complete");
-          setState(prev => ({ ...prev, isLoading: false }));
         }
       }
     };
