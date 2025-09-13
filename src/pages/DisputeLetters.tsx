@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { generateAutomaticDisputeLetter } from '@/components/ai/services/disputes/automaticLetterGenerator';
+import { clearOldLetterData } from '@/utils/creditReport/clearLetterData';
 
 const DisputeLetters = () => {
   const { toast } = useToast();
@@ -19,6 +20,9 @@ const DisputeLetters = () => {
   useEffect(() => {
     console.log("DisputeLetters page: User auth state:", user ? "Logged in" : "Not logged in");
     console.log("DisputeLetters page: User profile:", profile);
+    
+    // Clear old letter data to force regeneration with comprehensive system
+    clearOldLetterData();
     
     // Store profile data for letter generation even before the main component loads
     if (profile) {

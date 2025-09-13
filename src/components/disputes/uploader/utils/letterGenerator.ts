@@ -1,6 +1,7 @@
 
 import { CreditReportAccount, CreditReportData, IdentifiedIssue } from "@/utils/creditReport/types";
-import { generateLettersForIssues, generateDisputeLetter } from "@/utils/creditReport/disputeLetters";
+import { generateComprehensiveDisputeLetter } from "@/utils/creditReport/disputeLetters/comprehensiveLetterGenerator";
+import { getApplicableLaws } from "@/utils/creditReport/fcraCompliance/fcraLaws";
 import { createFallbackLetter } from "../handlers/fallbackLetterCreator";
 
 /**
@@ -17,99 +18,47 @@ export const generateDisputeLetters = async (
     const userInfo = getUserInfoFromStorage();
     console.log("User info retrieved:", userInfo.name);
     
-    // Debug the issues we're using to generate letters
-    console.log("Issue details for letter generation:", 
-      issues.map(i => ({
-        type: i.type,
-        description: i.description,
-        account: i.account,
-        bureau: i.bureau
-      }))
-    );
+    // Group issues by type and bureau for letter generation
+    const issueGroups = groupIssuesByTypeAndBureau(issues, reportData);
+    console.log("Grouped issues for letter generation:", issueGroups);
     
-    // Convert IdentifiedIssue[] to the format expected by generateDisputeLetter
-    const convertedIssues = issues.map(issue => ({
-      id: issue.id || `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      type: issue.type,
-      description: issue.description,
-      bureau: issue.bureau || reportData.primaryBureau || "Equifax",
-      accountName: issue.account?.accountName,
-      accountNumber: issue.account?.accountNumber,
-      reason: issue.description,
-      severity: (issue.severity === 'high' || issue.impact?.includes('High')) ? 'high' : 
-                (issue.severity === 'medium' || issue.impact?.includes('Medium')) ? 'medium' : 'low' as "high" | "medium" | "low",
-      legalBasis: issue.laws?.join(', ') || "15 USC 1681e(b)"
-    }));
-    
-    // Check if we have extracted actual issues from the report
-    if (convertedIssues.length === 0) {
-      console.warn("No issues found for letter generation, creating fallback letter");
-      const fallbackLetter = createFallbackLetter(reportData);
-      return [fallbackLetter];
-    }
-    
-    // Generate letters for each issue
     const generatedLetters = [];
     
-    for (const issue of convertedIssues) {
+    // Generate comprehensive letters for each issue group
+    for (const group of issueGroups) {
       try {
-        const accountName = issue.accountName || (reportData.accounts && reportData.accounts.length > 0 ? reportData.accounts[0].accountName : "");
-        const accountNumber = issue.accountNumber || (reportData.accounts && reportData.accounts.length > 0 ? reportData.accounts[0].accountNumber : "");
+        console.log(`Generating comprehensive letter for ${group.type} issues (${group.issues.length} issues) for ${group.bureau}`);
         
-        console.log(`Generating letter for issue: ${issue.type} on account: ${accountName}`);
-        
-        // Generate a letter for this issue
-        const letterContent = await generateDisputeLetter(
-          issue.type,
+        // Use the comprehensive letter generator
+        const comprehensiveLetter = generateComprehensiveDisputeLetter(
           {
-            accountName: accountName,
-            accountNumber: accountNumber,
-            errorDescription: issue.description || "Information appears to be inaccurate",
-            bureau: issue.bureau || reportData.primaryBureau || "Equifax",
-            relevantReportText: reportData.rawText?.substring(0, 1000) || ""
+            type: group.type,
+            description: group.description,
+            bureau: group.bureau,
+            severity: 'high' as 'high' | 'medium' | 'low'
           },
+          group.primaryAccount,
           userInfo,
-          reportData
+          group.bureau
         );
         
-        if (letterContent && letterContent.length > 200) {
-          generatedLetters.push({
-            id: `letter-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            title: `${issue.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Dispute`,
-            content: letterContent,
-            letterContent: letterContent,
-            bureau: issue.bureau || reportData.primaryBureau || "Equifax",
-            accountName: accountName,
-            accountNumber: accountNumber,
-            errorType: issue.type,
-            status: "ready",
-            createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-          });
-          
-          console.log(`Successfully generated letter for ${issue.type}`);
-        } else {
-          console.warn(`Generated letter for ${issue.type} was too short or empty`);
-        }
+        generatedLetters.push(comprehensiveLetter);
+        console.log(`Successfully generated comprehensive ${group.type} letter`);
       } catch (error) {
-        console.error(`Error generating letter for issue ${issue.type}:`, error);
+        console.error(`Error generating comprehensive letter for ${group.type}:`, error);
       }
     }
     
     if (generatedLetters.length > 0) {
-      console.log(`Successfully generated ${generatedLetters.length} letters`);
-      console.log("First letter content sample:", generatedLetters[0].content?.substring(0, 100));
+      console.log(`Successfully generated ${generatedLetters.length} comprehensive dispute letters`);
       return generatedLetters;
     } else {
-      console.warn("No valid letters were generated, creating fallback letter");
-      const fallbackLetter = createFallbackLetter(reportData);
-      return [fallbackLetter];
+      console.warn("No comprehensive letters were generated, creating enhanced fallback letters");
+      return generateEnhancedFallbackLetters(reportData);
     }
   } catch (error) {
-    console.error("Error generating dispute letters:", error);
-    
-    // Create and return a fallback letter using ONLY real data
-    const fallbackLetter = createFallbackLetter(reportData);
-    return [fallbackLetter];
+    console.error("Error in comprehensive letter generation:", error);
+    return generateEnhancedFallbackLetters(reportData);
   }
 };
 
@@ -186,10 +135,117 @@ function getUserInfoFromStorage(): { name: string; address?: string; city?: stri
 }
 
 /**
+ * Group issues by type and bureau for comprehensive letter generation
+ */
+function groupIssuesByTypeAndBureau(issues: IdentifiedIssue[], reportData: CreditReportData) {
+  const groups: Array<{
+    type: string;
+    bureau: string;
+    issues: IdentifiedIssue[];
+    accounts: CreditReportAccount[];
+    primaryAccount: CreditReportAccount;
+    description: string;
+  }> = [];
+
+  // Define common issue types with their descriptions
+  const issueTypeDescriptions: Record<string, string> = {
+    'late_payment': 'Inaccurate late payment reporting',
+    'collection': 'Unverified collection account',
+    'inquiry': 'Unauthorized credit inquiry',
+    'balance_error': 'Incorrect balance reporting',
+    'account_status': 'Inaccurate account status',
+    'personal_info': 'Incorrect personal information',
+    'charge_off': 'Inaccurate charge-off status',
+    'identity_theft': 'Fraudulent account or identity theft',
+    'duplicate_account': 'Duplicate account reporting'
+  };
+
+  // Group issues by type
+  const typeGroups = issues.reduce((acc, issue) => {
+    const key = issue.type;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(issue);
+    return acc;
+  }, {} as Record<string, IdentifiedIssue[]>);
+
+  // Create letter groups for each issue type
+  Object.entries(typeGroups).forEach(([type, typeIssues]) => {
+    const bureau = typeIssues[0]?.bureau || reportData.primaryBureau || 'Experian';
+    const accounts = typeIssues.map(issue => issue.account).filter(Boolean) as CreditReportAccount[];
+    
+    // Use the first account as primary, or get from report data
+    const primaryAccount = accounts[0] || (reportData.accounts && reportData.accounts.length > 0 ? reportData.accounts[0] : {
+      accountName: 'Credit Report Account',
+      accountNumber: '',
+      creditor: '',
+      balance: '',
+      status: ''
+    });
+
+    groups.push({
+      type,
+      bureau,
+      issues: typeIssues,
+      accounts,
+      primaryAccount,
+      description: issueTypeDescriptions[type] || 'Credit report inaccuracy'
+    });
+  });
+
+  return groups;
+}
+
+/**
+ * Generate enhanced fallback letters when no issues are detected
+ */
+function generateEnhancedFallbackLetters(reportData: CreditReportData): any[] {
+  const userInfo = getUserInfoFromStorage();
+  const letters = [];
+
+  // Generate multiple types of dispute letters based on common issues
+  const commonIssueTypes = [
+    { type: 'late_payment', description: 'Inaccurate payment history' },
+    { type: 'inquiry', description: 'Unauthorized credit inquiries' },
+    { type: 'personal_info', description: 'Incorrect personal information' },
+    { type: 'account_status', description: 'Inaccurate account status reporting' }
+  ];
+
+  for (const issueType of commonIssueTypes) {
+    try {
+      const primaryAccount = reportData.accounts && reportData.accounts.length > 0 ? 
+        reportData.accounts[0] : {
+          accountName: 'Credit Report Account',
+          accountNumber: '',
+          creditor: '',
+          balance: '',
+          status: ''
+        };
+
+      const letter = generateComprehensiveDisputeLetter(
+        {
+          type: issueType.type,
+          description: issueType.description,
+          bureau: reportData.primaryBureau || 'Experian',
+          severity: 'high' as 'high' | 'medium' | 'low'
+        },
+        primaryAccount,
+        userInfo,
+        reportData.primaryBureau || 'Experian'
+      );
+
+      letters.push(letter);
+    } catch (error) {
+      console.error(`Error generating fallback letter for ${issueType.type}:`, error);
+    }
+  }
+
+  return letters.length > 0 ? letters : [createFallbackLetter(reportData)];
+}
+
+/**
  * Create a generic dispute letter when no specific issues are found
  * This enhanced version extracts more details from the report data
  */
 export async function createGenericLetterWithDetails(reportData: CreditReportData): Promise<any> {
-  // Create a fallback letter using our dedicated handler that uses ONLY report data
-  return createFallbackLetter(reportData);
+  return generateEnhancedFallbackLetters(reportData)[0];
 }
