@@ -9,91 +9,38 @@
 const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
 
 export const extractTextFromPDF = async (file: File): Promise<string> => {
-  console.log(`Starting enhanced PDF extraction for ${file.name} (${file.type})`);
+  console.log(`Starting advanced PDF extraction for ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
   
   try {
-    // Immediately set a timeout to ensure extraction doesn't hang indefinitely
-    const extractionTimeout = setTimeout(() => {
-      console.warn("PDF extraction is taking too long - forcing completion");
-      throw new Error("PDF extraction timeout");
-    }, 15000); // 15 second hard timeout
-    
-    // We need to use a third-party PDF parsing library since we're getting raw binary data
-    // First attempt: Try to use PDF.js to extract the text if available
-    if (window.pdfjsLib) {
-      console.log("Using PDF.js for extraction");
-      try {
-        const result = await extractWithPDFJS(file);
-        clearTimeout(extractionTimeout);
-        return result;
-      } catch (e) {
-        console.warn("PDF.js extraction failed:", e);
-        // Continue with fallback methods
-      }
-    }
-    
-    // Yield to prevent unresponsiveness
-    await yieldToMain();
-    
-    // Second attempt: Use the browser's PDF capabilities if available
     const arrayBuffer = await file.arrayBuffer();
     
-    // Create a blob URL and an iframe to load the PDF
-    const blobUrl = URL.createObjectURL(new Blob([arrayBuffer], { type: 'application/pdf' }));
+    // Use advanced binary pattern extraction with enhanced credit report detection
+    console.log("Using advanced binary pattern extraction");
+    let textContent = await extractCreditReportText(arrayBuffer);
     
-    try {
-      // Try to use a more advanced extraction technique
-      console.log("Attempting browser-based PDF text extraction");
-      const text = await extractTextWithBrowser(blobUrl);
-      
-      if (text && text.length > 200) {
-        console.log(`Successfully extracted ${text.length} characters of text using browser method`);
-        clearTimeout(extractionTimeout);
-        return text;
-      }
-    } catch (e) {
-      console.warn("Browser-based extraction failed:", e);
-    } finally {
-      // Clean up the blob URL
-      URL.revokeObjectURL(blobUrl);
-    }
-    
-    // Yield to prevent unresponsiveness
-    await yieldToMain();
-    
-    // Last resort: Convert the binary PDF data to text and look for patterns
-    console.log("Falling back to binary pattern extraction");
-    const decoder = new TextDecoder('utf-8');
-    let textContent = decoder.decode(arrayBuffer);
-    
-    // Remove binary data and extract readable text
-    textContent = await cleanPDFText(textContent);
-    
-    // If we got to this point, clear the timeout as we're about to return
-    clearTimeout(extractionTimeout);
-    
-    // Look for credit report specific sections
-    const extractedSections = await extractCreditReportSections(textContent);
-    
-    if (extractedSections && extractedSections.length > 100) {
-      console.log(`Extracted ${extractedSections.length} characters from structured sections`);
-      return extractedSections;
-    }
-    
-    console.log("Could not extract structured text, returning cleaned text");
-    
-    // If we have at least some text, return it even if it's not ideal
-    if (textContent.length > 100) {
+    if (textContent && textContent.length > 500) {
+      console.log(`Successfully extracted ${textContent.length} characters with credit report patterns`);
       return textContent;
     }
     
-    // As a last resort, return a placeholder to prevent crashes
-    return "CREDIT REPORT CONTENT - Unable to extract detailed text. Please try uploading a text version of your report.";
+    // Fallback to basic text extraction
+    console.log("Falling back to basic text extraction");
+    const decoder = new TextDecoder('utf-8', { fatal: false });
+    let rawText = decoder.decode(arrayBuffer);
+    
+    // Clean and extract meaningful content
+    textContent = await cleanAndExtractCreditReportData(rawText);
+    
+    if (textContent.length > 100) {
+      console.log(`Extracted ${textContent.length} characters from fallback method`);
+      return textContent;
+    }
+    
+    throw new Error("Unable to extract meaningful text from PDF");
     
   } catch (error) {
-    console.error("Error extracting PDF text:", error);
-    // Return a minimal valid string to prevent crashes
-    return "CREDIT REPORT - Text extraction failed. Please try uploading in a different format.";
+    console.error("PDF extraction failed:", error);
+    throw new Error(`PDF text extraction failed: ${error.message}`);
   }
 };
 
@@ -224,65 +171,180 @@ const cleanPDFText = async (rawText: string): Promise<string> => {
   return cleaned;
 };
 
-// Extract important credit report sections using known keywords
-const extractCreditReportSections = async (text: string): Promise<string> => {
-  const sections = [];
+// Advanced credit report text extraction using binary patterns
+const extractCreditReportText = async (arrayBuffer: ArrayBuffer): Promise<string> => {
+  const uint8Array = new Uint8Array(arrayBuffer);
+  let extractedText = '';
   
-  // Common credit report sections
-  const sectionKeywords = [
-    'Personal Information', 'Consumer Information', 'Credit Summary',
-    'Account Information', 'Account History', 'Public Records',
-    'Credit Inquiries', 'Collections', 'Negative Items',
-    'Payment History', 'Credit Score', 'FICO', 'TransUnion', 
-    'Equifax', 'Experian', 'Tradeline', 'Dispute'
-  ];
+  // Search for text streams in PDF
+  const textStreamPattern = /BT\s+([^ET]+)\s+ET/g;
+  const tjPattern = /\[(.*?)\]\s*TJ/g;
+  const showTextPattern = /\((.*?)\)\s*Tj/g;
   
-  const lowerText = text.toLowerCase();
+  // Convert buffer to string for pattern matching
+  const decoder = new TextDecoder('latin1');
+  const binaryText = decoder.decode(uint8Array);
   
-  // Find paragraphs containing relevant information - process in chunks
-  for (let i = 0; i < sectionKeywords.length; i++) {
-    const keyword = sectionKeywords[i];
-    const lowerKeyword = keyword.toLowerCase();
-    const keywordIndex = lowerText.indexOf(lowerKeyword);
+  // Extract from text streams
+  let match;
+  while ((match = textStreamPattern.exec(binaryText)) !== null) {
+    const streamContent = match[1];
     
-    if (keywordIndex !== -1) {
-      // Extract a window of text (1000 chars) around the keyword
-      const start = Math.max(0, keywordIndex - 100);
-      const end = Math.min(text.length, keywordIndex + 900);
-      const sectionText = text.substring(start, end);
-      
-      // Only add if this section contains readable text (not just binary data)
-      if (/[a-z]{3,}/i.test(sectionText)) {
-        sections.push(`--- ${keyword.toUpperCase()} SECTION ---\n${sectionText}\n`);
+    // Extract text from TJ operators (text arrays)
+    let tjMatch;
+    while ((tjMatch = tjPattern.exec(streamContent)) !== null) {
+      const textArray = tjMatch[1];
+      // Parse individual strings from the array
+      const strings = textArray.match(/\((.*?)\)/g);
+      if (strings) {
+        strings.forEach(str => {
+          const cleanStr = str.replace(/[()]/g, '').trim();
+          if (cleanStr.length > 0) {
+            extractedText += cleanStr + ' ';
+          }
+        });
       }
     }
     
-    // Yield every 5 keywords
-    if (i % 5 === 0 && i > 0) {
-      await yieldToMain();
+    // Extract from Tj operators (simple text)
+    let tjSimpleMatch;
+    while ((tjSimpleMatch = showTextPattern.exec(streamContent)) !== null) {
+      const text = tjSimpleMatch[1].trim();
+      if (text.length > 0) {
+        extractedText += text + ' ';
+      }
     }
   }
   
-  // Look for account numbers and card numbers (masked with X's)
-  const accountPattern = /(?:account|acct)[^\d]*?(?:number|#|no)?[^\d]*?(\d[\dX]+\d)/gi;
-  let match;
-  let matchCount = 0;
+  // Also extract readable ASCII text directly from binary
+  const asciiText = await extractReadableText(uint8Array);
+  extractedText += ' ' + asciiText;
   
-  while ((match = accountPattern.exec(text)) !== null) {
-    if (match[1] && match[1].length > 4) {
-      const start = Math.max(0, match.index - 50);
-      const end = Math.min(text.length, match.index + 150);
-      const context = text.substring(start, end);
-      
-      sections.push(`--- ACCOUNT DETAIL ---\n${context}\n`);
+  // Clean up the extracted text
+  extractedText = await cleanAndStructureCreditReportText(extractedText);
+  
+  return extractedText;
+};
+
+// Extract readable ASCII text from binary data
+const extractReadableText = async (data: Uint8Array): Promise<string> => {
+  let text = '';
+  let currentWord = '';
+  
+  for (let i = 0; i < data.length; i++) {
+    const char = data[i];
+    
+    // Check if character is printable ASCII
+    if (char >= 32 && char <= 126) {
+      currentWord += String.fromCharCode(char);
+    } else if (char === 10 || char === 13) { // Newline
+      if (currentWord.trim().length > 0) {
+        text += currentWord + '\n';
+        currentWord = '';
+      }
+    } else {
+      // End of word
+      if (currentWord.trim().length > 2) { // Only add words with 3+ characters
+        text += currentWord + ' ';
+      }
+      currentWord = '';
     }
     
-    // Yield every 5 matches to prevent browser hanging
-    matchCount++;
-    if (matchCount % 5 === 0) {
+    // Yield control periodically
+    if (i % 10000 === 0) {
       await yieldToMain();
     }
   }
   
-  return sections.join('\n');
+  // Add final word
+  if (currentWord.trim().length > 2) {
+    text += currentWord;
+  }
+  
+  return text;
+};
+
+// Clean and structure credit report text for better parsing
+const cleanAndStructureCreditReportText = async (rawText: string): Promise<string> => {
+  let text = rawText;
+  
+  // Remove duplicate spaces and normalize
+  text = text.replace(/\s+/g, ' ').trim();
+  
+  // Add line breaks before important sections
+  const sectionMarkers = [
+    'PERSONAL INFORMATION', 'CONSUMER INFORMATION', 'ACCOUNT INFORMATION',
+    'CREDIT INQUIRIES', 'PUBLIC RECORDS', 'COLLECTIONS', 'TRADELINES',
+    'PAYMENT HISTORY', 'ACCOUNT HISTORY', 'NEGATIVE ITEMS'
+  ];
+  
+  sectionMarkers.forEach(marker => {
+    const regex = new RegExp(`(${marker})`, 'gi');
+    text = text.replace(regex, '\n\n$1\n');
+  });
+  
+  // Clean up account entries - add structure
+  text = text.replace(/(\b(?:ACCOUNT|ACCT|CREDITOR|FURNISHER)[\s:]+[A-Z0-9\s&\.,'"\-]+)/gi, '\n\nACCOUNT: $1');
+  
+  // Structure payment information
+  text = text.replace(/(\b(?:PAYMENT\s+HISTORY|LATE\s+PAYMENT|PAST\s+DUE|DELINQUENT))/gi, '\nPAYMENT_INFO: $1');
+  
+  // Structure inquiry information
+  text = text.replace(/(\b(?:INQUIRY|INQUIRIES)[\s:]+[A-Z0-9\s&\.,'"\-]+)/gi, '\nINQUIRY: $1');
+  
+  return text;
+};
+
+// Enhanced cleaning for extracted text
+const cleanAndExtractCreditReportData = async (rawText: string): Promise<string> => {
+  // Remove PDF metadata and binary markers
+  let text = rawText.replace(/%PDF-[\d.]+/g, '')
+                   .replace(/%%EOF/g, '')
+                   .replace(/stream[\s\S]*?endstream/g, '')
+                   .replace(/obj[\s\S]*?endobj/g, '');
+  
+  // Extract readable content using credit report patterns
+  const creditReportPatterns = [
+    // Personal information
+    /(?:name|consumer|personal\s+information)[\s:]+([^\n]{10,100})/gi,
+    // Account information
+    /(?:account|creditor|furnisher)[\s:]+([^\n]{5,80})/gi,
+    // Payment information
+    /(?:payment|late|past\s+due|delinquent|current)[\s:]+([^\n]{5,50})/gi,
+    // Balance information
+    /(?:balance|amount|limit)[\s:]+\$?[\d,\.]+/gi,
+    // Date information
+    /(?:date|opened|closed|reported)[\s:]+[\d\/\-]{6,12}/gi
+  ];
+  
+  let extractedContent = '';
+  
+  creditReportPatterns.forEach(pattern => {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      if (match[0] && match[0].length > 10) {
+        extractedContent += match[0] + '\n';
+      }
+    }
+  });
+  
+  // If pattern extraction didn't work well, fall back to cleaning raw text
+  if (extractedContent.length < 200) {
+    text = text.replace(/[^\x20-\x7E\n\r\t]/g, '') // Keep only printable ASCII
+               .replace(/\s+/g, ' ')
+               .trim();
+    
+    // Look for credit report keywords and extract surrounding context
+    const keywords = ['EXPERIAN', 'EQUIFAX', 'TRANSUNION', 'CREDIT', 'ACCOUNT', 'PAYMENT', 'INQUIRY'];
+    
+    keywords.forEach(keyword => {
+      const regex = new RegExp(`.{0,200}${keyword}.{0,200}`, 'gi');
+      const matches = text.match(regex);
+      if (matches) {
+        extractedContent += matches.join('\n') + '\n';
+      }
+    });
+  }
+  
+  return extractedContent || text;
 };
